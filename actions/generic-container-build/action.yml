@@ -110,14 +110,14 @@ runs:
         echo "=== DEPLOY + TEST (BBB) ==="
 
         mkdir -p ~/.ssh
-        echo "$BBB_SSH_KEY" > ~/.ssh/id_rsa
+        printf '%s\n' "$BBB_SSH_KEY" > ~/.ssh/id_rsa
         chmod 600 ~/.ssh/id_rsa
 
         # Deploy
-        scp -i ~/.ssh/id_rsa $OUTPUT_DIR/* $BBB_USER@$BBB_HOST:/home/$BBB_USER/bin/
+        scp -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa $OUTPUT_DIR/* $BBB_USER@$BBB_HOST:/home/$BBB_USER/bin/
 
         # Execute
-        ssh -i ~/.ssh/id_rsa $BBB_USER@$BBB_HOST <<EOF
+        ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa $BBB_USER@$BBB_HOST <<EOF
           cd /home/$BBB_USER/bin
           chmod +x *
           echo "Running binaries on BBB..."
