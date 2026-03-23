@@ -53,7 +53,7 @@ runs:
           -v "$OUTPUT_DIR:/output" \
           -v "$SOURCE_DIR:/src" \
           "$CONTAINER_IMAGE" \
-          /bin/bash -c "${BUILD_COMMANDS}"
+          -c "${BUILD_COMMANDS}"
 
       env:
         OUTPUT_DIR: ${{ inputs.output_dir }}
@@ -92,7 +92,7 @@ runs:
           -v "$OUTPUT_DIR:/output" \
           -v "$TEST_DIR:/tests" \
           "$CONTAINER_IMAGE" \
-          /bin/bash -c "${TEST_COMMANDS}"
+          -c "${TEST_COMMANDS}"
 
       env:
         OUTPUT_DIR: ${{ inputs.output_dir }}
