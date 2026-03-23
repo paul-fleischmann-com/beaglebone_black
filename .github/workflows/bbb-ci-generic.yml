@@ -13,7 +13,8 @@ jobs:
       - uses: actions/checkout@v4
       - uses: ./actions/build_container
         with:
-           options: -t generic-builder -f docker/builder/Dockerfile
+           image_name: generic-builder
+           dockerfile: docker/builder/Dockerfile
            context: docker/builder
       - uses: ./actions/generic-container-build
         with:
