@@ -238,3 +238,9 @@ runs:
         ls -l "$OUTPUT_DIR"
       env:
         OUTPUT_DIR: ${{ inputs.output_dir }}
+    - name: Upload output files
+      uses: actions/upload-artifact@v4
+      with:
+        name: output_dir
+        path: ${{ inputs.output_dir }}/
+        if-no-files-found: ignore
