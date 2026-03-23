@@ -198,8 +198,9 @@ runs:
 
     - name: Generate Coverage Index
       if: ${{ env.ARCH == 'ARM' && inputs.bbb_host != '' }}
-      shell: python3
+      shell: bash
       run: |
+        python3 << 'PYEOF'
         import os, json
         html_dir = os.path.join(os.environ['OUTPUT_DIR'], 'html')
         reports = [{"label": "All Tests", "url": "combined/index.html"}]
@@ -233,6 +234,7 @@ runs:
         }});</script></body></html>"""
         with open(os.path.join(html_dir, 'index.html'), 'w') as f:
             f.write(html)
+        PYEOF
       env:
         OUTPUT_DIR: ${{ inputs.output_dir }}
 
