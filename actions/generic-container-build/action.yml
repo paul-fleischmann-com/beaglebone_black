@@ -171,10 +171,17 @@ runs:
           -v "$(pwd)/$OUTPUT_DIR":/gcov_data \
           -v "$(pwd)/project/c":/src/c \
           "$CONTAINER_IMAGE" \
-          -c "lcov --capture \
+          -c "lcov --capture --initial \
+            --directory /gcov_data \
+            --base-directory /src/c/src \
+            --output-file /gcov_data/baseline.info && \
+            lcov --capture \
             --directory /gcov_data \
             --base-directory /src/c/src \
             --output-file /gcov_data/coverage.info && \
+            lcov --add-tracefile /gcov_data/baseline.info \
+              --add-tracefile /gcov_data/coverage.info \
+              --output-file /gcov_data/coverage.info && \
             lcov --list /gcov_data/coverage.info"
         cp "$OUTPUT_DIR"/coverage.info ./coverage/c/ || true
       env:
