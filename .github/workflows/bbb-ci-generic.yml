@@ -41,7 +41,7 @@ jobs:
             arm-linux-gnueabihf-gcc \
               --coverage -fprofile-prefix-map=/src/c=./project/c \
               -o /output/bme280_main \
-              /src/c/src/main.c \
+              /src/c/test/main.c \
               -I /src/c/include \
               -L /output -lhardware -lm
             find / -name "*.gcno" 2>/dev/null -exec cp {} /output/ \; || true
