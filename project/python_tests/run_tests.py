@@ -2,12 +2,20 @@
 import subprocess
 import sys
 import os
+import argparse
 
-# Liste der Binaries, die getestet werden sollen
+parser = argparse.ArgumentParser()
+parser.add_argument("--bin-dir", default="/output")
+parser.add_argument("--log-dir", default="/logs")
+args = parser.parse_args()
+
+BIN = args.bin_dir
+LOG = args.log_dir
+
 BINARIES = [
-    {"name": "bme280_main", "path": "/output/bme280_main","log": "/logs/c.log"},
-    {"name": "rust_app", "path": "/output/rust_app","log": "/logs/rust.lo"},
-    {"name": "go_app", "path": "/output/go_app","log": "/logs/go.log"}
+    {"name": "bme280_main", "path": f"{BIN}/bme280_main", "log": f"{LOG}/c.log"},
+    {"name": "rust_app",    "path": f"{BIN}/rust_app",    "log": f"{LOG}/rust.log"},
+    {"name": "go_app",      "path": f"{BIN}/go_app",      "log": f"{LOG}/go.log"},
 ]
 
 

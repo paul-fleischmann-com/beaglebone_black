@@ -116,26 +116,22 @@ runs:
         eval $(ssh-agent -s)
         ssh-add ~/.ssh/id_rsa
 
-        # Deploy
+        # Deploy binaries + test script
         scp -o StrictHostKeyChecking=no $OUTPUT_DIR/* $BBB_USER@$BBB_HOST:/home/$BBB_USER/bin/
+        scp -o StrictHostKeyChecking=no $TEST_DIR/run_tests.py $BBB_USER@$BBB_HOST:/home/$BBB_USER/
 
         # Execute
         ssh -o StrictHostKeyChecking=no $BBB_USER@$BBB_HOST <<EOF
           mkdir -p /home/$BBB_USER/bin/logs
-          cd /home/$BBB_USER/bin
-          chmod +x *
-          echo "Running binaries on BBB..."
-          for f in *; do
-            [ -f "\$f" ] || continue
-            [[ "\$f" == *.so ]] && continue
-            echo "--- Running \$f ---"
-            ./\$f 2>&1 | tee logs/\${f}.log
-            [ \${PIPESTATUS[0]} -eq 0 ] || exit 1
-          done
+          chmod +x /home/$BBB_USER/bin/*
+          python3 /home/$BBB_USER/run_tests.py \
+            --bin-dir /home/$BBB_USER/bin \
+            --log-dir /home/$BBB_USER/bin/logs
         EOF
 
       env:
         OUTPUT_DIR: ${{ inputs.output_dir }}
+        TEST_DIR: ${{ inputs.test_dir }}
         BBB_HOST: ${{ inputs.bbb_host }}
         BBB_USER: ${{ inputs.bbb_user }}
         BBB_SSH_KEY: ${{ inputs.bbb_ssh_key }}
