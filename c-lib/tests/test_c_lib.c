@@ -26,7 +26,7 @@ static void test_bme280_init_no_hardware(void) {
 }
 
 static void test_bme280_read_invalid_fd(void) {
-    bme280_dev_t dev;
+    bme280_dev dev;
     memset(&dev, 0, sizeof(dev));
     dev.fd = -1;
     bme280_data_t data;
@@ -35,7 +35,7 @@ static void test_bme280_read_invalid_fd(void) {
 }
 
 static void test_bme280_close_invalid_fd(void) {
-    bme280_dev_t dev;
+    bme280_dev dev;
     memset(&dev, 0, sizeof(dev));
     dev.fd = -1;
     bme280_close(&dev); /* darf nicht abstürzen */

@@ -303,7 +303,7 @@ plantuml::diagrams/07_library_layer.puml[format=svg,align=center]
 [source,c]
 .BME280 Read — C Implementierung
 ----
-int bme280_read(bme280_dev_t *dev, bme280_data_t *out) {
+int bme280_read(bme280_dev *dev, bme280_data_t *out) {
     uint8_t raw[8];
     if (i2c_read_reg(dev->fd, 0xF7, raw, 8) < 0)
         return -1;
