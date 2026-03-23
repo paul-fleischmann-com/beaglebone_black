@@ -73,7 +73,7 @@ extern "C" {
  * verify the sensor and also calibrates the sensor
  * As this API is the entry point, call this API before using other APIs.
  *
- * @param[in,out] dev : Structure instance of bme280_dev
+ * @param[in,out] dev : Structure instance of struct bme280_dev
  *
  * @return Result of API execution status.
  *
@@ -102,7 +102,7 @@ int8_t bme280_init(struct bme280_dev *dev);
  * @param[in] reg_data : Pointer to data buffer which is to be written
  *                       in the reg_addr of sensor.
  * @param[in] len      : No of bytes of data to write
- * @param[in,out] dev  : Structure instance of bme280_dev
+ * @param[in,out] dev  : Structure instance of struct bme280_dev
  *
  * @return Result of API execution status.
  *
@@ -124,7 +124,7 @@ int8_t bme280_set_regs(uint8_t *reg_addr, const uint8_t *reg_data, uint32_t len,
  * @param[in] reg_addr  : Register address from where the data to be read
  * @param[out] reg_data : Pointer to data buffer to store the read data.
  * @param[in] len       : No of bytes of data to be read.
- * @param[in,out] dev   : Structure instance of bme280_dev.
+ * @param[in,out] dev   : Structure instance of struct bme280_dev.
  *
  * @return Result of API execution status.
  *
@@ -153,7 +153,7 @@ int8_t bme280_get_regs(uint8_t reg_addr, uint8_t *reg_data, uint32_t len, struct
  * @param[in] desired_settings  : Variable used to select the settings which
  *                                are to be set in the sensor.
  * @param[in] settings          : Structure instance of bme280_settings.
- * @param[in] dev               : Structure instance of bme280_dev.
+ * @param[in] dev               : Structure instance of struct bme280_dev.
  *
  * @note : Below are the macros to be used by the user for selecting the
  * desired settings. User can do OR operation of these macros for configuring
@@ -190,7 +190,7 @@ int8_t bme280_set_sensor_settings(uint8_t desired_settings,
  * (normal mode) settings from the sensor.
  *
  * @param[in] settings  : Structure instance of bme280_settings.
- * @param[in,out] dev   : Structure instance of bme280_dev.
+ * @param[in,out] dev   : Structure instance of struct bme280_dev.
  *
  * @return Result of API execution status
  *
@@ -216,7 +216,7 @@ int8_t bme280_get_sensor_settings(struct bme280_settings *settings, struct bme28
  * @details This API sets the power mode of the sensor.
  *
  * @param[in] sensor_mode : Variable which contains the power mode to be set.
- * @param[in] dev         : Structure instance of bme280_dev.
+ * @param[in] dev         : Structure instance of struct bme280_dev.
  *
  *@verbatim
  *    sensor_mode       |      Macros
@@ -244,7 +244,7 @@ int8_t bme280_set_sensor_mode(uint8_t sensor_mode, struct bme280_dev *dev);
  * @details This API gets the power mode of the sensor.
  *
  * @param[out] sensor_mode : Pointer variable to store the power mode.
- * @param[in] dev          : Structure instance of bme280_dev.
+ * @param[in] dev          : Structure instance of struct bme280_dev.
  *
  *@verbatim
  *    sensor_mode       |      Macros
@@ -277,7 +277,7 @@ int8_t bme280_get_sensor_mode(uint8_t *sensor_mode, struct bme280_dev *dev);
  * \endcode
  * @details This API soft-resets the sensor.
  *
- * @param[in,out] dev : Structure instance of bme280_dev.
+ * @param[in,out] dev : Structure instance of struct bme280_dev.
  *
  * @return Result of API execution status.
  *
@@ -317,7 +317,7 @@ int8_t bme280_soft_reset(struct bme280_dev *dev);
  *@endverbatim
  *
  * @param[out] comp_data : Structure instance of bme280_data.
- * @param[in] dev        : Structure instance of bme280_dev.
+ * @param[in] dev        : Structure instance of struct bme280_dev.
  *
  * @return Result of API execution status
  *
