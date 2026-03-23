@@ -18,7 +18,7 @@
 /* ── bme280 ──────────────────────────────────────────────────────────────── */
 
 static void test_bme280_init_no_hardware(void) {
-    bme280_dev_t dev;
+    bme280_dev dev;
     memset(&dev, 0, sizeof(dev));
     /* Kein /dev/i2c-1 in CI → open() schlägt fehl → Rückgabe < 0 */
     int ret = bme280_init(&dev);
