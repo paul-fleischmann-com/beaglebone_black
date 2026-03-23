@@ -167,6 +167,7 @@ runs:
       shell: bash
       run: |
         lcov --capture \
+          --gcov-tool arm-linux-gnueabihf-gcov \
           --directory ./coverage/c \
           --base-directory ./project/c/src \
           --output-file ./coverage/c/coverage.info \
