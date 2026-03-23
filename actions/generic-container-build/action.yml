@@ -177,10 +177,10 @@ runs:
             for test_dir in /gcov_data/coverage/*/; do
               [ -d \"\$test_dir\" ] || continue
               test_name=\$(basename \"\$test_dir\")
+              cp /gcov_data/*.gcno \"\$test_dir\"/
               lcov --capture \
                 --test-name \"\$test_name\" \
                 --directory \"\$test_dir\" \
-                --build-directory /gcov_data \
                 --base-directory /src/c \
                 --output-file /gcov_data/\${test_name}.info
             done
