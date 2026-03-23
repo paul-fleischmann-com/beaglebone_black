@@ -168,6 +168,10 @@ runs:
           -v "$(pwd)/project/c":/src/c \
           "$CONTAINER_IMAGE" \
           -c "set -e
+            echo '=== GCOV DATA STRUCTURE ==='
+            find /gcov_data -type f | sort
+            echo '=== END ==='
+
             lcov --capture --initial \
               --directory /gcov_data \
               --base-directory /src/c \
@@ -192,7 +196,14 @@ runs:
             lcov \$merged_args --output-file /gcov_data/coverage.info
 
             lcov --list /gcov_data/coverage.info
-            genhtml /gcov_data/coverage.info \
+
+            genhtml_args=\"/gcov_data/baseline.info\"
+            for f in /gcov_data/*.info; do
+              [ \"\$f\" = '/gcov_data/baseline.info' ] && continue
+              [ \"\$f\" = '/gcov_data/coverage.info' ] && continue
+              genhtml_args=\"\$genhtml_args \$f\"
+            done
+            genhtml \$genhtml_args \
               --output-directory /gcov_data/html \
               --title 'C Coverage Report' \
               --show-details"
