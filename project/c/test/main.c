@@ -39,7 +39,7 @@ int main(int argc, char *argv[]) {
 static int test_bme280_init_no_hardware(void) {
     bme280_dev_t dev;
     memset(&dev, 0, sizeof(dev));
-    /* Kein /dev/i2c-1 in CI → open() schlägt fehl → Rückgabe < 0 */
+    /* Kein /dev/i2c-1 in CI → open() schlägt fehl → Rückgabe ist -1 */
     int ret = bme280_init(&dev);
-    return (ret < 0) ? 0 : -1;
+    return (ret == -1) ? 0 : -1;
 }
