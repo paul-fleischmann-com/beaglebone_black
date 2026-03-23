@@ -1,5 +1,5 @@
-name: Generic Container Build + Test
-description: Build C/Rust/Go and run tests inside a container, with verified output for BBB deploy
+name: Smart Generic Container Build
+description: Build C/Rust/Go and intelligently run tests (container or BBB)
 
 inputs:
   source_dir:
@@ -15,61 +15,140 @@ inputs:
     description: Container image to use for building
     required: true
   build_commands:
-    description: Multi-line shell commands to build binaries
-    required: true
+     description: Multi-line shell commands to build binaries
+     required: true
   test_commands:
     description: Multi-line shell commands to run tests
     required: false
     default: ""
 
+  # OPTIONAL: BBB Deployment
+  bbb_host:
+    required: false
+  bbb_user:
+    required: false
+  bbb_ssh_key:
+    required: false
+
 runs:
   using: "composite"
   steps:
-    - name: Ensure output directory exists
+
+    - name: Prepare output dir
       shell: bash
-      run: |
-        echo "Ensuring output directory exists: $OUTPUT_DIR"
-        mkdir -p "$OUTPUT_DIR"
+      run: mkdir -p "$OUTPUT_DIR"
       env:
         OUTPUT_DIR: ${{ inputs.output_dir }}
 
-    - name: Run build inside container
+    # =========================
+    # BUILD
+    # =========================
+    - name: Build inside container
       shell: bash
       run: |
-        echo "Starting build in container ${CONTAINER_IMAGE}..."
+        set -e
+        echo "=== BUILD ==="
+
         podman run --rm \
           -v "$OUTPUT_DIR:/output" \
           -v "$SOURCE_DIR:/src" \
           "$CONTAINER_IMAGE" \
-          -c "${BUILD_COMMANDS}"
+          /bin/bash -c "${BUILD_COMMANDS}"
+
       env:
         OUTPUT_DIR: ${{ inputs.output_dir }}
+        SOURCE_DIR: ${{ inputs.source_dir }}
         CONTAINER_IMAGE: ${{ inputs.container_image }}
         BUILD_COMMANDS: ${{ inputs.build_commands }}
-        SOURCE_DIR: ${{ inputs.source_dir }}
 
-    - name: Run tests inside container
+    # =========================
+    # DETECT ARCH
+    # =========================
+    - name: Detect binary architecture
       shell: bash
-      if: ${{ inputs.test_commands != '' }}
       run: |
-        echo "Running tests inside container ${CONTAINER_IMAGE}..."
+        echo "=== DETECT ARCH ==="
+        FILE_INFO=$(file $OUTPUT_DIR/* | head -n1)
+        echo "$FILE_INFO"
+
+        if echo "$FILE_INFO" | grep -q "ARM"; then
+          echo "ARCH=ARM" >> $GITHUB_ENV
+        else
+          echo "ARCH=X86" >> $GITHUB_ENV
+        fi
+      env:
+        OUTPUT_DIR: ${{ inputs.output_dir }}
+
+    # =========================
+    # TEST IN CONTAINER (nur wenn x86)
+    # =========================
+    - name: Run tests in container (x86 only)
+      if: ${{ env.ARCH == 'X86' && inputs.test_commands != '' }}
+      shell: bash
+      run: |
+        echo "=== TEST (Container x86) ==="
+
         podman run --rm \
           -v "$OUTPUT_DIR:/output" \
           -v "$TEST_DIR:/tests" \
           "$CONTAINER_IMAGE" \
-          -c "${TEST_COMMANDS}"
+          /bin/bash -c "${TEST_COMMANDS}"
 
       env:
-        CONTAINER_IMAGE: ${{ inputs.container_image }}
-        TEST_COMMANDS: ${{ inputs.test_commands }}
         OUTPUT_DIR: ${{ inputs.output_dir }}
         TEST_DIR: ${{ inputs.test_dir }}
+        CONTAINER_IMAGE: ${{ inputs.container_image }}
+        TEST_COMMANDS: ${{ inputs.test_commands }}
 
-
-    - name: List built binaries
+    # =========================
+    # TEST AUF BBB (nur ARM)
+    # =========================
+    - name: Deploy & Test on BBB
+      if: ${{ env.ARCH == 'ARM' && inputs.bbb_host != '' }}
       shell: bash
       run: |
-        echo "Built files in output directory ($OUTPUT_DIR):"
+        echo "=== DEPLOY + TEST (BBB) ==="
+
+        mkdir -p ~/.ssh
+        echo "$BBB_SSH_KEY" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+
+        # Deploy
+        scp -i ~/.ssh/id_rsa $OUTPUT_DIR/* $BBB_USER@$BBB_HOST:/home/$BBB_USER/bin/
+
+        # Execute
+        ssh -i ~/.ssh/id_rsa $BBB_USER@$BBB_HOST <<EOF
+          cd /home/$BBB_USER/bin
+          chmod +x *
+          echo "Running binaries on BBB..."
+          for f in *; do
+            echo "--- Running \$f ---"
+            ./\$f || exit 1
+          done
+        EOF
+
+      env:
+        OUTPUT_DIR: ${{ inputs.output_dir }}
+        BBB_HOST: ${{ inputs.bbb_host }}
+        BBB_USER: ${{ inputs.bbb_user }}
+        BBB_SSH_KEY: ${{ inputs.bbb_ssh_key }}
+
+    # =========================
+    # FALLBACK
+    # =========================
+    - name: Skip tests info
+      if: ${{ env.ARCH == 'ARM' && inputs.bbb_host == '' }}
+      shell: bash
+      run: |
+        echo "⚠️ ARM binaries detected but no BBB configured → skipping tests"
+
+    # =========================
+    # DEBUG OUTPUT
+    # =========================
+    - name: List artifacts
+      shell: bash
+      run: |
+        echo "=== OUTPUT FILES ==="
         ls -l "$OUTPUT_DIR"
       env:
         OUTPUT_DIR: ${{ inputs.output_dir }}
