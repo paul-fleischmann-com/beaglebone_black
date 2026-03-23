@@ -153,7 +153,7 @@ runs:
         echo "=== FETCH GCDA (C coverage) ==="
         mkdir -p coverage/c
         scp -o StrictHostKeyChecking=no -r $BBB_USER@$BBB_HOST:/home/$BBB_USER/bin/coverage/ ./coverage/c/ || true
-        cp $OUTPUT_DIR/*.gcno ./coverage/c/ || true
+        cp $OUTPUT_DIR/*.gcno ./coverage/c/coverage/ || true
       env:
         BBB_HOST: ${{ inputs.bbb_host }}
         BBB_USER: ${{ inputs.bbb_user }}
