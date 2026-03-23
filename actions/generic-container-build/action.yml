@@ -137,6 +137,31 @@ runs:
         BBB_SSH_KEY: ${{ inputs.bbb_ssh_key }}
 
     # =========================
+    # FETCH LOGS FROM BBB
+    # =========================
+    - name: Fetch Test Logs from BBB
+      if: ${{ env.ARCH == 'ARM' && inputs.bbb_host != '' }}
+      shell: bash
+      run: |
+        echo "=== FETCH LOGS ==="
+        mkdir -p logs
+        scp -o StrictHostKeyChecking=no -r $BBB_USER@$BBB_HOST:/home/$BBB_USER/bin/logs/* ./logs/
+      env:
+        BBB_HOST: ${{ inputs.bbb_host }}
+        BBB_USER: ${{ inputs.bbb_user }}
+
+    # =========================
+    # UPLOAD LOGS
+    # =========================
+    - name: Upload BBB Logs
+      if: ${{ env.ARCH == 'ARM' && inputs.bbb_host != '' }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: bbb-test-logs
+        path: logs/
+        if-no-files-found: ignore
+
+    # =========================
     # FALLBACK
     # =========================
     - name: Skip tests info
