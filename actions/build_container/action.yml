@@ -1,0 +1,24 @@
+name: Build Container
+description: Build a container based on provided options and context
+
+inputs:
+  options:
+    description: options provided to build command 
+    required: true
+  context:
+    description: context used for build command
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Build container
+      shell: bash
+      run: |
+        echo "Build $CONTAINER_IMAGE with options ( $OPTIONS ) and context ( $CONTEXT )  "
+        podman build "$OPTIONS" "$CONTEXT" 
+      env:
+        OPTIONS: ${{ inputs.options }}
+        CONTEXT: ${{ inputs.context }}
+        
+

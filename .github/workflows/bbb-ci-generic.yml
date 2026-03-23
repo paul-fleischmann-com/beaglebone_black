@@ -11,7 +11,10 @@ jobs:
     name: Build, Test & Deploy to BBB
     steps:
       - uses: actions/checkout@v4
-
+      - uses: ./actions/generic-container-build
+        with:
+           options: -t generic-builder -f docker/builder/Dockerfile
+           context: docker/builder
       - uses: ./actions/generic-container-build
         with:
           source_dir: ./project
