@@ -112,13 +112,15 @@ runs:
         mkdir -p ~/.ssh
         printf '%s\n' "$BBB_SSH_KEY" | tr -d '\r' > ~/.ssh/id_rsa
         chmod 600 ~/.ssh/id_rsa
-        ssh-keygen -l -f ~/.ssh/id_rsa
+
+        eval $(ssh-agent -s)
+        ssh-add ~/.ssh/id_rsa
 
         # Deploy
-        scp -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa $OUTPUT_DIR/* $BBB_USER@$BBB_HOST:/home/$BBB_USER/bin/
+        scp -o StrictHostKeyChecking=no $OUTPUT_DIR/* $BBB_USER@$BBB_HOST:/home/$BBB_USER/bin/
 
         # Execute
-        ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa $BBB_USER@$BBB_HOST <<EOF
+        ssh -o StrictHostKeyChecking=no $BBB_USER@$BBB_HOST <<EOF
           cd /home/$BBB_USER/bin
           chmod +x *
           echo "Running binaries on BBB..."
