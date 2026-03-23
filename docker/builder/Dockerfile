@@ -53,7 +53,7 @@ RUN python3 -m venv /opt/venv
 
 # Aktivieren der venv und pytest installieren
 RUN /opt/venv/bin/pip install --upgrade pip && \
-    /opt/venv/bin/pip install pytest coverage
+    /opt/venv/bin/pip install pytest coverage gcovr
 
 # PATH anpassen
 ENV PATH="/opt/venv/bin:$PATH"

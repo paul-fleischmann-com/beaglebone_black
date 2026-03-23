@@ -168,46 +168,33 @@ runs:
           -v "$(pwd)/project/c":/src/c \
           "$CONTAINER_IMAGE" \
           -c "set -e
-            echo '=== GCOV DATA STRUCTURE ==='
-            find /gcov_data -type f | sort
-            echo '=== END ==='
-
-            lcov --capture --initial \
-              --directory /gcov_data \
-              --base-directory /src/c \
-              --output-file /gcov_data/baseline.info
+            mkdir -p /gcov_data/html
 
             for test_dir in /gcov_data/coverage/*/; do
               [ -d \"\$test_dir\" ] || continue
               test_name=\$(basename \"\$test_dir\")
               cp /gcov_data/*.gcno \"\$test_dir\"/
-              lcov --capture \
-                --test-name \"\$test_name\" \
-                --directory \"\$test_dir\" \
-                --base-directory /src/c \
-                --output-file /gcov_data/\${test_name}.info
+              /opt/venv/bin/gcovr \
+                --gcov-executable arm-linux-gnueabihf-gcov \
+                --root /src/c \
+                --object-directory \"\$test_dir\" \
+                --json /gcov_data/\${test_name}.json \
+                --print-summary
             done
 
-            merged_args='--add-tracefile /gcov_data/baseline.info'
-            for f in /gcov_data/*.info; do
-              [ \"\$f\" = '/gcov_data/baseline.info' ] && continue
-              merged_args=\"\$merged_args --add-tracefile \$f\"
+            add_args=\"\"
+            for f in /gcov_data/*.json; do
+              add_args=\"\$add_args --add-tracefile \$f\"
             done
-            lcov \$merged_args --output-file /gcov_data/coverage.info
 
-            lcov --list /gcov_data/coverage.info
-
-            genhtml_args=\"/gcov_data/baseline.info\"
-            for f in /gcov_data/*.info; do
-              [ \"\$f\" = '/gcov_data/baseline.info' ] && continue
-              [ \"\$f\" = '/gcov_data/coverage.info' ] && continue
-              genhtml_args=\"\$genhtml_args \$f\"
-            done
-            genhtml \$genhtml_args \
-              --output-directory /gcov_data/html \
-              --title 'C Coverage Report' \
-              --show-details"
-        cp "$OUTPUT_DIR"/coverage.info ./coverage/c/ || true
+            /opt/venv/bin/gcovr \
+              --gcov-executable arm-linux-gnueabihf-gcov \
+              --root /src/c \
+              \$add_args \
+              --html-details /gcov_data/html/index.html \
+              --html-title 'C Coverage Report' \
+              --print-summary"
+        true
       env:
         OUTPUT_DIR: ${{ inputs.output_dir }}
         CONTAINER_IMAGE: ${{ inputs.container_image }}
@@ -218,6 +205,7 @@ runs:
       with:
         name: c-coverage-html
         path: bin/html/
+
         if-no-files-found: ignore
 
     # =========================
