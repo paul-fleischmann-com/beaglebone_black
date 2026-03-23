@@ -128,7 +128,8 @@ runs:
           for f in *; do
             [ -f "\$f" ] || continue
             echo "--- Running \$f ---"
-            ./\$f || exit 1
+            ./\$f 2>&1 | tee logs/\${f}.log
+            [ \${PIPESTATUS[0]} -eq 0 ] || exit 1
           done
         EOF
 
