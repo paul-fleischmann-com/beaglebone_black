@@ -5,27 +5,34 @@ import os
 
 # Liste der Binaries, die getestet werden sollen
 BINARIES = [
-    {"name": "bme260_main", "path": "/output/bme260_main"},
-    {"name": "rust_app", "path": "/output/rust_app"},
-    {"name": "go_app", "path": "/output/go_app"}
+    {"name": "bme260_main", "path": "/output/bme260_main","log": "/logs/c.log"},
+    {"name": "rust_app", "path": "/output/rust_app","log": "/logs/rust.lo"},
+    {"name": "go_app", "path": "/output/go_app","log": "/logs/go.log"}
 ]
+
 
 def run_binary(binary):
     """Führt ein Binary aus und prüft Ausgabe und Exitcode."""
     path = binary["path"]
     name = binary["name"]
-    
+    log  = binary["log"]
+
     if not os.path.isfile(path):
         print(f"[ERROR] Binary '{name}' nicht gefunden unter {path}")
         return False
 
+    os.makedirs(os.path.dirname(log), exist_ok=True)
+
     try:
         result = subprocess.run(
             [path],
-            capture_output=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
             text=True,
             check=True
         )
+        with open(log, "w") as f:
+            f.write(result.stdout)
         print(f"[OK] {name} ausgeführt:")
         print("=== STDOUT ===")
         print(result.stdout.strip())
@@ -35,6 +42,8 @@ def run_binary(binary):
         return True
 
     except subprocess.CalledProcessError as e:
+        with open(log, "w") as f:
+            f.write(e.stdout)
         print(f"[FAIL] {name} exit code {e.returncode}")
         print("=== STDOUT ===")
         print(e.stdout.strip())
