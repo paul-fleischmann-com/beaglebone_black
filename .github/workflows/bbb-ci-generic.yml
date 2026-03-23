@@ -45,7 +45,6 @@ jobs:
 
             echo "=== Build Go ==="
             GOOS=linux GOARCH=arm GOARM=7 go build -o /output/go_app /src/go/main.go
-            mkdir -p /home/$BBB_USER/bin/logs
             
           test_commands: |
             echo "=== Run Python Tests (host binaries only) ==="

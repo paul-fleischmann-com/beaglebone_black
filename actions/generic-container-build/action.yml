@@ -121,6 +121,7 @@ runs:
 
         # Execute
         ssh -o StrictHostKeyChecking=no $BBB_USER@$BBB_HOST <<EOF
+          mkdir -p /home/$BBB_USER/bin/logs
           cd /home/$BBB_USER/bin
           chmod +x *
           echo "Running binaries on BBB..."
@@ -145,7 +146,7 @@ runs:
       run: |
         echo "=== FETCH LOGS ==="
         mkdir -p logs
-        scp -o StrictHostKeyChecking=no -r $BBB_USER@$BBB_HOST:/home/$BBB_USER/bin/logs/* ./logs/
+        scp -o StrictHostKeyChecking=no -r $BBB_USER@$BBB_HOST:/home/$BBB_USER/bin/logs/* ./logs/ || true
       env:
         BBB_HOST: ${{ inputs.bbb_host }}
         BBB_USER: ${{ inputs.bbb_user }}
