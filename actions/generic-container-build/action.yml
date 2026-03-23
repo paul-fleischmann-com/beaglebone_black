@@ -167,7 +167,7 @@ runs:
       shell: bash
       run: |
         lcov --capture \
-          --gcov-tool arm-linux-gnueabihf-gcov \
+          --gcov-tool arm-linux-gnueabihf-gcov-12 \
           --directory ./coverage/c \
           --output-file ./coverage/c/coverage.info \
           --ignore-errors empty,empty,gcov,version,version || true
