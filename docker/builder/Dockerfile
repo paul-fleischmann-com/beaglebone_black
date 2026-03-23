@@ -2,7 +2,8 @@
 # BBB Cross-Compile & Test Builder Container
 # Supports C, Rust, Go, Python
 # =============================================
-FROM debian:12-slim
+# previous : debian:12-slim
+FROM debian:bookworm 
 
 # ----------------------------
 # Install basic packages
