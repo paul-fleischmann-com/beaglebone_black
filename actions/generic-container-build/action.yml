@@ -126,6 +126,7 @@ runs:
           chmod +x *
           echo "Running binaries on BBB..."
           for f in *; do
+            [ -f "\$f" ] || continue
             echo "--- Running \$f ---"
             ./\$f || exit 1
           done
