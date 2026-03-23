@@ -31,16 +31,20 @@ jobs:
             echo "=== Build C ==="
             echo "=== Build lib ==="
             arm-linux-gnueabihf-gcc -shared -fPIC \
+              --coverage \
               -o /output/libhardware.so \
               $(ls /src/c/src/*.c | grep -v main.c) \
               -I /src/c/include -lm
+            cp /src/c/src/*.gcno /output/
 
             echo "=== Build executable ==="
             arm-linux-gnueabihf-gcc \
+              --coverage \
               -o /output/bme280_main \
               /src/c/src/main.c \
               -I /src/c/include \
               -L /output -lhardware -lm
+            cp /src/c/src/main.gcno /output/
 
             echo "=== Build Rust ==="
             cargo build \
@@ -55,6 +59,8 @@ jobs:
             
           test_commands: |
             echo "=== Run Python Tests (host binaries only) ==="
-            /opt/venv/bin/python /tests/run_tests.py
+            /opt/venv/bin/coverage run --source=/tests /tests/run_tests.py
+            /opt/venv/bin/coverage report -m
 
-     
+
+

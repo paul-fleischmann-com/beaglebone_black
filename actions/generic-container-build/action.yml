@@ -122,6 +122,7 @@ runs:
 
         # Execute
         ssh -o StrictHostKeyChecking=no $BBB_USER@$BBB_HOST <<EOF
+          rm -rf /home/$BBB_USER/bin/logs
           mkdir -p /home/$BBB_USER/bin/logs
           chmod +x /home/$BBB_USER/bin/*
           python3 /home/$BBB_USER/run_tests.py \
@@ -146,9 +147,35 @@ runs:
         echo "=== FETCH LOGS ==="
         mkdir -p logs
         scp -o StrictHostKeyChecking=no -r $BBB_USER@$BBB_HOST:/home/$BBB_USER/bin/logs/* ./logs/ || true
+
+        echo "=== FETCH GCDA (C coverage) ==="
+        mkdir -p coverage/c
+        scp -o StrictHostKeyChecking=no $BBB_USER@$BBB_HOST:/home/$BBB_USER/bin/*.gcda ./coverage/c/ || true
+        cp $OUTPUT_DIR/*.gcno ./coverage/c/ || true
       env:
         BBB_HOST: ${{ inputs.bbb_host }}
         BBB_USER: ${{ inputs.bbb_user }}
+
+    # =========================
+    # C COVERAGE REPORT
+    # =========================
+    - name: C Coverage Report
+      if: ${{ env.ARCH == 'ARM' && inputs.bbb_host != '' }}
+      shell: bash
+      run: |
+        lcov --capture \
+          --directory ./coverage/c \
+          --base-directory ./project/c/src \
+          --output-file ./coverage/c/coverage.info || true
+        lcov --list ./coverage/c/coverage.info || true
+
+    - name: Upload C Coverage
+      if: ${{ env.ARCH == 'ARM' && inputs.bbb_host != '' }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: c-coverage
+        path: coverage/c/coverage.info
+        if-no-files-found: ignore
 
     # =========================
     # UPLOAD LOGS
