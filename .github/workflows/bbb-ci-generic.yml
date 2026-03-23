@@ -29,11 +29,18 @@ jobs:
             set -e
             mkdir -p /output
             echo "=== Build C ==="
-            arm-linux-gnueabihf-gcc \
-              -o /output/bme260_main \
-              /src/c/src/main.c \
-              /src/c/src/bme260.c \
+            echo "=== Build lib ==="
+            arm-linux-gnueabihf-gcc -shared -fPIC \
+              -o /output/libhardware.so \
+              $(ls /src/c/src/*.c | grep -v main.c) \
               -I /src/c/include -lm
+
+            echo "=== Build executable ==="
+            arm-linux-gnueabihf-gcc \
+              -o /output/bme280_main \
+              /src/c/src/main.c \
+              -I /src/c/include \
+              -L /output -lhardware -lm
 
             echo "=== Build Rust ==="
             cargo build \

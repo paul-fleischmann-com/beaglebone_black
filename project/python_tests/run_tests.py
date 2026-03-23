@@ -5,7 +5,7 @@ import os
 
 # Liste der Binaries, die getestet werden sollen
 BINARIES = [
-    {"name": "bme260_main", "path": "/output/bme260_main","log": "/logs/c.log"},
+    {"name": "bme280_main", "path": "/output/bme280_main","log": "/logs/c.log"},
     {"name": "rust_app", "path": "/output/rust_app","log": "/logs/rust.lo"},
     {"name": "go_app", "path": "/output/go_app","log": "/logs/go.log"}
 ]
