@@ -1,1 +1,1 @@
-fn main() { println!("BME260 Rust dummy binary running"); }
+fn main() { println!("BME280 Rust dummy binary running"); }

@@ -1,3 +1,3 @@
-#include "bme260.h"
+#include "bme280.h"
 #include <stdio.h>
-int main() { printf("BME260 C dummy binary running\n"); return 0; }
+int main() { printf("BME280 C dummy binary running\n"); return 0; }
