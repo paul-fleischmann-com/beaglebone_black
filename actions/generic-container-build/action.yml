@@ -127,6 +127,7 @@ runs:
           echo "Running binaries on BBB..."
           for f in *; do
             [ -f "\$f" ] || continue
+            [[ "\$f" == *.so ]] && continue
             echo "--- Running \$f ---"
             ./\$f 2>&1 | tee logs/\${f}.log
             [ \${PIPESTATUS[0]} -eq 0 ] || exit 1
