@@ -35,7 +35,7 @@ jobs:
               -o /output/libhardware.so \
               $(ls /src/c/src/*.c | grep -v main.c) \
               -I /src/c/include -lm
-            cp /src/c/src/*.gcno /output/
+            cp *.gcno /output/
 
             echo "=== Build executable ==="
             arm-linux-gnueabihf-gcc \
@@ -44,7 +44,7 @@ jobs:
               /src/c/src/main.c \
               -I /src/c/include \
               -L /output -lhardware -lm
-            cp /src/c/src/main.gcno /output/
+            cp *.gcno /output/
 
             echo "=== Build Rust ==="
             cargo build \
