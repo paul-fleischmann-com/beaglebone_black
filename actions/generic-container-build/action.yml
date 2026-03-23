@@ -182,7 +182,11 @@ runs:
             lcov --add-tracefile /gcov_data/baseline.info \
               --add-tracefile /gcov_data/coverage.info \
               --output-file /gcov_data/coverage.info && \
-            lcov --list /gcov_data/coverage.info"
+            lcov --list /gcov_data/coverage.info && \
+            genhtml /gcov_data/coverage.info \
+              --output-directory /gcov_data/html \
+              --title 'C Coverage Report' \
+              --show-details"
         cp "$OUTPUT_DIR"/coverage.info ./coverage/c/ || true
       env:
         OUTPUT_DIR: ${{ inputs.output_dir }}
@@ -192,8 +196,8 @@ runs:
       if: ${{ env.ARCH == 'ARM' && inputs.bbb_host != '' }}
       uses: actions/upload-artifact@v4
       with:
-        name: c-coverage
-        path: coverage/c/coverage.info
+        name: c-coverage-html
+        path: bin/html/
         if-no-files-found: ignore
 
     # =========================
