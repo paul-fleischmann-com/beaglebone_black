@@ -125,12 +125,10 @@ runs:
           rm -rf /home/$BBB_USER/bin/logs
           mkdir -p /home/$BBB_USER/bin/logs
           chmod +x /home/$BBB_USER/bin/*
-          LD_LIBRARY_PATH=/home/$BBB_USER/bin \
-          GCOV_PREFIX=/home/$BBB_USER/bin/coverage \
-          GCOV_PREFIX_STRIP=100 \
           python3 /home/$BBB_USER/run_tests.py \
             --bin-dir /home/$BBB_USER/bin \
-            --log-dir /home/$BBB_USER/bin/logs
+            --log-dir /home/$BBB_USER/bin/logs \
+            --cov-dir /home/$BBB_USER/bin/coverage
         EOF
 
       env:
@@ -152,11 +150,10 @@ runs:
         scp -o StrictHostKeyChecking=no -r $BBB_USER@$BBB_HOST:/home/$BBB_USER/bin/logs/* ./logs/ || true
 
         echo "=== FETCH GCDA (C coverage) ==="
-        mkdir -p coverage/c
-        scp -o StrictHostKeyChecking=no -r $BBB_USER@$BBB_HOST:/home/$BBB_USER/bin/coverage/ ./coverage/c/ || true
-        mkdir -p ./coverage/c/coverage
-        find . -maxdepth 2 -name "*.gcno" -exec cp {} ./coverage/c/coverage/ \; || true
+        scp -o StrictHostKeyChecking=no -r $BBB_USER@$BBB_HOST:/home/$BBB_USER/bin/coverage/ "$OUTPUT_DIR"/ || true
+        find . -maxdepth 2 -name "*.gcno" -exec cp {} "$OUTPUT_DIR"/ \; || true
       env:
+        OUTPUT_DIR: ${{ inputs.output_dir }}
         BBB_HOST: ${{ inputs.bbb_host }}
         BBB_USER: ${{ inputs.bbb_user }}
 
@@ -167,23 +164,36 @@ runs:
       if: ${{ env.ARCH == 'ARM' && inputs.bbb_host != '' }}
       shell: bash
       run: |
-        cp ./coverage/c/coverage/*.gcda "$OUTPUT_DIR"/ || true
         podman run --rm \
           -v "$(pwd)/$OUTPUT_DIR":/gcov_data \
           -v "$(pwd)/project/c":/src/c \
           "$CONTAINER_IMAGE" \
-          -c "lcov --capture --initial \
-            --directory /gcov_data \
-            --base-directory /src/c \
-            --output-file /gcov_data/baseline.info && \
-            lcov --capture \
-            --directory /gcov_data \
-            --base-directory /src/c \
-            --output-file /gcov_data/coverage.info && \
-            lcov --add-tracefile /gcov_data/baseline.info \
-              --add-tracefile /gcov_data/coverage.info \
-              --output-file /gcov_data/coverage.info && \
-            lcov --list /gcov_data/coverage.info && \
+          -c "set -e
+            lcov --capture --initial \
+              --directory /gcov_data \
+              --base-directory /src/c \
+              --output-file /gcov_data/baseline.info
+
+            for test_dir in /gcov_data/coverage/*/; do
+              [ -d \"\$test_dir\" ] || continue
+              test_name=\$(basename \"\$test_dir\")
+              cp \"\$test_dir\"*.gcda /gcov_data/ 2>/dev/null || true
+              lcov --capture \
+                --test-name \"\$test_name\" \
+                --directory /gcov_data \
+                --base-directory /src/c \
+                --output-file /gcov_data/\${test_name}.info
+              rm -f /gcov_data/*.gcda
+            done
+
+            merged_args='--add-tracefile /gcov_data/baseline.info'
+            for f in /gcov_data/*.info; do
+              [ \"\$f\" = '/gcov_data/baseline.info' ] && continue
+              merged_args=\"\$merged_args --add-tracefile \$f\"
+            done
+            lcov \$merged_args --output-file /gcov_data/coverage.info
+
+            lcov --list /gcov_data/coverage.info
             genhtml /gcov_data/coverage.info \
               --output-directory /gcov_data/html \
               --title 'C Coverage Report' \
