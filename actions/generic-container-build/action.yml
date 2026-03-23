@@ -110,8 +110,9 @@ runs:
         echo "=== DEPLOY + TEST (BBB) ==="
 
         mkdir -p ~/.ssh
-        printf '%s\n' "$BBB_SSH_KEY" > ~/.ssh/id_rsa
+        printf '%s\n' "$BBB_SSH_KEY" | tr -d '\r' > ~/.ssh/id_rsa
         chmod 600 ~/.ssh/id_rsa
+        ssh-keygen -l -f ~/.ssh/id_rsa
 
         # Deploy
         scp -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa $OUTPUT_DIR/* $BBB_USER@$BBB_HOST:/home/$BBB_USER/bin/
