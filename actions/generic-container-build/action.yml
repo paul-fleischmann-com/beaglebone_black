@@ -150,8 +150,7 @@ runs:
         scp -o StrictHostKeyChecking=no -r $BBB_USER@$BBB_HOST:/home/$BBB_USER/bin/logs/* ./logs/ || true
 
         echo "=== FETCH GCDA (C coverage) ==="
-        scp -o StrictHostKeyChecking=no -r $BBB_USER@$BBB_HOST:/home/$BBB_USER/bin/coverage/ "$OUTPUT_DIR"/ || true
-        find . -maxdepth 2 -name "*.gcno" -exec cp {} "$OUTPUT_DIR"/ \; || true
+        scp -o StrictHostKeyChecking=no -r $BBB_USER@$BBB_HOST:/home/$BBB_USER/bin/coverage "$OUTPUT_DIR"/ || true
       env:
         OUTPUT_DIR: ${{ inputs.output_dir }}
         BBB_HOST: ${{ inputs.bbb_host }}
