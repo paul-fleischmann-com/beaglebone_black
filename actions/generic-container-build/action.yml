@@ -177,13 +177,12 @@ runs:
             for test_dir in /gcov_data/coverage/*/; do
               [ -d \"\$test_dir\" ] || continue
               test_name=\$(basename \"\$test_dir\")
-              cp \"\$test_dir\"*.gcda /gcov_data/ 2>/dev/null || true
               lcov --capture \
                 --test-name \"\$test_name\" \
-                --directory /gcov_data \
+                --directory \"\$test_dir\" \
+                --build-directory /gcov_data \
                 --base-directory /src/c \
                 --output-file /gcov_data/\${test_name}.info
-              rm -f /gcov_data/*.gcda
             done
 
             merged_args='--add-tracefile /gcov_data/baseline.info'
