@@ -170,29 +170,34 @@ runs:
           -c "set -e
             mkdir -p /gcov_data/html
 
+          -c "set -e
+            mkdir -p /gcov_data/html/combined
+
+            add_args=\"\"
             for test_dir in /gcov_data/coverage/*/; do
               [ -d \"\$test_dir\" ] || continue
               test_name=\$(basename \"\$test_dir\")
               cp /gcov_data/*.gcno \"\$test_dir\"/
+
+              mkdir -p /gcov_data/html/\$test_name
               /opt/venv/bin/gcovr \
                 --gcov-executable arm-linux-gnueabihf-gcov \
                 --root /src/c \
                 --object-directory \"\$test_dir\" \
+                --html-details /gcov_data/html/\${test_name}/index.html \
+                --html-title \"Coverage: \$test_name\" \
                 --json /gcov_data/\${test_name}.json \
                 --print-summary
-            done
 
-            add_args=\"\"
-            for f in /gcov_data/*.json; do
-              add_args=\"\$add_args --add-tracefile \$f\"
+              add_args=\"\$add_args --add-tracefile /gcov_data/\${test_name}.json\"
             done
 
             /opt/venv/bin/gcovr \
               --gcov-executable arm-linux-gnueabihf-gcov \
               --root /src/c \
               \$add_args \
-              --html-details /gcov_data/html/index.html \
-              --html-title 'C Coverage Report' \
+              --html-details /gcov_data/html/combined/index.html \
+              --html-title 'C Coverage — All Tests' \
               --print-summary"
         true
       env:
