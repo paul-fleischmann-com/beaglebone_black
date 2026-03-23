@@ -166,10 +166,11 @@ runs:
       if: ${{ env.ARCH == 'ARM' && inputs.bbb_host != '' }}
       shell: bash
       run: |
+        mkdir -p /src/c
+        ln -sfn $(pwd)/project/c /src/c
         lcov --capture \
           --gcov-tool arm-linux-gnueabihf-gcov \
           --directory ./coverage/c \
-          --base-directory ./project/c/src \
           --output-file ./coverage/c/coverage.info \
           --ignore-errors empty,empty,gcov,version,version || true
         lcov --list ./coverage/c/coverage.info || true
