@@ -12,6 +12,8 @@
 } while(0)
 
 
+static int test_bme280_init_no_hardware(void);
+
 int main(void) {
     printf("BME280 C dummy binary running\n")
     printf("c-lib Tests (CI-Modus: Hardware-Fehlerpfade)\n");
