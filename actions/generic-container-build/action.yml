@@ -166,12 +166,20 @@ runs:
       if: ${{ env.ARCH == 'ARM' && inputs.bbb_host != '' }}
       shell: bash
       run: |
-        lcov --capture \
-          --gcov-tool arm-linux-gnueabihf-gcov-12 \
-          --directory ./coverage/c \
-          --output-file ./coverage/c/coverage.info \
-          --ignore-errors empty,empty,gcov,version,version || true
-        lcov --list ./coverage/c/coverage.info || true
+        cp ./coverage/c/coverage/*.gcda "$OUTPUT_DIR"/ || true
+        podman run --rm \
+          -v "$(pwd)/$OUTPUT_DIR":/gcov_data \
+          -v "$(pwd)/project/c":/src/c \
+          "$CONTAINER_IMAGE" \
+          bash -c "lcov --capture \
+            --directory /gcov_data \
+            --base-directory /src/c/src \
+            --output-file /gcov_data/coverage.info && \
+            lcov --list /gcov_data/coverage.info"
+        cp "$OUTPUT_DIR"/coverage.info ./coverage/c/ || true
+      env:
+        OUTPUT_DIR: ${{ inputs.output_dir }}
+        CONTAINER_IMAGE: ${{ inputs.container_image }}
 
     - name: Upload C Coverage
       if: ${{ env.ARCH == 'ARM' && inputs.bbb_host != '' }}
