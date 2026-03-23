@@ -125,6 +125,8 @@ runs:
           rm -rf /home/$BBB_USER/bin/logs
           mkdir -p /home/$BBB_USER/bin/logs
           chmod +x /home/$BBB_USER/bin/*
+          GCOV_PREFIX=/home/$BBB_USER/bin/coverage \
+          GCOV_PREFIX_STRIP=100 \
           python3 /home/$BBB_USER/run_tests.py \
             --bin-dir /home/$BBB_USER/bin \
             --log-dir /home/$BBB_USER/bin/logs
@@ -150,7 +152,7 @@ runs:
 
         echo "=== FETCH GCDA (C coverage) ==="
         mkdir -p coverage/c
-        scp -o StrictHostKeyChecking=no $BBB_USER@$BBB_HOST:/home/$BBB_USER/bin/*.gcda ./coverage/c/ || true
+        scp -o StrictHostKeyChecking=no -r $BBB_USER@$BBB_HOST:/home/$BBB_USER/bin/coverage/ ./coverage/c/ || true
         cp $OUTPUT_DIR/*.gcno ./coverage/c/ || true
       env:
         BBB_HOST: ${{ inputs.bbb_host }}
@@ -166,7 +168,8 @@ runs:
         lcov --capture \
           --directory ./coverage/c \
           --base-directory ./project/c/src \
-          --output-file ./coverage/c/coverage.info || true
+          --output-file ./coverage/c/coverage.info \
+          --ignore-errors empty,gcov || true
         lcov --list ./coverage/c/coverage.info || true
 
     - name: Upload C Coverage
