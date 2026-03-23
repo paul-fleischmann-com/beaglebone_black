@@ -110,7 +110,7 @@ runs:
         echo "=== DEPLOY + TEST (BBB) ==="
 
         mkdir -p ~/.ssh
-        printf '%s\n' "$BBB_SSH_KEY" | tr -d '\r' > ~/.ssh/id_rsa
+        printf '%s' "$BBB_SSH_KEY" | base64 -d > ~/.ssh/id_rsa
         chmod 600 ~/.ssh/id_rsa
 
         eval $(ssh-agent -s)
