@@ -125,6 +125,7 @@ runs:
           rm -rf /home/$BBB_USER/bin/logs
           mkdir -p /home/$BBB_USER/bin/logs
           chmod +x /home/$BBB_USER/bin/*
+          LD_LIBRARY_PATH=/home/$BBB_USER/bin \
           GCOV_PREFIX=/home/$BBB_USER/bin/coverage \
           GCOV_PREFIX_STRIP=100 \
           python3 /home/$BBB_USER/run_tests.py \
