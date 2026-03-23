@@ -12,6 +12,7 @@ RUN apt-get update && apt-get install -y \
     cmake \
     curl \
     git \
+    bash \
     ca-certificates \
     pkg-config \
     python3 \
@@ -23,6 +24,8 @@ RUN apt-get update && apt-get install -y \
     libc6-dev-armhf-cross \
     golang \
     && rm -rf /var/lib/apt/lists/*
+
+    
 
 ENV PATH="/usr/local/go/bin:${PATH}"
 # ----------------------------
