@@ -171,7 +171,7 @@ runs:
           -v "$(pwd)/$OUTPUT_DIR":/gcov_data \
           -v "$(pwd)/project/c":/src/c \
           "$CONTAINER_IMAGE" \
-          bash -c "lcov --capture \
+          -c "lcov --capture \
             --directory /gcov_data \
             --base-directory /src/c/src \
             --output-file /gcov_data/coverage.info && \
