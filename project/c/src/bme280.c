@@ -41,7 +41,7 @@ static int read_calibration(bme280_dev_t *dev) {
         if (i2c_read_reg (dev->fd,0xA1,h1,1) >= 0) {
            c->H1=h1[0];
            uint8_t hb[7] = {0}; 
-          if ( i2c_read_reg(dev->fd,0xE1,hb,7) >= 0) {
+           if ( i2c_read_reg(dev->fd,0xE1,hb,7) >= 0) {
             c->H2=pack2bytesInInt16(hb[0],hb[1]);
             c->H3=hb[2];
             c->H4=((int16_t)hb[3]<<4)|((int16_t)(hb[4]&0x0F));
@@ -98,6 +98,7 @@ int bme280_init(bme280_dev_t *dev) {
     usleep(100000); 
     return 0;
 }
+
 static double comp_temp(bme280_dev_t *dev, int32_t raw) {
     bme280_calib_t *c=&dev->calib;
     double v1=((double)raw/16384.0-(double)c->T1/1024.0)*(double)c->T2;
@@ -121,6 +122,7 @@ static double comp_press(bme280_dev_t *dev, int32_t raw) {
     v1=(double)c->P9*p*p/2147483648.0; v2=p*(double)c->P8/32768.0;
     return (p+(v1+v2+(double)c->P7)/16.0)/100.0;
 }
+
 static double comp_hum(bme280_dev_t *dev, int32_t raw) {
     bme280_calib_t *c=&dev->calib;
     double h=(double)dev->t_fine-76800.0;
@@ -136,6 +138,7 @@ static double comp_hum(bme280_dev_t *dev, int32_t raw) {
     }
     return h;
 }
+
 int bme280_read(bme280_dev_t *dev, bme280_data_t *out) {
     uint8_t raw[8];
     if(i2c_read_reg(dev->fd,0xF7,raw,8)<0){
@@ -153,7 +156,8 @@ int bme280_read(bme280_dev_t *dev, bme280_data_t *out) {
 }
 
 void bme280_close(bme280_dev_t *dev) { 
-    if(dev->fd>=0){close(dev->fd);
-        dev->fd=-1;} 
-    }
+    if(dev->fd>=0){
+        close(dev->fd);
+        dev->fd=-1;
+    } 
 }
