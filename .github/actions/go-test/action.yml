@@ -106,7 +106,7 @@ runs:
     - name: Convert JUnit XML to SonarQube Generic format
       shell: bash
       run: |
-        python3 "$GITHUB_ACTION_PATH/../../../scripts/junit_to_sonar_generic.py" \
+        python3 "$GITHUB_WORKSPACE/scripts/junit_to_sonar_generic.py" \
           reports/go-tests-junit.xml \
           reports/go-tests-sonar.xml
 
@@ -121,7 +121,7 @@ runs:
       if: inputs.upload-sarif == 'true'
       shell: bash
       run: |
-        python3 "$GITHUB_ACTION_PATH/../../../scripts/junit_to_sarif.py" \
+        python3 "$GITHUB_WORKSPACE/scripts/junit_to_sarif.py" \
           reports/go-tests-junit.xml reports/go-tests.sarif go-tests
 
     - name: Upload Go Test SARIF to GitHub Code Scanning
