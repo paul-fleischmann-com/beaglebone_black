@@ -75,10 +75,10 @@ runs:
     - name: Go Unit Tests
       shell: bash
       run: |
-        mkdir -p reports
+        mkdir -p "$GITHUB_WORKSPACE/reports"
         cd ${{ inputs.working-directory }} && gotestsum \
-          --junitfile ../reports/go-tests-junit.xml \
-          --jsonfile  ../reports/go-tests.json \
+          --junitfile "$GITHUB_WORKSPACE/reports/go-tests-junit.xml" \
+          --jsonfile  "$GITHUB_WORKSPACE/reports/go-tests.json" \
           -- \
           -race -count=3 \
           -coverprofile=coverage.out \
@@ -99,9 +99,9 @@ runs:
     - name: Convert coverage to Cobertura XML
       shell: bash
       run: |
-        cp ${{ inputs.working-directory }}/coverage.out reports/go-coverage.out
+        cp ${{ inputs.working-directory }}/coverage.out "$GITHUB_WORKSPACE/reports/go-coverage.out"
         cd ${{ inputs.working-directory }} && \
-          gocover-cobertura < coverage.out > ../reports/go-coverage.xml
+          gocover-cobertura < coverage.out > "$GITHUB_WORKSPACE/reports/go-coverage.xml"
 
     - name: Convert JUnit XML to SonarQube Generic format
       shell: bash
@@ -122,7 +122,8 @@ runs:
       shell: bash
       run: |
         python3 "$GITHUB_ACTION_PATH/../../../scripts/junit_to_sarif.py" \
-          reports/go-tests-junit.xml reports/go-tests.sarif go-tests
+          "$GITHUB_WORKSPACE/reports/go-tests-junit.xml" \
+          "$GITHUB_WORKSPACE/reports/go-tests.sarif" go-tests
 
     - name: Upload Go Test SARIF to GitHub Code Scanning
       if: inputs.upload-sarif == 'true'
