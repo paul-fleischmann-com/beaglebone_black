@@ -185,6 +185,20 @@ runs:
 
     # All SARIF and coverage artifacts are now wired up (#3–#9 complete).
 
+    # ── Placeholder-Dateien für optionale BBB-Reports ───────────────────────
+    - name: Create missing BBB report placeholders
+      shell: bash
+      run: |
+        mkdir -p bin reports
+        if [ ! -f bin/sonar-coverage.xml ]; then
+          printf '<?xml version="1.0" ?>\n<coverage version="1">\n</coverage>\n' \
+            > bin/sonar-coverage.xml
+        fi
+        if [ ! -f bin/coverage.sarif ]; then
+          printf '{"version":"2.1.0","runs":[{"tool":{"driver":{"name":"bbb-coverage","rules":[]}},"results":[]}]}\n' \
+            > bin/coverage.sarif
+        fi
+
     # ── SonarCloud Scan ─────────────────────────────────────────────────────
     - name: SonarCloud Scan
       id: sonar
