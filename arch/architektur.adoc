@@ -589,6 +589,17 @@ embedded/
 │       ├── hal/              # HAL Interface + Drivers
 │       ├── api/              # HTTP Handler
 │       └── models/           # Datenmodelle
+│
+├── project/
+|   ├── c/                     # C Hardware Library
+│   |   ├── include/                # Header: bme280.h gpio.h uart.h spi.h
+│   |   ├── src/                    # Implementierungen
+│   |   └── Makefile
+|   ├── rust-lib/                   # Rust Hardware Library
+|   │   ├── src/                    # lib.rs bme280.rs gpio.rs uart.rs spi.rs
+|   │   └── Cargo.toml
+|   └── go
+|
 ├── tools/
 │   ├── cli/                  # bbcli (Cobra)
 │   ├── tui/                  # bbtui (BubbleTea)

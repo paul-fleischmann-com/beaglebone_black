@@ -6,7 +6,7 @@ Follow these steps in order:
 
 1. **C library** (`c-lib/include/` + `c-lib/src/`): Add the header and implementation for the new hardware interface.
 
-2. **Rust library** (`rust-lib/src/`): Add a new module (e.g. `newfeature.rs`) and export the functions via FFI in `lib.rs` using `#[no_mangle] pub extern "C"`.
+2. **Rust library** (`project/rust-lib/src/`): Add a new module (e.g. `newfeature.rs`) and export the functions via FFI in `lib.rs` using `#[no_mangle] pub extern "C"`.
 
 3. **HAL interface** (`go-api/pkg/hal/interface.go`): Add the new methods to the `HardwareDriver` interface.
 

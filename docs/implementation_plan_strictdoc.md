@@ -76,7 +76,7 @@ Anforderungen werden mit folgenden Dateien verknüpft:
 |-----------------|-------------------|
 | Systemanforderungen | `go-api/cmd/main.go`, `go-api/pkg/hal/interface.go` |
 | Softwareanforderungen | `go-api/pkg/hal/factory.go`, `go-api/pkg/hal/mock/driver.go` |
-| Treiberanforderungen | `c-lib/include/`, `rust-lib/src/lib.rs`, `go-api/pkg/hal/hal_test.go` |
+| Treiberanforderungen | `c-lib/include/`, `project/rust-lib/src/lib.rs`, `go-api/pkg/hal/hal_test.go` |
 
 ### 3.2 Beispiel-Relation (SWR-003 → HAL-Test)
 

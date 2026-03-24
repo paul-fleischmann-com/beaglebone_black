@@ -11,7 +11,7 @@ vendor/
 *.test
 
 # ── Rust ─────────────────────────────────
-rust-lib/target/
+project/rust-lib/target/
 Cargo.lock
 
 # ── C ────────────────────────────────────

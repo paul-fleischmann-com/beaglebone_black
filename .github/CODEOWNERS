@@ -8,7 +8,7 @@
 c-lib/                      @c-hardware-team
 
 # Rust Library
-rust-lib/                   @rust-hardware-team
+project/rust-lib/                   @rust-hardware-team
 
 # Go API + HAL
 go-api/                     @go-api-team

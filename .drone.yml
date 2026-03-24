@@ -14,7 +14,7 @@ name: 1-libraries
 trigger:
   event: [push, pull_request, tag]
   paths:
-    include: [c-lib/**, rust-lib/**, .drone.yml]
+    include: [c-lib/**, project/rust-lib/**, .drone.yml]
 
 steps:
   - name: build-c-lib
@@ -39,8 +39,8 @@ steps:
     commands:
       - cargo install cross cbindgen
       - make rust-lib
-      - cp rust-lib/target/armv7-unknown-linux-musleabihf/release/libhardware_rs.so /build/libs/
-      - cbindgen --config rust-lib/cbindgen.toml --output /build/libs/include/hardware_rs.h
+      - cp project/rust-lib/target/armv7-unknown-linux-musleabihf/release/libhardware_rs.so /build/libs/
+      - cbindgen --config project/rust-lib/cbindgen.toml --output /build/libs/include/hardware_rs.h
 
   - name: test-c-lib
     image: debian:bookworm
@@ -57,7 +57,7 @@ steps:
         path: /usr/local/cargo/registry
     commands:
       - apk add --no-cache musl-dev
-      - cargo test --manifest-path rust-lib/Cargo.toml
+      - cargo test --manifest-path project/rust-lib/Cargo.toml
 
 volumes:
   - name: libs-cache
@@ -78,7 +78,7 @@ name: 2-embedded-sw
 trigger:
   event: [push, pull_request, tag]
   paths:
-    include: [go-api/**, c-lib/**, rust-lib/**, .drone.yml]
+    include: [go-api/**, c-lib/**, project/rust-lib/**, .drone.yml]
 
 depends_on: [1-libraries]
 

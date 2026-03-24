@@ -79,14 +79,14 @@ The `HardwareDriver` interface in `go-api/pkg/hal/interface.go` defines all hard
 | `go-api/pkg/hal/rust/driver.go` | FFI bindings to Rust library |
 | `go-api/pkg/hal/mock/driver.go` | Test mock — no hardware needed |
 | `c-lib/include/` | C headers for all hardware interfaces |
-| `rust-lib/src/lib.rs` | Rust FFI exports |
+| `project/rust-lib/src/lib.rs` | Rust FFI exports |
 | `.drone.yml` | 7 CI/CD pipelines |
 
 ## Dependencies
 
 **Go** (`go-api/go.mod`): `gorilla/mux`, `spf13/cobra`, `spf13/viper`, `charmbracelet/bubbletea`, `fyne.io/fyne/v2`
 
-**Rust** (`rust-lib/Cargo.toml`): `linux-embedded-hal`, `bme280`, `serialport`, `spidev`, `cbindgen`
+**Rust** (`project/rust-lib/Cargo.toml`): `linux-embedded-hal`, `bme280`, `serialport`, `spidev`, `cbindgen`
 
 ## Prerequisites
 

@@ -9,7 +9,7 @@ def create_config():
         include_source_paths=[
             "go-api/",
             "c-lib/",
-            "rust-lib/",
+            "project/rust-lib/",
             "tests/",
             "Makefile",
         ],
