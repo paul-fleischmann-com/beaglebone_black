@@ -24,14 +24,6 @@ jobs:
       security-events: write
       actions: read
     steps:
-      - name: Debug git credential config
-        run: |
-          echo "=== system git config ==="
-          git config --system --list 2>/dev/null || echo "(no system config)"
-          echo "=== global git config ==="
-          git config --global --list 2>/dev/null || echo "(no global config)"
-          echo "=== credential helpers ==="
-          git config --list --show-origin 2>/dev/null | grep -i credential || echo "(none)"
       - uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -60,7 +52,7 @@ jobs:
               -o /output/libhardware.so \
               $(ls /src/c/src/*.c | grep -v main.c) \
               -I /src/c/include -lm
-            find / -name "*.gcno" 2>/dev/null -exec cp {} /output/ \; || true
+            find /src/c -name "*.gcno" -exec cp {} /output/ \; || true
 
             echo "=== Build executable ==="
             arm-linux-gnueabihf-gcc \
@@ -69,7 +61,7 @@ jobs:
               /src/c/test/main.c \
               -I /src/c/include \
               -L /output -lhardware -lm
-            find / -name "*.gcno" 2>/dev/null -exec cp {} /output/ \; || true
+            find /src/c -name "*.gcno" -exec cp {} /output/ \; || true
 
             echo "=== Build Rust ==="
             PKG_CONFIG_ALLOW_CROSS=1 \
@@ -84,11 +76,6 @@ jobs:
 
             echo "=== Build Go ==="
             GOOS=linux GOARCH=arm GOARM=7 go build -o /output/go_app /src/go/main.go
-          unit_test_commands: |
-            echo "=== Run Go Unit Tests ==="
-            cd /src/go-api && CGO_ENABLED=0 gotestsum \
-              --junitfile /output/go-test-results.xml \
-              ./pkg/hal ./pkg/hal/mock ./pkg/hal/config ./pkg/api/...
           test_commands: |
             echo "=== Run Python Tests ==="
             /opt/venv/bin/coverage run --source=/tests /tests/run_tests.py
@@ -237,6 +224,40 @@ jobs:
           goarm:             ${{ matrix.goarm }}
           artifact-name:     ${{ matrix.name }}
 
+  # ── CLI Integration Tests auf BBB ─────────────
+  test-cli-bbb:
+    name: CLI Integration Tests on BBB
+    runs-on: self-hosted
+    needs: [build-cli, build-deploy]
+    steps:
+      - name: Download CLI binary (ARMv7)
+        uses: actions/download-artifact@v6
+        with:
+          name: bbcli-linux-armv7
+          path: bin/
+      - name: Deploy CLI to BBB & run smoke tests
+        env:
+          BBB_HOST: ${{ secrets.BBB_HOST }}
+          BBB_USER: ${{ secrets.BBB_USER }}
+          BBB_SSH_KEY: ${{ secrets.BBB_SSH_KEY }}
+        run: |
+          set -e
+          KEY=$(mktemp)
+          trap "rm -f $KEY" EXIT
+          echo "$BBB_SSH_KEY" > "$KEY"
+          chmod 600 "$KEY"
+          SSH="ssh -i $KEY -o StrictHostKeyChecking=no $BBB_USER@$BBB_HOST"
+          SCP="scp -i $KEY -o StrictHostKeyChecking=no"
+
+          chmod +x bin/bbcli-linux-armv7
+          $SCP bin/bbcli-linux-armv7 $BBB_USER@$BBB_HOST:~/bbcli
+
+          echo "=== Smoke Tests ==="
+          $SSH "~/bbcli --version"
+          $SSH "~/bbcli --help"
+          $SSH "~/bbcli sensor read || true"
+          echo "✅ CLI smoke tests passed"
+
   # ── StrictDoc Requirements Export ────────────
   strictdoc:
     name: StrictDoc Export & Validation
@@ -296,7 +317,7 @@ jobs:
   report:
     name: Test Report
     runs-on: ubuntu-latest
-    needs: [build-deploy, test-go, lint-go, test-web, test-scripts, test-python, build-cli, strictdoc, sonarcloud]
+    needs: [build-deploy, test-go, lint-go, test-web, test-scripts, test-python, build-cli, test-cli-bbb, strictdoc, sonarcloud]
     if: always()
     permissions:
       contents: write
