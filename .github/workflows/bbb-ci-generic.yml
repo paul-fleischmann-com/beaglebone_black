@@ -88,6 +88,7 @@ jobs:
     permissions:
       contents: read
       security-events: write
+      checks: write
     steps:
       - uses: actions/checkout@v4
         with:
@@ -96,7 +97,6 @@ jobs:
         with:
           coverpkg: './pkg/hal/,./pkg/hal/mock/,./pkg/hal/config/'
           test-packages: './pkg/hal/ ./pkg/hal/mock/ ./pkg/hal/config/'
-          codecov-flags: hal-unit-tests
 
   # ── C Coverage ───────────────────────────────
   test-c:
