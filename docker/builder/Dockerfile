@@ -1,7 +1,75 @@
-FROM ubuntu:22.04
-RUN apt-get update && apt-get install -y build-essential \
-    gcc-arm-linux-gnueabihf rustc cargo golang-go python3 \
-    python3-pip make git \
+# =============================================
+# BBB Cross-Compile & Test Builder Container
+# Supports C, Rust, Go, Python
+# =============================================
+# previous : debian:12-slim
+FROM debian:bookworm 
+
+# ----------------------------
+# Install basic packages
+# ----------------------------
+RUN dpkg --add-architecture armhf
+
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    cmake \
+    curl \
+    git \
+    bash \
+    ca-certificates \
+    pkg-config \
+    python3 \
+    python3-pip \
+    python3-setuptools \
+    unzip \
+    gcc-arm-linux-gnueabihf \
+    g++-arm-linux-gnueabihf \
+    libc6-dev-armhf-cross \
+    libudev-dev \
+    libudev-dev:armhf \
+    lcov \
+    golang \
     && rm -rf /var/lib/apt/lists/*
-WORKDIR /src
-CMD ["/bin/bash"]
+
+    
+
+ENV PATH="/usr/local/go/bin:${PATH}"
+# ----------------------------
+# Install Rust + ARM Target
+# ----------------------------
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+ENV PATH="/root/.cargo/bin:${PATH}"
+
+# Add ARMv7 target
+RUN rustup target add armv7-unknown-linux-gnueabihf
+
+# Create Cargo config for cross-linker
+RUN mkdir -p /root/.cargo && \
+    echo '[target.armv7-unknown-linux-gnueabihf]' > /root/.cargo/config.toml && \
+    echo 'linker = "arm-linux-gnueabihf-gcc"' >> /root/.cargo/config.toml
+
+# --- Python Test Tools ---
+# Installiere venv falls noch nicht vorhanden
+RUN apt-get update && apt-get install -y python3-venv python3-pip
+
+# Erstelle venv
+RUN python3 -m venv /opt/venv
+
+# Aktivieren der venv und pytest installieren
+RUN /opt/venv/bin/pip install --upgrade pip && \
+    /opt/venv/bin/pip install pytest coverage gcovr
+
+# PATH anpassen
+ENV PATH="/opt/venv/bin:$PATH"
+
+
+
+# ----------------------------
+# Set working directory
+# ----------------------------
+WORKDIR /workspace
+
+# ----------------------------
+# Entrypoint to allow arbitrary commands
+# ----------------------------
+ENTRYPOINT ["/bin/bash"]

@@ -80,10 +80,6 @@ beaglebone-embedded/
 │   ├── src/                    # Implementierungen
 │   └── Makefile
 │
-├── rust-lib/                   # Rust Hardware Library
-│   ├── src/                    # lib.rs bme280.rs gpio.rs uart.rs spi.rs
-│   └── Cargo.toml
-│
 ├── go-api/                     # Go REST API Server
 │   ├── cmd/main.go             # Einstiegspunkt (:5000)
 │   └── pkg/
@@ -97,6 +93,16 @@ beaglebone-embedded/
 │       │   └── config/         # Konfiguration
 │       └── api/                # HTTP Handler
 │
+├── project/
+|   ├── c/                     # C Hardware Library
+│   |   ├── include/                # Header: bme280.h gpio.h uart.h spi.h
+│   |   ├── src/                    # Implementierungen
+│   |   └── Makefile
+|   ├── rust-lib/                   # Rust Hardware Library
+|   │   ├── src/                    # lib.rs bme280.rs gpio.rs uart.rs spi.rs
+|   │   └── Cargo.toml
+|   └── go
+|
 ├── tools/
 │   ├── cli/                    # bbcli (Cobra CLI)
 │   ├── tui/                    # bbtui (BubbleTea TUI)

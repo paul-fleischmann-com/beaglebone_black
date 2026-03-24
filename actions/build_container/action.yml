@@ -1,0 +1,44 @@
+name: "Build Container Image"
+description: "Builds a container image using podman"
+
+inputs:
+  image_name:
+    description: "Name of the image (e.g. generic-builder)"
+    required: true
+
+  dockerfile:
+    description: "Path to Dockerfile"
+    required: true
+
+  context:
+    description: "Build context directory"
+    required: true
+
+  additional_args:
+    description: "Optional extra podman build args"
+    required: false
+    default: ""
+
+runs:
+  using: "composite"
+  steps:
+
+    - name: Debug inputs
+      shell: bash
+      run: |
+        echo "Image: ${{ inputs.image_name }}"
+        echo "Dockerfile: ${{ inputs.dockerfile }}"
+        echo "Context: ${{ inputs.context }}"
+        echo "Extra args: ${{ inputs.additional_args }}"
+
+    - name: Build container image
+      shell: bash
+      run: |
+        set -e
+        set -x
+
+        podman build \
+          -t "${{ inputs.image_name }}" \
+          -f "${{ inputs.dockerfile }}" \
+          ${{ inputs.additional_args }} \
+          "${{ inputs.context }}"

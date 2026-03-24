@@ -1,0 +1,285 @@
+name: Smart Generic Container Build
+description: Build C/Rust/Go and intelligently run tests (container or BBB)
+
+inputs:
+  source_dir:
+    description: Source code directory (host path)
+    required: true
+  test_dir:
+    description: Test code directory (host path)
+    required: true
+  output_dir:
+    description: Output directory for binaries (host path)
+    required: true
+  container_image:
+    description: Container image to use for building
+    required: true
+  build_commands:
+     description: Multi-line shell commands to build binaries
+     required: true
+  test_commands:
+    description: Multi-line shell commands to run tests
+    required: false
+    default: ""
+
+  # OPTIONAL: BBB Deployment
+  bbb_host:
+    required: false
+  bbb_user:
+    required: false
+  bbb_ssh_key:
+    required: false
+
+runs:
+  using: "composite"
+  steps:
+
+    - name: Prepare output dir
+      shell: bash
+      run: mkdir -p "$OUTPUT_DIR"
+      env:
+        OUTPUT_DIR: ${{ inputs.output_dir }}
+
+    # =========================
+    # BUILD
+    # =========================
+    - name: Build inside container
+      shell: bash
+      run: |
+        set -e
+        echo "=== BUILD ==="
+
+        podman run --rm \
+          -v "$OUTPUT_DIR:/output" \
+          -v "$SOURCE_DIR:/src" \
+          "$CONTAINER_IMAGE" \
+          -c "${BUILD_COMMANDS}"
+
+      env:
+        OUTPUT_DIR: ${{ inputs.output_dir }}
+        SOURCE_DIR: ${{ inputs.source_dir }}
+        CONTAINER_IMAGE: ${{ inputs.container_image }}
+        BUILD_COMMANDS: ${{ inputs.build_commands }}
+
+    # =========================
+    # DETECT ARCH
+    # =========================
+    - name: Detect binary architecture
+      shell: bash
+      run: |
+        echo "=== DETECT ARCH ==="
+        FILE_INFO=$(file $OUTPUT_DIR/* | head -n1)
+        echo "$FILE_INFO"
+
+        if echo "$FILE_INFO" | grep -q "ARM"; then
+          echo "ARCH=ARM" >> $GITHUB_ENV
+        else
+          echo "ARCH=X86" >> $GITHUB_ENV
+        fi
+      env:
+        OUTPUT_DIR: ${{ inputs.output_dir }}
+
+    # =========================
+    # TEST IN CONTAINER (nur wenn x86)
+    # =========================
+    - name: Run tests in container (x86 only)
+      if: ${{ env.ARCH == 'X86' && inputs.test_commands != '' }}
+      shell: bash
+      run: |
+        echo "=== TEST (Container x86) ==="
+
+        podman run --rm \
+          -v "$OUTPUT_DIR:/output" \
+          -v "$TEST_DIR:/tests" \
+          "$CONTAINER_IMAGE" \
+          -c "${TEST_COMMANDS}"
+
+      env:
+        OUTPUT_DIR: ${{ inputs.output_dir }}
+        TEST_DIR: ${{ inputs.test_dir }}
+        CONTAINER_IMAGE: ${{ inputs.container_image }}
+        TEST_COMMANDS: ${{ inputs.test_commands }}
+
+    # =========================
+    # TEST AUF BBB (nur ARM)
+    # =========================
+    - name: Deploy & Test on BBB
+      if: ${{ env.ARCH == 'ARM' && inputs.bbb_host != '' }}
+      shell: bash
+      run: |
+        echo "=== DEPLOY + TEST (BBB) ==="
+
+        mkdir -p ~/.ssh
+        printf '%s' "$BBB_SSH_KEY" | base64 -d > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+
+        eval $(ssh-agent -s)
+        ssh-add ~/.ssh/id_rsa
+
+        # Deploy binaries + test script
+        scp -o StrictHostKeyChecking=no $OUTPUT_DIR/* $BBB_USER@$BBB_HOST:/home/$BBB_USER/bin/
+        scp -o StrictHostKeyChecking=no $TEST_DIR/run_tests.py $BBB_USER@$BBB_HOST:/home/$BBB_USER/
+
+        # Execute
+        ssh -o StrictHostKeyChecking=no $BBB_USER@$BBB_HOST <<EOF
+          rm -rf /home/$BBB_USER/bin/logs
+          mkdir -p /home/$BBB_USER/bin/logs
+          chmod +x /home/$BBB_USER/bin/*
+          python3 /home/$BBB_USER/run_tests.py \
+            --bin-dir /home/$BBB_USER/bin \
+            --log-dir /home/$BBB_USER/bin/logs \
+            --cov-dir /home/$BBB_USER/bin/coverage
+        EOF
+
+      env:
+        OUTPUT_DIR: ${{ inputs.output_dir }}
+        TEST_DIR: ${{ inputs.test_dir }}
+        BBB_HOST: ${{ inputs.bbb_host }}
+        BBB_USER: ${{ inputs.bbb_user }}
+        BBB_SSH_KEY: ${{ inputs.bbb_ssh_key }}
+
+    # =========================
+    # FETCH LOGS FROM BBB
+    # =========================
+    - name: Fetch Test Logs from BBB
+      if: ${{ env.ARCH == 'ARM' && inputs.bbb_host != '' }}
+      shell: bash
+      run: |
+        echo "=== FETCH LOGS ==="
+        mkdir -p logs
+        scp -o StrictHostKeyChecking=no -r $BBB_USER@$BBB_HOST:/home/$BBB_USER/bin/logs/* ./logs/ || true
+
+        echo "=== FETCH GCDA (C coverage) ==="
+        scp -o StrictHostKeyChecking=no -r $BBB_USER@$BBB_HOST:/home/$BBB_USER/bin/coverage "$OUTPUT_DIR"/ || true
+      env:
+        OUTPUT_DIR: ${{ inputs.output_dir }}
+        BBB_HOST: ${{ inputs.bbb_host }}
+        BBB_USER: ${{ inputs.bbb_user }}
+
+    # =========================
+    # C COVERAGE REPORT
+    # =========================
+    - name: C Coverage Report
+      if: ${{ env.ARCH == 'ARM' && inputs.bbb_host != '' }}
+      shell: bash
+      run: |
+        podman run --rm \
+          -v "$(pwd)/$OUTPUT_DIR":/gcov_data \
+          -v "$(pwd)/project/c":/src/c \
+          "$CONTAINER_IMAGE" \
+          -c "set -e
+            mkdir -p /gcov_data/html/combined
+            add_args=''
+            for test_dir in /gcov_data/coverage/*/; do
+              [ -d \"\$test_dir\" ] || continue
+              test_name=\$(basename \"\$test_dir\")
+              cp /gcov_data/*.gcno \"\$test_dir\"/
+              mkdir -p /gcov_data/html/\$test_name
+              /opt/venv/bin/gcovr \
+                --gcov-executable arm-linux-gnueabihf-gcov \
+                --root /src/c \
+                --object-directory \"\$test_dir\" \
+                --html-details /gcov_data/html/\${test_name}/index.html \
+                --html-title \"Coverage: \$test_name\" \
+                --json /gcov_data/\${test_name}.json \
+                --print-summary
+              add_args=\"\$add_args --add-tracefile /gcov_data/\${test_name}.json\"
+            done
+            /opt/venv/bin/gcovr \
+              --gcov-executable arm-linux-gnueabihf-gcov \
+              --root /src/c \
+              \$add_args \
+              --html-details /gcov_data/html/combined/index.html \
+              --html-title 'C Coverage All Tests' \
+              --print-summary"
+      env:
+        OUTPUT_DIR: ${{ inputs.output_dir }}
+        CONTAINER_IMAGE: ${{ inputs.container_image }}
+
+    - name: Generate Coverage Index
+      if: ${{ env.ARCH == 'ARM' && inputs.bbb_host != '' }}
+      shell: bash
+      run: |
+        python3 << 'PYEOF'
+        import os, json
+        html_dir = os.path.join(os.environ['OUTPUT_DIR'], 'html')
+        reports = [{"label": "All Tests", "url": "combined/index.html"}]
+        cov_dir = os.path.join(os.environ['OUTPUT_DIR'], 'coverage')
+        if os.path.isdir(cov_dir):
+            for name in sorted(os.listdir(cov_dir)):
+                if os.path.isdir(os.path.join(cov_dir, name)):
+                    reports.append({"label": name, "url": f"{name}/index.html"})
+        html = f"""<!DOCTYPE html><html><head><meta charset="utf-8">
+        <title>C Coverage</title><style>
+        body{{font-family:sans-serif;margin:2em}}
+        .tabs{{display:flex;gap:8px;margin-bottom:1em;flex-wrap:wrap}}
+        .tab{{padding:8px 16px;background:#eee;border:1px solid #ccc;border-radius:4px;cursor:pointer;text-decoration:none;color:#333}}
+        .tab:hover{{background:#ddd}}.tab.active{{background:#4a90d9;color:white;border-color:#4a90d9}}
+        iframe{{width:100%;height:85vh;border:1px solid #ccc;border-radius:4px}}
+        </style></head><body><h2>C Coverage Report</h2>
+        <div class="tabs" id="tabs"></div>
+        <iframe id="frame" src="combined/index.html"></iframe>
+        <script>
+        const reports={json.dumps(reports)};
+        const tabs=document.getElementById('tabs');
+        const frame=document.getElementById('frame');
+        reports.forEach((r,i)=>{{
+          const a=document.createElement('a');
+          a.className='tab'+(i===0?' active':'');
+          a.textContent=r.label;a.href='#';
+          a.onclick=e=>{{e.preventDefault();
+            document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+            a.classList.add('active');frame.src=r.url;}};
+          tabs.appendChild(a);
+        }});</script></body></html>"""
+        with open(os.path.join(html_dir, 'index.html'), 'w') as f:
+            f.write(html)
+        PYEOF
+      env:
+        OUTPUT_DIR: ${{ inputs.output_dir }}
+
+    - name: Upload C Coverage
+      if: ${{ env.ARCH == 'ARM' && inputs.bbb_host != '' }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: c-coverage-html
+        path: bin/html/
+
+        if-no-files-found: ignore
+
+    # =========================
+    # UPLOAD LOGS
+    # =========================
+    - name: Upload BBB Logs
+      if: ${{ env.ARCH == 'ARM' && inputs.bbb_host != '' }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: bbb-test-logs
+        path: logs/
+        if-no-files-found: ignore
+
+    # =========================
+    # FALLBACK
+    # =========================
+    - name: Skip tests info
+      if: ${{ env.ARCH == 'ARM' && inputs.bbb_host == '' }}
+      shell: bash
+      run: |
+        echo "⚠️ ARM binaries detected but no BBB configured → skipping tests"
+
+    # =========================
+    # DEBUG OUTPUT
+    # =========================
+    - name: List artifacts
+      shell: bash
+      run: |
+        echo "=== OUTPUT FILES ==="
+        ls -l "$OUTPUT_DIR"
+      env:
+        OUTPUT_DIR: ${{ inputs.output_dir }}
+    - name: Upload output files
+      uses: actions/upload-artifact@v4
+      with:
+        name: output_dir
+        path: ${{ inputs.output_dir }}/
+        if-no-files-found: ignore

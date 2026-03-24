@@ -1,5 +1,4 @@
-use libc::{c_int, c_char};
-use std::ffi::CStr;
+use libc::c_int;
 
 #[repr(C)]
 pub struct RsGpioData { pub pin: u32, pub value: i32, pub error: i32 }

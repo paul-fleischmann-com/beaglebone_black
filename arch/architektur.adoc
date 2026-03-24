@@ -303,7 +303,7 @@ plantuml::diagrams/07_library_layer.puml[format=svg,align=center]
 [source,c]
 .BME280 Read — C Implementierung
 ----
-int bme280_read(bme280_dev_t *dev, bme280_data_t *out) {
+int bme280_read(struct bme280_dev *dev, bme280_data_t *out) {
     uint8_t raw[8];
     if (i2c_read_reg(dev->fd, 0xF7, raw, 8) < 0)
         return -1;
@@ -589,6 +589,17 @@ embedded/
 │       ├── hal/              # HAL Interface + Drivers
 │       ├── api/              # HTTP Handler
 │       └── models/           # Datenmodelle
+│
+├── project/
+|   ├── c/                     # C Hardware Library
+│   |   ├── include/                # Header: bme280.h gpio.h uart.h spi.h
+│   |   ├── src/                    # Implementierungen
+│   |   └── Makefile
+|   ├── rust-lib/                   # Rust Hardware Library
+|   │   ├── src/                    # lib.rs bme280.rs gpio.rs uart.rs spi.rs
+|   │   └── Cargo.toml
+|   └── go
+|
 ├── tools/
 │   ├── cli/                  # bbcli (Cobra)
 │   ├── tui/                  # bbtui (BubbleTea)

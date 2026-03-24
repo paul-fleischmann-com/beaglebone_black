@@ -62,7 +62,7 @@ RELATIONS:
 - TYPE: File
   VALUE: c-lib/include/bme280.h
 - TYPE: File
-  VALUE: rust-lib/src/lib.rs
+  VALUE: project/rust-lib/src/lib.rs
 
 [SW_REQUIREMENT]
 UID: SWR-005

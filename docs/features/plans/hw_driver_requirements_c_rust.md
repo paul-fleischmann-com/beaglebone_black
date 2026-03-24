@@ -8,7 +8,7 @@
 
 ## Motivation
 
-Die bestehende `docs/requirements/hardware_driver_requirements.sdoc` enthält nur high-level Anforderungen (HW-DRV-001 bis HW-DRV-004). Basierend auf den C-Header-Dateien (`c-lib/include/`) und den Rust-Sourcen (`rust-lib/src/`) fehlen konkrete Implementierungsanforderungen für beide Backends sowie die Anforderung, dass C und Rust funktional äquivalent sein müssen.
+Die bestehende `docs/requirements/hardware_driver_requirements.sdoc` enthält nur high-level Anforderungen (HW-DRV-001 bis HW-DRV-004). Basierend auf den C-Header-Dateien (`c-lib/include/`) und den Rust-Sourcen (`project/rust-lib/src/`) fehlen konkrete Implementierungsanforderungen für beide Backends sowie die Anforderung, dass C und Rust funktional äquivalent sein müssen.
 
 ---
 
@@ -66,7 +66,7 @@ RELATIONS:
 - TYPE: File
   VALUE: c-lib/include/bme280.h
 - TYPE: File
-  VALUE: rust-lib/src/bme280.rs
+  VALUE: project/rust-lib/src/bme280.rs
 
 [REQUIREMENT]
 UID: HW-DRV-006
@@ -76,7 +76,7 @@ RELATIONS:
 - TYPE: File
   VALUE: c-lib/include/bme280.h
 - TYPE: File
-  VALUE: rust-lib/src/bme280.rs
+  VALUE: project/rust-lib/src/bme280.rs
 
 [REQUIREMENT]
 UID: HW-DRV-007
@@ -86,7 +86,7 @@ RELATIONS:
 - TYPE: File
   VALUE: c-lib/include/bme280.h
 - TYPE: File
-  VALUE: rust-lib/src/bme280.rs
+  VALUE: project/rust-lib/src/bme280.rs
 
 [REQUIREMENT]
 UID: HW-DRV-008
@@ -96,7 +96,7 @@ RELATIONS:
 - TYPE: File
   VALUE: c-lib/include/gpio.h
 - TYPE: File
-  VALUE: rust-lib/src/gpio.rs
+  VALUE: project/rust-lib/src/gpio.rs
 
 [REQUIREMENT]
 UID: HW-DRV-009
@@ -106,7 +106,7 @@ RELATIONS:
 - TYPE: File
   VALUE: c-lib/include/uart.h
 - TYPE: File
-  VALUE: rust-lib/src/uart.rs
+  VALUE: project/rust-lib/src/uart.rs
 
 [REQUIREMENT]
 UID: HW-DRV-010
@@ -116,7 +116,7 @@ RELATIONS:
 - TYPE: File
   VALUE: c-lib/include/uart.h
 - TYPE: File
-  VALUE: rust-lib/src/uart.rs
+  VALUE: project/rust-lib/src/uart.rs
 
 [REQUIREMENT]
 UID: HW-DRV-011
@@ -126,7 +126,7 @@ RELATIONS:
 - TYPE: File
   VALUE: c-lib/include/spi.h
 - TYPE: File
-  VALUE: rust-lib/src/spi.rs
+  VALUE: project/rust-lib/src/spi.rs
 
 [REQUIREMENT]
 UID: HW-DRV-012
@@ -168,8 +168,8 @@ Für HW-DRV-005 bis HW-DRV-012 jeweils `RELATIONS` zu relevanten Tests ergänzen
 - `c-lib/include/gpio.h`
 - `c-lib/include/uart.h`
 - `c-lib/include/spi.h`
-- `rust-lib/src/bme280.rs`
-- `rust-lib/src/gpio.rs`
-- `rust-lib/src/uart.rs`
-- `rust-lib/src/spi.rs`
+- `project/rust-lib/src/bme280.rs`
+- `project/rust-lib/src/gpio.rs`
+- `project/rust-lib/src/uart.rs`
+- `project/rust-lib/src/spi.rs`
 - [Issue #28 — StrictDoc Integration](https://github.com/paulefl/beaglebone_black/issues/28)

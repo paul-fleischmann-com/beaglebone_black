@@ -40,7 +40,7 @@ interface "HardwareDriver\n<color:#64748b>Go Interface</color>" as IFACE {
 }
 
 class "CDriver\n<color:#fbbf24>C Backend</color>" as CD {
-  - bme280 C.bme280_dev_t
+  - bme280 C.struct bme280_dev
   - uart   C.uart_dev_t
   - config *Config
   --

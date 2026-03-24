@@ -17,7 +17,7 @@ Fixes #<!-- Issue Nummer -->
 ## Betroffene Komponenten
 
 - [ ] C Library (`c-lib/`)
-- [ ] Rust Library (`rust-lib/`)
+- [ ] Rust Library (`project/rust-lib/`)
 - [ ] Go REST API (`go-api/`)
 - [ ] HAL Wrapper (`go-api/pkg/hal/`)
 - [ ] CLI Tools (`tools/cli/`)

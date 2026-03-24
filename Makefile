@@ -16,9 +16,9 @@ c-lib:
 	cp c-lib/libhardware.so go-api/libs/ 2>/dev/null || true
 
 rust-lib:
-	cd rust-lib && cross build --release --target $(TARGET)
-	cp rust-lib/target/$(TARGET)/release/libhardware_rs.so go-api/libs/ 2>/dev/null || true
-	cbindgen --config rust-lib/cbindgen.toml --output go-api/libs/include/hardware_rs.h 2>/dev/null || true
+	cd project/rust-lib && cross build --release --target $(TARGET)
+	cp project/rust-lib/target/$(TARGET)/release/libhardware_rs.so go-api/libs/ 2>/dev/null || true
+	cbindgen --config project/rust-lib/cbindgen.toml --output go-api/libs/include/hardware_rs.h 2>/dev/null || true
 
 go-api: c-lib rust-lib
 	cd go-api && GOOS=linux GOARCH=arm GOARM=7 CGO_ENABLED=1 CC=$(CC) \
@@ -78,7 +78,7 @@ req-tracing: tooling-download
 
 clean:
 	$(MAKE) -C c-lib clean
-	cd rust-lib && cargo clean
+	cd project/rust-lib && cargo clean
 	rm -f bin/embedded bin/bbcli-*
 
 version:
