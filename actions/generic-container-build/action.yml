@@ -225,6 +225,7 @@ runs:
               --html-details /gcov_data/html/combined/index.html \
               --html-title 'C Coverage All Tests' \
               --cobertura /gcov_data/coverage.xml \
+              --sonarqube /gcov_data/sonar-coverage.xml \
               --print-summary"
       env:
         OUTPUT_DIR: ${{ inputs.output_dir }}

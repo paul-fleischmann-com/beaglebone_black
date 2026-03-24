@@ -179,6 +179,15 @@ jobs:
           ref: main
           path: tooling
 
+      - name: Download C coverage from BBB CI run
+        uses: dawidd6/action-download-artifact@v6
+        with:
+          workflow: bbb-ci-generic.yml
+          branch: ${{ github.ref_name }}
+          name: output_dir
+          path: bin/
+          if_no_artifact_found: warn
+
       - uses: paulefl/beaglebone-tooling/.github/actions/sonarcloud@main
         with:
           sonar-token: ${{ secrets.SONAR_TOKEN }}
