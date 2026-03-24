@@ -99,6 +99,7 @@ jobs:
     name: Go Unit Tests
     runs-on: ubuntu-latest
     permissions:
+      contents: read
       security-events: write
     steps:
       - uses: actions/checkout@v4
@@ -159,6 +160,7 @@ jobs:
     name: Python Tests
     runs-on: ubuntu-latest
     permissions:
+      contents: read
       security-events: write
     steps:
       - uses: actions/checkout@v4
@@ -240,6 +242,7 @@ jobs:
     name: StrictDoc Export & Validation
     runs-on: ubuntu-latest
     permissions:
+      contents: read
       security-events: write
     steps:
       - uses: actions/checkout@v4
@@ -252,6 +255,7 @@ jobs:
     name: Python Security Scan
     runs-on: ubuntu-latest
     permissions:
+      contents: read
       security-events: write
     steps:
       - uses: actions/checkout@v4
