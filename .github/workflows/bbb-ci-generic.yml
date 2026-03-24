@@ -25,6 +25,8 @@ jobs:
       actions: read
     steps:
       - uses: actions/checkout@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
       - uses: ./actions/build_container
         with:
           image_name: generic-builder
@@ -104,6 +106,8 @@ jobs:
     runs-on: self-hosted
     steps:
       - uses: actions/checkout@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
       - uses: ./.github/actions/c-test
 
   # ── Go Lint ──────────────────────────────────
