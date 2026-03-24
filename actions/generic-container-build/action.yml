@@ -219,6 +219,7 @@ runs:
               \$add_args \
               --html-details /gcov_data/html/combined/index.html \
               --html-title 'C Coverage All Tests' \
+              --cobertura /gcov_data/coverage.xml \
               --print-summary"
       env:
         OUTPUT_DIR: ${{ inputs.output_dir }}
@@ -266,13 +267,23 @@ runs:
       env:
         OUTPUT_DIR: ${{ inputs.output_dir }}
 
+    - name: C Coverage Summary
+      if: ${{ env.ARCH == 'ARM' && inputs.bbb_host != '' }}
+      uses: irongut/CodeCoverageSummary@v1.3.0
+      with:
+        filename: ${{ inputs.output_dir }}/coverage.xml
+        badge: true
+        format: markdown
+        indicators: true
+        output: both
+        thresholds: '75 90'
+
     - name: Upload C Coverage
       if: ${{ env.ARCH == 'ARM' && inputs.bbb_host != '' }}
       uses: actions/upload-artifact@v4
       with:
         name: c-coverage-html
         path: bin/html/
-
         if-no-files-found: ignore
 
     # =========================
