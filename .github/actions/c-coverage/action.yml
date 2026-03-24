@@ -6,9 +6,9 @@ description: >
 
 inputs:
   source-dir:
-    description: 'Verzeichnis mit *.gcda/*.gcno Dateien (z.B. c-lib/)'
+    description: 'Verzeichnis mit *.gcda/*.gcno Dateien (z.B. project/c/)'
     required: true
-    default: 'c-lib/'
+    default: 'project/c/'
   output-file:
     description: 'Zieldatei für lcov-Report (z.B. reports/c-coverage.info)'
     required: true

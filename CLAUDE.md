@@ -78,7 +78,8 @@ The `HardwareDriver` interface in `project/go-api/pkg/hal/interface.go` defines 
 | `project/go-api/pkg/hal/c/driver.go` | CGO bindings to C library |
 | `project/go-api/pkg/hal/rust/driver.go` | FFI bindings to Rust library |
 | `project/go-api/pkg/hal/mock/driver.go` | Test mock — no hardware needed |
-| `c-lib/include/` | C headers for all hardware interfaces |
+| `project/c/include/` | C headers for all hardware interfaces |
+| `project/c/test/` | C unit tests (CI-compatible error-path tests) |
 | `project/rust-lib/src/lib.rs` | Rust FFI exports |
 | `.drone.yml` | 7 CI/CD pipelines |
 

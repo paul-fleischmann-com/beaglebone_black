@@ -13,14 +13,14 @@ install:
 	cp $(TARGET) ../project/go-api/libs/
 	cp ../project/c/include/*.h ../project/go-api/libs/include/
 clean:
-	rm -f $(OBJS) $(TARGET) tests/test_runner tests/*.gcda tests/*.gcno tests/*.gcov
+	rm -f $(OBJS) $(TARGET) ../project/c/test/test_runner ../project/c/test/*.gcda ../project/c/test/*.gcno ../project/c/test/*.gcov
 # ── Coverage (nativer gcc, kein ARM-Cross-Compiler) ──────────────────────────
 COV_CC     = gcc
 COV_CFLAGS = -Wall -Wextra -O2 -I../project/c/include -fprofile-arcs -ftest-coverage
 COV_LDFLAGS = -lm --coverage
-TEST_BIN   = tests/test_runner
+TEST_BIN   = ../project/c/test/test_runner
 coverage: $(TEST_BIN)
-$(TEST_BIN): $(SRCS) tests/test_c_lib.c
+$(TEST_BIN): $(SRCS) ../project/c/test/test_c_lib.c
 	$(COV_CC) $(COV_CFLAGS) -o $@ $^ $(COV_LDFLAGS)
 test: $(TEST_BIN)
 	./$(TEST_BIN)

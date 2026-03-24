@@ -17,28 +17,36 @@
 
 /* ── bme280 ──────────────────────────────────────────────────────────────── */
 
-static void test_bme280_init_no_hardware(void) {
+static void test_bme280_init_null_ptrs(void) {
     struct bme280_dev dev;
     memset(&dev, 0, sizeof(dev));
-    /* Kein /dev/i2c-1 in CI → open() schlägt fehl → Rückgabe < 0 */
-    int ret = bme280_init(&dev);
+    /* NULL read/write/delay_us → null_ptr_check → BME280_E_NULL_PTR (< 0) */
+    int8_t ret = bme280_init(&dev);
     assert(ret < 0);
 }
 
-static void test_bme280_read_invalid_fd(void) {
+static void test_bme280_get_sensor_data_null_output(void) {
     struct bme280_dev dev;
     memset(&dev, 0, sizeof(dev));
-    dev.fd = -1;
-    bme280_data_t data;
-    int ret = bme280_read(&dev, &data);
+    /* NULL comp_data argument → BME280_E_NULL_PTR (< 0) */
+    int8_t ret = bme280_get_sensor_data(7 /* BME280_ALL */, NULL, &dev);
     assert(ret < 0);
 }
 
-static void test_bme280_close_invalid_fd(void) {
+static void test_bme280_set_sensor_settings_null_settings(void) {
     struct bme280_dev dev;
     memset(&dev, 0, sizeof(dev));
-    dev.fd = -1;
-    bme280_close(&dev); /* darf nicht abstürzen */
+    /* NULL settings pointer → BME280_E_NULL_PTR (< 0) */
+    int8_t ret = bme280_set_sensor_settings(0, NULL, &dev);
+    assert(ret < 0);
+}
+
+static void test_bme280_compensate_null_data(void) {
+    struct bme280_uncomp_data uncomp;
+    memset(&uncomp, 0, sizeof(uncomp));
+    /* NULL comp_data → BME280_E_NULL_PTR (< 0) */
+    int8_t ret = bme280_compensate_data(7, &uncomp, NULL, NULL);
+    assert(ret < 0);
 }
 
 /* ── gpio ────────────────────────────────────────────────────────────────── */
@@ -83,9 +91,10 @@ int main(void) {
     printf("c-lib Tests (CI-Modus: Hardware-Fehlerpfade)\n");
     printf("============================================================\n");
 
-    TEST(test_bme280_init_no_hardware);
-    TEST(test_bme280_read_invalid_fd);
-    TEST(test_bme280_close_invalid_fd);
+    TEST(test_bme280_init_null_ptrs);
+    TEST(test_bme280_get_sensor_data_null_output);
+    TEST(test_bme280_set_sensor_settings_null_settings);
+    TEST(test_bme280_compensate_null_data);
     TEST(test_gpio_export_fails_no_sysfs);
     TEST(test_gpio_read_fails_no_sysfs);
     TEST(test_gpio_write_fails_no_sysfs);

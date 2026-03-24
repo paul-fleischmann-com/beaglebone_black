@@ -10,7 +10,7 @@ inputs:
   source-dir:
     description: C source directory (relative to workspace root), passed to lcov.
     required: false
-    default: c-lib/
+    default: project/c/
 
   makefile-dir:
     description: Directory containing the Makefile (relative to workspace root).
