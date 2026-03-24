@@ -10,10 +10,13 @@ crate-type = ["cdylib","staticlib"]
 name = "rust_app"
 path = "test/main.rs"
 [dependencies]
-linux-embedded-hal = "0.4"
-bme280             = "0.5"
-serialport         = "4"
-spidev             = "0.7"
-libc               = "0.2"
+linux-embedded-hal  = "0.4"
+bme280              = "0.5"
+embedded-hal        = "1"
+embedded-hal-async  = "1"
+futures             = { version = "0.3", default-features = false, features = ["executor"] }
+serialport          = "4"
+spidev              = "0.7"
+libc                = "0.2"
 [build-dependencies]
 cbindgen = "0.29"
