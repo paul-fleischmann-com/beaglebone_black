@@ -1,6 +1,6 @@
 use std::ffi::CStr;
 use libc::c_char;
-use bme280::BME280;
+use bme280::i2c::BME280;
 use linux_embedded_hal::{Delay, I2cdev};
 
 const SEA_LEVEL_PA: f64 = 101325.0;
@@ -28,7 +28,7 @@ pub unsafe extern "C" fn rs_bme280_read(i2c_path: *const c_char, addr: u8) -> Rs
     let path = match CStr::from_ptr(i2c_path).to_str() { Ok(p)=>p, Err(_)=>return err(-1) };
     let i2c  = match I2cdev::new(path)                  { Ok(d)=>d, Err(_)=>return err(-2) };
     let mut d = Delay;
-    let mut s = match BME280::new(i2c,addr,&mut d)      { Ok(s)=>s, Err(_)=>return err(-3) };
+    let mut s: BME280<I2cdev> = match BME280::new(i2c,addr,&mut d) { Ok(s)=>s, Err(_)=>return err(-3) };
     if s.init(&mut d).is_err() { return err(-4); }
     match s.measure(&mut d) {
         Ok(m) => {
