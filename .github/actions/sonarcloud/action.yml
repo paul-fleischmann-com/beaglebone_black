@@ -185,19 +185,21 @@ runs:
 
     # All SARIF and coverage artifacts are now wired up (#3–#9 complete).
 
-    # ── Placeholder-Dateien für optionale BBB-Reports ───────────────────────
-    - name: Create missing BBB report placeholders
+    # ── BBB Coverage (optional, nur wenn BBB-Job lief) ──────────────────────
+    - name: Download BBB SonarQube Coverage
+      uses: actions/download-artifact@v6
+      with:
+        name: bbb-sonar-coverage
+        path: bin/
+      continue-on-error: true
+
+    - name: BBB Coverage Placeholder (falls kein BBB-Run)
       shell: bash
       run: |
-        mkdir -p bin reports
-        if [ ! -f bin/sonar-coverage.xml ]; then
+        mkdir -p bin
+        [ -f bin/sonar-coverage.xml ] || \
           printf '<?xml version="1.0" ?>\n<coverage version="1">\n</coverage>\n' \
             > bin/sonar-coverage.xml
-        fi
-        if [ ! -f bin/coverage.sarif ]; then
-          printf '{"version":"2.1.0","runs":[{"tool":{"driver":{"name":"bbb-coverage","rules":[]}},"results":[]}]}\n' \
-            > bin/coverage.sarif
-        fi
 
     # ── SonarCloud Scan ─────────────────────────────────────────────────────
     - name: SonarCloud Scan

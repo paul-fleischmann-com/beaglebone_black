@@ -257,6 +257,14 @@ runs:
         sarif_file: ${{ inputs.output_dir }}/coverage.sarif
         category: c-coverage
 
+    - name: Upload BBB SonarQube Coverage
+      if: ${{ env.ARCH == 'ARM' && inputs.bbb_host != '' }}
+      uses: actions/upload-artifact@v6
+      with:
+        name: bbb-sonar-coverage
+        path: ${{ inputs.output_dir }}/sonar-coverage.xml
+        if-no-files-found: ignore
+
     - name: Upload C Coverage
       if: ${{ env.ARCH == 'ARM' && inputs.bbb_host != '' }}
       uses: actions/upload-artifact@v6
