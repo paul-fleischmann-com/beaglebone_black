@@ -67,7 +67,8 @@ echo "[c_coverage] Erfasse Coverage aus: $SOURCE_DIR"
 lcov --capture \
      --directory "$SOURCE_DIR" \
      --output-file "$OUTPUT_FILE" \
-     --rc lcov_branch_coverage=1 \
+     --rc branch_coverage=1 \
+     --ignore-errors inconsistent \
      --quiet
 
 # ── Filter anwenden ───────────────────────────────────────────────────────────
@@ -77,11 +78,12 @@ for pattern in "$@"; do
     lcov --remove "$OUTPUT_FILE" \
          "$pattern" \
          --output-file "$OUTPUT_FILE" \
-         --rc lcov_branch_coverage=1 \
+         --rc branch_coverage=1 \
+         --ignore-errors unused \
          --quiet
 done
 
 # ── Zusammenfassung ───────────────────────────────────────────────────────────
 
 echo "[c_coverage] Report geschrieben: $OUTPUT_FILE"
-lcov --summary "$OUTPUT_FILE" --rc lcov_branch_coverage=1
+lcov --summary "$OUTPUT_FILE" --rc branch_coverage=1
