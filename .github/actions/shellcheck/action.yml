@@ -1,0 +1,82 @@
+name: ShellCheck
+description: >
+  Shell script quality pipeline: bash -n syntax check + ShellCheck analysis
+  on all .sh files in the workspace. Generates a SARIF report for SonarCloud
+  and uploads it as an artifact.
+  Optionally downloads beaglebone-tooling scripts so tooling/*.sh are included.
+  Requires actions/checkout to have run in the calling job.
+
+inputs:
+  include-tooling:
+    description: >
+      Download beaglebone-tooling scripts into tooling/ before scanning,
+      so tooling/*.sh are included in the ShellCheck run.
+      Requires GH_TOKEN / GITHUB_TOKEN to be set in the calling job.
+    required: false
+    default: 'false'
+
+  tooling-dest:
+    description: Target directory for downloaded tooling scripts (only used when include-tooling is true).
+    required: false
+    default: tooling
+
+  artifact-name:
+    description: Name of the uploaded SARIF artifact (empty = no upload).
+    required: false
+    default: shell-sarif
+
+  output-file:
+    description: Path to write the SARIF report.
+    required: false
+    default: reports/shell-lint.sarif
+
+runs:
+  using: composite
+  steps:
+    - name: Download tooling scripts
+      if: inputs.include-tooling == 'true'
+      shell: bash
+      env:
+        GH_TOKEN: ${{ env.GH_TOKEN || env.GITHUB_TOKEN }}
+      run: |
+        mkdir -p "${{ inputs.tooling-dest }}"
+        for attempt in 1 2 3; do
+          rm -rf /tmp/tooling-dl && mkdir -p /tmp/tooling-dl
+          gh release download             --repo paulefl/beaglebone-tooling             --pattern "tooling-*.tar.gz"             --dir /tmp/tooling-dl && break
+          echo "⏳ Attempt ${attempt}/3 failed — waiting 10s..."
+          sleep 10
+        done
+        tar xf /tmp/tooling-dl/tooling-*.tar.gz -C "${{ inputs.tooling-dest }}"
+        chmod +x "${{ inputs.tooling-dest }}"/*.sh "${{ inputs.tooling-dest }}"/bausteinsicht
+        echo "✅ Tooling downloaded to ${{ inputs.tooling-dest }}/"
+
+    - name: Bash Syntax Check
+      shell: bash
+      run: |
+        find . -name "*.sh" -not -path "*/.git/*"           | while read -r f; do
+            bash -n "$f" && echo "  ✅ $f" || { echo "  ❌ $f"; exit 1; }
+          done
+        echo "✅ Script Syntax OK"
+
+    - name: Install shellcheck
+      shell: bash
+      run: sudo apt-get install -y --no-install-recommends shellcheck
+
+    - name: ShellCheck SARIF
+      shell: bash
+      run: |
+        mkdir -p "$(dirname "${{ inputs.output-file }}")"
+        FINDINGS=$(find . -name "*.sh" -not -path "*/.git/*"           | xargs shellcheck --format=json 2>/dev/null || true)
+        if [ -z "$FINDINGS" ] || [ "$FINDINGS" = "[]" ]; then
+          echo "[]" | python3 "$GITHUB_ACTION_PATH/../../../tooling/shellcheck_to_sarif.py" > "${{ inputs.output-file }}"
+        else
+          echo "$FINDINGS" | python3 "$GITHUB_ACTION_PATH/../../../tooling/shellcheck_to_sarif.py" > "${{ inputs.output-file }}"
+        fi
+        echo "✅ ShellCheck SARIF: ${{ inputs.output-file }}"
+
+    - name: Upload ShellCheck SARIF
+      if: inputs.artifact-name != ''
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ inputs.artifact-name }}
+        path: ${{ inputs.output-file }}

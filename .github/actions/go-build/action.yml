@@ -1,0 +1,77 @@
+name: Go Build Binary
+description: >
+  Builds a single Go binary for a given GOOS/GOARCH target.
+  Intended to be called from a matrix job — the matrix defines
+  goos, goarch, goarm, and output name; this action performs the build.
+  Requires actions/checkout to have run in the calling job.
+
+inputs:
+  go-version:
+    description: Go version (passed to actions/setup-go).
+    required: false
+    default: '1.23'
+
+  working-directory:
+    description: Directory containing the main package (go.mod).
+    required: true
+
+  output-path:
+    description: Path for the compiled binary (relative to workspace root).
+    required: true
+
+  goos:
+    description: Target OS (GOOS).
+    required: true
+
+  goarch:
+    description: Target architecture (GOARCH).
+    required: true
+
+  goarm:
+    description: ARM variant (GOARM), e.g. "7". Leave empty for non-ARM.
+    required: false
+    default: ''
+
+  ldflags:
+    description: Extra -ldflags string passed to go build.
+    required: false
+    default: '-s -w'
+
+  artifact-name:
+    description: Name of the uploaded binary artifact (empty = no upload).
+    required: false
+    default: ''
+
+  retention-days:
+    description: Artifact retention in days.
+    required: false
+    default: '30'
+
+runs:
+  using: composite
+  steps:
+    - name: Setup Go
+      uses: actions/setup-go@v6
+      with:
+        go-version: ${{ inputs.go-version }}
+
+    - name: Build
+      shell: bash
+      env:
+        GOOS:        ${{ inputs.goos }}
+        GOARCH:      ${{ inputs.goarch }}
+        GOARM:       ${{ inputs.goarm }}
+        CGO_ENABLED: "0"
+      run: |
+        cd ${{ inputs.working-directory }}
+        go mod tidy
+        go build -ldflags="${{ inputs.ldflags }}" \
+          -o ../../${{ inputs.output-path }} .
+
+    - name: Upload binary
+      if: inputs.artifact-name != ''
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ inputs.artifact-name }}
+        path: ${{ inputs.output-path }}
+        retention-days: ${{ inputs.retention-days }}

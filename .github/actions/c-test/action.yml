@@ -1,0 +1,80 @@
+name: C Test & Coverage Pipeline
+description: >
+  Full C test pipeline: installs bear + lcov, builds the C library with
+  coverage instrumentation and generates compile_commands.json, runs the
+  test binary, generates an lcov .info report, and uploads both the coverage
+  report and the compilation database as an artifact for SonarQube.
+  Requires actions/checkout to have run in the calling job.
+
+inputs:
+  source-dir:
+    description: C source directory (relative to workspace root), passed to lcov.
+    required: false
+    default: c-lib/
+
+  makefile-dir:
+    description: Directory containing the Makefile (relative to workspace root).
+    required: false
+    default: c-lib
+
+  compile-commands-output:
+    description: Path for bear's compile_commands.json output.
+    required: false
+    default: c-lib/compile_commands.json
+
+  coverage-output:
+    description: Path for the generated lcov .info file.
+    required: false
+    default: reports/c-coverage.info
+
+  filter-patterns:
+    description: >
+      Space-separated lcov filter patterns to exclude (e.g. "'/usr/*'").
+      Passed directly to lcov --remove.
+    required: false
+    default: "'/usr/*'"
+
+  upload-artifact:
+    description: Whether to upload the c-reports artifact ('true'/'false').
+    required: false
+    default: 'true'
+
+  artifact-name:
+    description: Name of the uploaded reports artifact.
+    required: false
+    default: c-reports
+
+runs:
+  using: composite
+  steps:
+    - name: Install bear + lcov
+      shell: bash
+      run: sudo apt-get install -y --no-install-recommends bear lcov
+
+    - name: Build with coverage + Compilation Database
+      shell: bash
+      run: |
+        mkdir -p reports
+        bear --output "${{ inputs.compile-commands-output }}" -- \
+          make -C "${{ inputs.makefile-dir }}" coverage CC=gcc
+
+    - name: Run C tests
+      shell: bash
+      run: make -C "${{ inputs.makefile-dir }}" test
+
+    - name: Generate lcov coverage report
+      uses: paulefl/beaglebone-tooling/.github/actions/c-coverage@v1.1.0
+      with:
+        source-dir: ${{ inputs.source-dir }}
+        output-file: ${{ inputs.coverage-output }}
+        filter-patterns: ${{ inputs.filter-patterns }}
+        upload-artifact: 'false'
+
+    - name: Upload C reports
+      if: inputs.upload-artifact == 'true'
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ inputs.artifact-name }}
+        path: |
+          ${{ inputs.coverage-output }}
+          ${{ inputs.compile-commands-output }}

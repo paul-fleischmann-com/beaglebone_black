@@ -20,7 +20,7 @@ jobs:
       - uses: actions/checkout@v6
 
 
-      - uses: paulefl/beaglebone-tooling/.github/actions/go-test@main
+      - uses: ./.github/actions/go-test
         with:
           coverpkg: './pkg/hal/,./pkg/hal/mock/,./pkg/hal/config/'
           test-packages: './pkg/hal/ ./pkg/hal/mock/ ./pkg/hal/config/'
@@ -33,7 +33,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - uses: paulefl/beaglebone-tooling/.github/actions/c-test@main
+      - uses: ./.github/actions/c-test
 
   # ── Go Lint ──────────────────────────────────
   lint-go:
@@ -41,7 +41,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - uses: paulefl/beaglebone-tooling/.github/actions/go-lint@main
+      - uses: ./.github/actions/go-lint
 
   # ── Web GUI Validierung ───────────────────────
   test-web:
@@ -49,7 +49,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - uses: paulefl/beaglebone-tooling/.github/actions/html-validate@main
+      - uses: ./.github/actions/html-validate
 
   # ── Shell Script Syntax ───────────────────────
   test-scripts:
@@ -58,7 +58,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - uses: paulefl/beaglebone-tooling/.github/actions/shellcheck@main
+      - uses: ./.github/actions/shellcheck
         with:
           include-tooling: 'true'
         env:
@@ -72,7 +72,7 @@ jobs:
       security-events: write
     steps:
       - uses: actions/checkout@v6
-      - uses: paulefl/beaglebone-tooling/.github/actions/python-test@main
+      - uses: ./.github/actions/python-test
 
   # ── CLI Build (Multi-Plattform) ───────────────
   build-cli:
@@ -100,7 +100,7 @@ jobs:
             name: bbcli-windows-amd64.exe
     steps:
       - uses: actions/checkout@v6
-      - uses: paulefl/beaglebone-tooling/.github/actions/go-build@main
+      - uses: ./.github/actions/go-build
         with:
           working-directory: tools/cli
           output-path:       bin/${{ matrix.name }}
@@ -130,7 +130,7 @@ jobs:
             name: bbtui-darwin-amd64
     steps:
       - uses: actions/checkout@v6
-      - uses: paulefl/beaglebone-tooling/.github/actions/go-build@main
+      - uses: ./.github/actions/go-build
         with:
           working-directory: tools/tui
           output-path:       bin/${{ matrix.name }}
@@ -149,7 +149,7 @@ jobs:
       - uses: actions/checkout@v6
 
 
-      - uses: paulefl/beaglebone-tooling/.github/actions/strictdoc@main
+      - uses: ./.github/actions/strictdoc
 
   # ── Python Security Scan (bandit) ────────────
   security-python:
@@ -159,7 +159,7 @@ jobs:
       security-events: write
     steps:
       - uses: actions/checkout@v6
-      - uses: paulefl/beaglebone-tooling/.github/actions/python-security@main
+      - uses: ./.github/actions/python-security
 
     # ── SonarCloud Quality Analysis ───────────────
   sonarcloud:
@@ -188,12 +188,12 @@ jobs:
           path: bin/
           if_no_artifact_found: warn
 
-      - uses: paulefl/beaglebone-tooling/.github/actions/sonarcloud@main
+      - uses: ./.github/actions/sonarcloud
         with:
           sonar-token: ${{ secrets.SONAR_TOKEN }}
           qualitygate-wait: 'false'
 
-      - uses: paulefl/beaglebone-tooling/.github/actions/sonarqube-report@main
+      - uses: ./.github/actions/sonarqube-report
         with:
           sonar-token: ${{ secrets.SONAR_TOKEN }}
           project-key: paulefl_beaglebone_black
@@ -212,7 +212,7 @@ jobs:
       - uses: actions/checkout@v6
 
 
-      - uses: paulefl/beaglebone-tooling/.github/actions/test-report@main
+      - uses: ./.github/actions/test-report
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

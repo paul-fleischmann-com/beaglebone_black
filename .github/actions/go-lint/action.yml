@@ -1,0 +1,94 @@
+name: Go Lint
+description: >
+  Runs golangci-lint (via make lint) for a Go module, and optionally
+  produces a SARIF report for GitHub Code Scanning and SonarQube.
+  Requires actions/checkout to have run in the calling job.
+  Job must declare security-events: write when upload-sarif is true.
+
+inputs:
+  go-version:
+    description: Go version (passed to actions/setup-go).
+    required: false
+    default: '1.23'
+
+  working-directory:
+    description: Directory to run make lint in (must contain go.mod).
+    required: false
+    default: '.'
+
+  golangci-lint-version:
+    description: golangci-lint version to install for SARIF generation.
+    required: false
+    default: 'v1.64.8'
+
+  sarif-output:
+    description: Path for the SARIF output file (relative to workspace root). Empty = skip SARIF.
+    required: false
+    default: reports/go-lint.sarif
+
+  artifact-name:
+    description: Artifact name for the SARIF report (empty = no upload).
+    required: false
+    default: go-sarif
+
+  retention-days:
+    description: Artifact retention in days.
+    required: false
+    default: '30'
+
+  upload-sarif:
+    description: Upload SARIF to GitHub Code Scanning ('true'/'false'). Requires security-events:write.
+    required: false
+    default: 'true'
+
+runs:
+  using: composite
+  steps:
+    - name: Setup Go
+      uses: actions/setup-go@v6
+      with:
+        go-version: ${{ inputs.go-version }}
+
+    - name: Lint
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: make lint
+
+    - name: Install golangci-lint
+      if: inputs.sarif-output != ''
+      shell: bash
+      run: |
+        curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh \
+          | sh -s -- -b "$(go env GOPATH)/bin" ${{ inputs.golangci-lint-version }}
+
+    - name: Run golangci-lint → SARIF
+      if: inputs.sarif-output != ''
+      shell: bash
+      run: |
+        mkdir -p "$(dirname "${{ inputs.sarif-output }}")"
+        cd ${{ inputs.working-directory }}
+        golangci-lint run ./... \
+          --out-format sarif \
+          --issues-exit-code 0 \
+          > "../${{ inputs.sarif-output }}" || \
+        golangci-lint run ./... \
+          --out-format sarif \
+          --issues-exit-code 0 \
+          > "${{ inputs.sarif-output }}" 2>/dev/null || true
+        echo "Findings: $(python3 -c "import json; d=json.load(open('${{ inputs.sarif-output }}')); print(len(d['runs'][0]['results']))" 2>/dev/null || echo '?')"
+
+    - name: Upload Go Lint SARIF to GitHub Code Scanning
+      if: inputs.sarif-output != '' && inputs.upload-sarif == 'true'
+      continue-on-error: true
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: ${{ inputs.sarif-output }}
+        category: go-lint
+
+    - name: Upload Go Lint SARIF Artifact
+      if: inputs.sarif-output != '' && inputs.artifact-name != ''
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ inputs.artifact-name }}
+        path: ${{ inputs.sarif-output }}
+        retention-days: ${{ inputs.retention-days }}
