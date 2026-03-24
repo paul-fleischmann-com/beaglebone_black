@@ -259,6 +259,18 @@ runs:
         if-no-files-found: ignore
 
     # =========================
+    # TEST REPORT
+    # =========================
+    - name: Publish Test Report
+      if: ${{ env.ARCH == 'ARM' && inputs.bbb_host != '' && always() }}
+      uses: dorny/test-reporter@v1
+      with:
+        name: BBB Hardware Tests
+        path: logs/test-results.xml
+        reporter: java-junit
+        fail-on-error: false
+
+    # =========================
     # FALLBACK
     # =========================
     - name: Skip tests info
