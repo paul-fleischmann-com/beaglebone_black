@@ -34,6 +34,9 @@ RUN apt-get update && apt-get install -y \
     
 
 ENV PATH="/usr/local/go/bin:${PATH}"
+
+# Install gotestsum for JUnit XML test output
+RUN GOPATH=/usr/local go install gotest.tools/gotestsum@latest
 # ----------------------------
 # Install Rust + ARM Target
 # ----------------------------

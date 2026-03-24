@@ -91,14 +91,17 @@ runs:
         podman run --rm \
           -v "$OUTPUT_DIR:/output" \
           -v "$TEST_DIR:/tests" \
+          -v "$SOURCE_DIR:/src" \
           "$CONTAINER_IMAGE" \
           -c "${TEST_COMMANDS}"
 
       env:
         OUTPUT_DIR: ${{ inputs.output_dir }}
         TEST_DIR: ${{ inputs.test_dir }}
+        SOURCE_DIR: ${{ inputs.source_dir }}
         CONTAINER_IMAGE: ${{ inputs.container_image }}
         TEST_COMMANDS: ${{ inputs.test_commands }}
+
 
     # =========================
     # TEST AUF BBB (nur ARM)
@@ -261,12 +264,12 @@ runs:
     # =========================
     # TEST REPORT
     # =========================
-    - name: Publish Test Report
-      if: ${{ env.ARCH == 'ARM' && inputs.bbb_host != '' && always() }}
+    - name: Publish Test Reports
+      if: always()
       uses: dorny/test-reporter@v1
       with:
-        name: BBB Hardware Tests
-        path: logs/test-results.xml
+        name: Test Results
+        path: "logs/test-results.xml,${{ inputs.output_dir }}/go-test-results.xml"
         reporter: java-junit
         fail-on-error: false
 
