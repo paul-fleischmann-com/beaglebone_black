@@ -5,8 +5,8 @@ bin/
 *.exe
 
 # ── Go ────────────────────────────────────
-go-api/libs/*.so
-go-api/libs/include/hardware_rs.h
+project/go-api/libs/*.so
+project/go-api/libs/include/hardware_rs.h
 vendor/
 *.test
 
@@ -66,4 +66,4 @@ secrets/
 # ── Node (Web GUI) ────────────────────────
 node_modules/
 dist/
-go-api/coverage.out
+project/go-api/coverage.out

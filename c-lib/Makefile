@@ -10,8 +10,8 @@ $(TARGET): $(OBJS)
 %.o: %.c
 	$(CC) $(CFLAGS) -c -o $@ $<
 install:
-	cp $(TARGET) ../go-api/libs/
-	cp include/*.h ../go-api/libs/include/
+	cp $(TARGET) ../project/go-api/libs/
+	cp include/*.h ../project/go-api/libs/include/
 clean:
 	rm -f $(OBJS) $(TARGET) tests/test_runner src/**/*.gcda src/**/*.gcno src/**/*.gcov
 # ── Coverage (nativer gcc, kein ARM-Cross-Compiler) ──────────────────────────

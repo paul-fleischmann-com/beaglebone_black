@@ -50,9 +50,9 @@ Quality gates: ≥90% test success rate, ≥75% average coverage, ≥50% per fil
 ```
 Client Tools (CLI/TUI/GUI/Web)
         ↓
-REST API Server (go-api/cmd/main.go, :5000)
+REST API Server (project/go-api/cmd/main.go, :5000)
         ↓
-HAL Interface (go-api/pkg/hal/interface.go)
+HAL Interface (project/go-api/pkg/hal/interface.go)
     ↙           ↘
 C Driver      Rust Driver      Mock Driver (tests only)
 (CGO)         (FFI)
@@ -65,26 +65,26 @@ Hardware (BME280/GPIO/UART/SPI)
 - `rust` — calls Rust shared library via FFI
 - `auto` — tries C first, falls back to Rust on error (default in production)
 
-The `HardwareDriver` interface in `go-api/pkg/hal/interface.go` defines all hardware operations. New hardware features must be added to all three backend drivers (C, Rust, Mock) plus the interface.
+The `HardwareDriver` interface in `project/go-api/pkg/hal/interface.go` defines all hardware operations. New hardware features must be added to all three backend drivers (C, Rust, Mock) plus the interface.
 
 ## Key Files
 
 | File | Purpose |
 |------|---------|
-| `go-api/cmd/main.go` | HTTP server entry, routes, middleware |
-| `go-api/pkg/hal/interface.go` | `HardwareDriver` interface definition |
-| `go-api/pkg/hal/factory.go` | Backend selection logic (c/rust/auto) |
-| `go-api/pkg/hal/hal_test.go` | Unit tests using mock driver |
-| `go-api/pkg/hal/c/driver.go` | CGO bindings to C library |
-| `go-api/pkg/hal/rust/driver.go` | FFI bindings to Rust library |
-| `go-api/pkg/hal/mock/driver.go` | Test mock — no hardware needed |
+| `project/go-api/cmd/main.go` | HTTP server entry, routes, middleware |
+| `project/go-api/pkg/hal/interface.go` | `HardwareDriver` interface definition |
+| `project/go-api/pkg/hal/factory.go` | Backend selection logic (c/rust/auto) |
+| `project/go-api/pkg/hal/hal_test.go` | Unit tests using mock driver |
+| `project/go-api/pkg/hal/c/driver.go` | CGO bindings to C library |
+| `project/go-api/pkg/hal/rust/driver.go` | FFI bindings to Rust library |
+| `project/go-api/pkg/hal/mock/driver.go` | Test mock — no hardware needed |
 | `c-lib/include/` | C headers for all hardware interfaces |
 | `project/rust-lib/src/lib.rs` | Rust FFI exports |
 | `.drone.yml` | 7 CI/CD pipelines |
 
 ## Dependencies
 
-**Go** (`go-api/go.mod`): `gorilla/mux`, `spf13/cobra`, `spf13/viper`, `charmbracelet/bubbletea`, `fyne.io/fyne/v2`
+**Go** (`project/go-api/go.mod`): `gorilla/mux`, `spf13/cobra`, `spf13/viper`, `charmbracelet/bubbletea`, `fyne.io/fyne/v2`
 
 **Rust** (`project/rust-lib/Cargo.toml`): `linux-embedded-hal`, `bme280`, `serialport`, `spidev`, `cbindgen`
 

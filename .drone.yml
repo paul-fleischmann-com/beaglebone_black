@@ -78,7 +78,7 @@ name: 2-embedded-sw
 trigger:
   event: [push, pull_request, tag]
   paths:
-    include: [go-api/**, c-lib/**, project/rust-lib/**, .drone.yml]
+    include: [project/go-api/**, c-lib/**, project/rust-lib/**, .drone.yml]
 
 depends_on: [1-libraries]
 
@@ -118,7 +118,7 @@ steps:
       CC: arm-linux-gnueabihf-gcc
     commands:
       - apt-get update -q && apt-get install -y -q gcc-arm-linux-gnueabihf
-      - cp -r /build/libs go-api/libs/
+      - cp -r /build/libs project/go-api/libs/
       - cd go-api
       - go build -ldflags="-s -w -X main.Version=${DRONE_TAG:-dev}" -o ../bin/embedded-armv7 ./cmd/
 
@@ -155,7 +155,7 @@ steps:
       - mkdir -p ~/.ssh
       - echo "$BEAGLE_KEY" > ~/.ssh/id_rsa && chmod 600 ~/.ssh/id_rsa
       - ssh-keyscan -H $BEAGLE_HOST >> ~/.ssh/known_hosts
-      - scp bin/embedded-armv7 go-api/libs/libhardware.so go-api/libs/libhardware_rs.so
+      - scp bin/embedded-armv7 project/go-api/libs/libhardware.so project/go-api/libs/libhardware_rs.so
           $BEAGLE_USER@$BEAGLE_HOST:/app/
       - ssh $BEAGLE_USER@$BEAGLE_HOST "systemctl restart embedded-sw && sleep 3 && systemctl is-active embedded-sw"
     when:
@@ -422,7 +422,7 @@ steps:
       REGISTRY_TOKEN: {from_secret: registry_token}
     commands:
       - podman login -u $REGISTRY_USER -p $REGISTRY_TOKEN docker.io
-      - podman build --platform linux/arm/v7 -f go-api/Dockerfile.embedded
+      - podman build --platform linux/arm/v7 -f project/go-api/Dockerfile.embedded
           -t myuser/embedded-sw:${DRONE_TAG} -t myuser/embedded-sw:latest .
       - podman push myuser/embedded-sw:${DRONE_TAG}
       - podman push myuser/embedded-sw:latest
@@ -435,8 +435,8 @@ steps:
       base_url: {from_secret: gitea_url}
       files:
         - bin/embedded-armv7
-        - go-api/libs/libhardware.so
-        - go-api/libs/libhardware_rs.so
+        - project/go-api/libs/libhardware.so
+        - project/go-api/libs/libhardware_rs.so
         - bin/bbcli-linux-amd64
         - bin/bbcli-linux-armv7
         - bin/bbcli-darwin-amd64
@@ -508,7 +508,7 @@ trigger:
     include:
       - tests/**
       - requirements.json
-      - go-api/**
+      - project/go-api/**
       - tools/**
       - reports/**
       - arch/**

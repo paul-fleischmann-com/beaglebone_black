@@ -13,12 +13,12 @@ all: c-lib rust-lib go-api
 
 c-lib:
 	$(MAKE) -C c-lib CC=$(CC)
-	cp c-lib/libhardware.so go-api/libs/ 2>/dev/null || true
+	cp c-lib/libhardware.so project/go-api/libs/ 2>/dev/null || true
 
 rust-lib:
 	cd project/rust-lib && cross build --release --target $(TARGET)
-	cp project/rust-lib/target/$(TARGET)/release/libhardware_rs.so go-api/libs/ 2>/dev/null || true
-	cbindgen --config project/rust-lib/cbindgen.toml --output go-api/libs/include/hardware_rs.h 2>/dev/null || true
+	cp project/rust-lib/target/$(TARGET)/release/libhardware_rs.so project/go-api/libs/ 2>/dev/null || true
+	cbindgen --config project/rust-lib/cbindgen.toml --output project/go-api/libs/include/hardware_rs.h 2>/dev/null || true
 
 go-api: c-lib rust-lib
 	cd go-api && GOOS=linux GOARCH=arm GOARM=7 CGO_ENABLED=1 CC=$(CC) \
@@ -41,7 +41,7 @@ lint:
 	cd go-api && go vet ./pkg/hal/ ./pkg/hal/mock/ ./pkg/hal/config/
 	cd tools/cli && go mod tidy && go vet ./...
 	cd tools/tui && go mod tidy && go vet ./...
-	test -z "$$(gofmt -l go-api/ tools/)" || (echo "❌ Formatierung prüfen: gofmt -w ." && exit 1)
+	test -z "$$(gofmt -l project/go-api/ tools/)" || (echo "❌ Formatierung prüfen: gofmt -w ." && exit 1)
 	@echo "✅ Lint OK"
 
 test-python:
@@ -65,7 +65,7 @@ test-report-open: tooling-download
 	./tooling/report.sh --open
 
 deploy:
-	scp bin/embedded go-api/libs/libhardware.so go-api/libs/libhardware_rs.so \
+	scp bin/embedded project/go-api/libs/libhardware.so project/go-api/libs/libhardware_rs.so \
 	  debian@192.168.7.2:/app/
 	ssh debian@192.168.7.2 "systemctl restart embedded-sw"
 

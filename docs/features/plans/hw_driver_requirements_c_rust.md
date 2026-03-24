@@ -134,14 +134,14 @@ TITLE: C und Rust funktionale Äquivalenz
 STATEMENT: Das C-Backend und das Rust-Backend müssen für alle Hardware-Operationen (BME280, GPIO, UART, SPI) funktional äquivalente Ergebnisse liefern. Beide Backends müssen dieselben FFI-Funktionssignaturen exportieren.
 RELATIONS:
 - TYPE: File
-  VALUE: go-api/pkg/hal/c/driver.go
+  VALUE: project/go-api/pkg/hal/c/driver.go
 - TYPE: File
-  VALUE: go-api/pkg/hal/rust/driver.go
+  VALUE: project/go-api/pkg/hal/rust/driver.go
 ```
 
 ### Schritt 2 — Traceability zu Tests erweitern
 
-Für HW-DRV-005 bis HW-DRV-012 jeweils `RELATIONS` zu relevanten Tests ergänzen sobald entsprechende Testfälle in `go-api/pkg/hal/hal_test.go` oder `tests/hardware/test_hardware.py` existieren.
+Für HW-DRV-005 bis HW-DRV-012 jeweils `RELATIONS` zu relevanten Tests ergänzen sobald entsprechende Testfälle in `project/go-api/pkg/hal/hal_test.go` oder `tests/hardware/test_hardware.py` existieren.
 
 ---
 
