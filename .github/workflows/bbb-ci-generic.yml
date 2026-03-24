@@ -24,6 +24,14 @@ jobs:
       security-events: write
       actions: read
     steps:
+      - name: Debug git credential config
+        run: |
+          echo "=== system git config ==="
+          git config --system --list 2>/dev/null || echo "(no system config)"
+          echo "=== global git config ==="
+          git config --global --list 2>/dev/null || echo "(no global config)"
+          echo "=== credential helpers ==="
+          git config --list --show-origin 2>/dev/null | grep -i credential || echo "(none)"
       - uses: actions/checkout@v6
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -94,6 +102,8 @@ jobs:
       security-events: write
     steps:
       - uses: actions/checkout@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
       - uses: ./.github/actions/go-test
         with:
           coverpkg: './pkg/hal/,./pkg/hal/mock/,./pkg/hal/config/'
@@ -116,6 +126,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
       - uses: ./.github/actions/go-lint
 
   # ── Web GUI Validierung ───────────────────────
@@ -124,6 +136,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
       - uses: ./.github/actions/html-validate
 
   # ── Shell Script Syntax ───────────────────────
@@ -132,6 +146,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
       - uses: ./.github/actions/shellcheck
         with:
           include-tooling: 'true'
@@ -146,6 +162,8 @@ jobs:
       security-events: write
     steps:
       - uses: actions/checkout@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
       - uses: ./.github/actions/python-test
 
   # ── CLI Build (Multi-Plattform) ───────────────
@@ -174,6 +192,8 @@ jobs:
             name: bbcli-windows-amd64.exe
     steps:
       - uses: actions/checkout@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
       - uses: ./.github/actions/go-build
         with:
           working-directory: tools/cli
@@ -204,6 +224,8 @@ jobs:
             name: bbtui-darwin-amd64
     steps:
       - uses: actions/checkout@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
       - uses: ./.github/actions/go-build
         with:
           working-directory: tools/tui
@@ -221,6 +243,8 @@ jobs:
       security-events: write
     steps:
       - uses: actions/checkout@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
       - uses: ./.github/actions/strictdoc
 
   # ── Python Security Scan (bandit) ────────────
@@ -231,6 +255,8 @@ jobs:
       security-events: write
     steps:
       - uses: actions/checkout@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
       - uses: ./.github/actions/python-security
 
   # ── SonarCloud Quality Analysis ───────────────
@@ -242,6 +268,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
+          token: ${{ secrets.GITHUB_TOKEN }}  
           fetch-depth: 0
 
       - name: Download C coverage from BBB build
@@ -273,6 +300,8 @@ jobs:
       id-token: write
     steps:
       - uses: actions/checkout@v6
+        with:                                                                                                                 
+         token: ${{ secrets.GITHUB_TOKEN }}
       - uses: ./.github/actions/test-report
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -288,6 +317,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
+          token: ${{ secrets.GITHUB_TOKEN }}  
           fetch-depth: 0
 
       - name: Generate Unreleased section with git-cliff
@@ -338,6 +368,8 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v6
+        with:                                                                                                                 
+         token: ${{ secrets.GITHUB_TOKEN }}  
       - uses: actions/download-artifact@v4
         with:
           path: bin/

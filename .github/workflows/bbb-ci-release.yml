@@ -11,7 +11,8 @@ jobs:
     name: Build, Test, Deploy & Release
     steps:
       - uses: actions/checkout@v6
-
+        with:                                                                                                                 
+         token: ${{ secrets.GITHUB_TOKEN }}  
       - uses: ./actions/generic-container-build
         with:
           source_dir: ./project

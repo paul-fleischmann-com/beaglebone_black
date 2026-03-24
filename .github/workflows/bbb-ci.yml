@@ -12,7 +12,8 @@ jobs:
     steps:
       # 1️⃣ Checkout
       - uses: actions/checkout@v6
-
+        with:                                                                                                                 
+         token: ${{ secrets.GITHUB_TOKEN }}  
       # 2️⃣ Debug: Repo Struktur
       - name: Show files
         run: |

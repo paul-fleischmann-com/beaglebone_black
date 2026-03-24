@@ -18,7 +18,8 @@ jobs:
       security-events: write
     steps:
       - uses: actions/checkout@v6
-
+        with:                                                                                                                 
+         token: ${{ secrets.GITHUB_TOKEN }}  
 
       - uses: ./.github/actions/go-test
         with:
@@ -32,7 +33,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-
+        with:                                                                                                                 
+         token: ${{ secrets.GITHUB_TOKEN }}  
       - uses: ./.github/actions/c-test
 
   # ── Go Lint ──────────────────────────────────
@@ -41,6 +43,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+        with:                                                                                                                 
+         token: ${{ secrets.GITHUB_TOKEN }}  
       - uses: ./.github/actions/go-lint
 
   # ── Web GUI Validierung ───────────────────────
@@ -49,6 +53,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+        with:                                                                                                                 
+         token: ${{ secrets.GITHUB_TOKEN }}  
       - uses: ./.github/actions/html-validate
 
   # ── Shell Script Syntax ───────────────────────
@@ -57,7 +63,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-
+        with:                                                                                                                 
+         token: ${{ secrets.GITHUB_TOKEN }}  
       - uses: ./.github/actions/shellcheck
         with:
           include-tooling: 'true'
@@ -72,6 +79,8 @@ jobs:
       security-events: write
     steps:
       - uses: actions/checkout@v6
+        with:                                                                                                                 
+         token: ${{ secrets.GITHUB_TOKEN }}  
       - uses: ./.github/actions/python-test
 
   # ── CLI Build (Multi-Plattform) ───────────────
@@ -100,6 +109,8 @@ jobs:
             name: bbcli-windows-amd64.exe
     steps:
       - uses: actions/checkout@v6
+        with:                                                                                                                 
+         token: ${{ secrets.GITHUB_TOKEN }}  
       - uses: ./.github/actions/go-build
         with:
           working-directory: tools/cli
@@ -130,6 +141,8 @@ jobs:
             name: bbtui-darwin-amd64
     steps:
       - uses: actions/checkout@v6
+        with:                                                                                                                 
+         token: ${{ secrets.GITHUB_TOKEN }}  
       - uses: ./.github/actions/go-build
         with:
           working-directory: tools/tui
@@ -147,7 +160,8 @@ jobs:
       security-events: write
     steps:
       - uses: actions/checkout@v6
-
+        with:                                                                                                                 
+         token: ${{ secrets.GITHUB_TOKEN }}  
 
       - uses: ./.github/actions/strictdoc
 
@@ -159,6 +173,8 @@ jobs:
       security-events: write
     steps:
       - uses: actions/checkout@v6
+        with:                                                                                                                 
+         token: ${{ secrets.GITHUB_TOKEN }}  
       - uses: ./.github/actions/python-security
 
     # ── SonarCloud Quality Analysis ───────────────
@@ -169,6 +185,8 @@ jobs:
     if: always()
     steps:
       - uses: actions/checkout@v6
+        with:                                                                                                                 
+         token: ${{ secrets.GITHUB_TOKEN }}  
         with:
           fetch-depth: 0  # vollständige History für blame/annotations
 
@@ -210,7 +228,8 @@ jobs:
       id-token: write
     steps:
       - uses: actions/checkout@v6
-
+        with:                                                                                                                 
+         token: ${{ secrets.GITHUB_TOKEN }}  
 
       - uses: ./.github/actions/test-report
         env:
@@ -228,6 +247,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
+          token: ${{ secrets.GITHUB_TOKEN }}  
           fetch-depth: 0
 
       - name: Generate Unreleased section with git-cliff
@@ -281,6 +301,8 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v6
+        with:                                                                                                                 
+         token: ${{ secrets.GITHUB_TOKEN }}  
       - uses: actions/download-artifact@v8
         with:
           path: bin/

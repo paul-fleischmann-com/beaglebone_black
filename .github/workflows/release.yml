@@ -18,7 +18,8 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v6
-        with:
+        with:                                                                                                               
+          token: ${{ secrets.GITHUB_TOKEN }}  
           fetch-depth: 0
 
       - name: Aktuelle VERSION aus Makefile lesen
