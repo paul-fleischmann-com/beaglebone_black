@@ -26,6 +26,11 @@ inputs:
     required: false
     default: ""
 
+  github_token:
+    description: GitHub token for publishing check runs
+    required: false
+    default: ""
+
   # OPTIONAL: BBB Deployment
   bbb_host:
     required: false
@@ -238,6 +243,9 @@ runs:
       run: python3 scripts/coverage_summary.py
       env:
         OUTPUT_DIR: ${{ inputs.output_dir }}
+        GITHUB_TOKEN: ${{ inputs.github_token }}
+        GITHUB_REPOSITORY: ${{ github.repository }}
+        GITHUB_SHA: ${{ github.sha }}
 
     - name: Upload C Coverage
       if: ${{ env.ARCH == 'ARM' && inputs.bbb_host != '' }}
