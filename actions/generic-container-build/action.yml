@@ -137,6 +137,7 @@ runs:
     # TEST AUF BBB (nur ARM)
     # =========================
     - name: Deploy & Test on BBB
+      continue-on-error: true
       if: ${{ env.ARCH == 'ARM' && inputs.bbb_host != '' }}
       shell: bash
       run: |
@@ -175,7 +176,7 @@ runs:
     # FETCH LOGS FROM BBB
     # =========================
     - name: Fetch Test Logs from BBB
-      if: ${{ env.ARCH == 'ARM' && inputs.bbb_host != '' }}
+      if: ${{ always() && env.ARCH == 'ARM' && inputs.bbb_host != '' }}
       shell: bash
       run: |
         echo "=== FETCH LOGS ==="

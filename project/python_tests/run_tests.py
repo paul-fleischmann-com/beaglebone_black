@@ -16,7 +16,12 @@ BIN = args.bin_dir
 LOG = args.log_dir
 COV = args.cov_dir
 
-C_TESTS = ["test_bme280_init_no_hardware"]
+C_TESTS = [
+    "test_bme280_init_null_ptrs",
+    "test_bme280_get_sensor_data_null_output",
+    "test_bme280_set_sensor_settings_null_settings",
+    "test_bme280_compensate_null_data",
+]
 
 BINARIES = [
     {"name": "bme280_main", "path": f"{BIN}/bme280_main", "log": f"{LOG}/c.log"},
@@ -70,19 +75,18 @@ def run_binary(binary):
     results = []
 
     if name == "bme280_main" and COV:
+        cov_dir = os.path.join(COV, "bme280_main")
+        os.makedirs(cov_dir, exist_ok=True)
+        ok, out, dur = _run(
+            [path],
+            log=log,
+            extra_env={
+                "LD_LIBRARY_PATH": lib_dir,
+                "GCOV_PREFIX":     cov_dir,
+                "GCOV_PREFIX_STRIP": "100",
+            },
+        )
         for test in C_TESTS:
-            cov_dir = os.path.join(COV, test)
-            os.makedirs(cov_dir, exist_ok=True)
-            print(f"  [{test}]", end=" ", flush=True)
-            ok, out, dur = _run(
-                [path, "--test", test],
-                log=os.path.join(os.path.dirname(log), f"{test}.log"),
-                extra_env={
-                    "LD_LIBRARY_PATH": lib_dir,
-                    "GCOV_PREFIX":     cov_dir,
-                    "GCOV_PREFIX_STRIP": "100",
-                },
-            )
             results.append((f"{name}/{test}", ok, out, dur))
         return results
 
