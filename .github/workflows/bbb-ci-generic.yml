@@ -11,6 +11,8 @@ jobs:
     name: Build, Test & Deploy to BBB
     permissions:
       checks: write
+      contents: read
+      statuses: read
     steps:
       - uses: actions/checkout@v6
       - uses: ./actions/build_container
