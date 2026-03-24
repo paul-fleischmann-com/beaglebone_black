@@ -8,6 +8,8 @@ FROM debian:bookworm
 # ----------------------------
 # Install basic packages
 # ----------------------------
+RUN dpkg --add-architecture armhf
+
 RUN apt-get update && apt-get install -y \
     build-essential \
     cmake \
@@ -23,6 +25,8 @@ RUN apt-get update && apt-get install -y \
     gcc-arm-linux-gnueabihf \
     g++-arm-linux-gnueabihf \
     libc6-dev-armhf-cross \
+    libudev-dev \
+    libudev-dev:armhf \
     lcov \
     golang \
     && rm -rf /var/lib/apt/lists/*
