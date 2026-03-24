@@ -12,12 +12,12 @@ inputs:
   go-version:
     description: Go version (passed to actions/setup-go).
     required: false
-    default: '1.23'
+    default: '1.24'
 
   working-directory:
     description: Directory containing go.mod, relative to workspace root.
     required: false
-    default: go-api
+    default: project/go-api
 
   coverpkg:
     description: Comma-separated package list for -coverpkg flag.
@@ -134,7 +134,7 @@ runs:
 
     - name: Upload Go reports
       if: inputs.upload-artifact == 'true'
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: ${{ inputs.artifact-name }}
         path: |

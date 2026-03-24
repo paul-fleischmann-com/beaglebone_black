@@ -9,7 +9,7 @@ inputs:
   go-version:
     description: Go version (passed to actions/setup-go).
     required: false
-    default: '1.23'
+    default: '1.24'
 
   working-directory:
     description: Directory containing the main package (go.mod).
@@ -70,7 +70,7 @@ runs:
 
     - name: Upload binary
       if: inputs.artifact-name != ''
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: ${{ inputs.artifact-name }}
         path: ${{ inputs.output-path }}

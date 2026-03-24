@@ -96,7 +96,7 @@ runs:
     # ── Coverage Reports herunterladen ──────────────────────────────────────
     - name: Download Go reports
       if: inputs.go-reports-artifact != ''
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v6
       with:
         name: ${{ inputs.go-reports-artifact }}
         path: reports/
@@ -104,7 +104,7 @@ runs:
 
     - name: Download Python reports
       if: inputs.python-reports-artifact != ''
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v6
       with:
         name: ${{ inputs.python-reports-artifact }}
         path: reports/
@@ -112,7 +112,7 @@ runs:
 
     - name: Download C reports
       if: inputs.c-reports-artifact != ''
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v6
       with:
         name: ${{ inputs.c-reports-artifact }}
         path: c-reports/
@@ -129,7 +129,7 @@ runs:
     # ── SARIF Reports herunterladen ─────────────────────────────────────────
     - name: Download Go Lint SARIF
       if: inputs.go-sarif-artifact != ''
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v6
       with:
         name: ${{ inputs.go-sarif-artifact }}
         path: reports/
@@ -137,7 +137,7 @@ runs:
 
     - name: Download ShellCheck SARIF
       if: inputs.shell-sarif-artifact != ''
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v6
       with:
         name: ${{ inputs.shell-sarif-artifact }}
         path: reports/
@@ -145,7 +145,7 @@ runs:
 
     - name: Download Requirements Coverage SARIF
       if: inputs.requirements-sarif-artifact != ''
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v6
       with:
         name: ${{ inputs.requirements-sarif-artifact }}
         path: reports/
@@ -153,7 +153,7 @@ runs:
 
     - name: Download Python Security SARIF
       if: inputs.python-sarif-artifact != ''
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v6
       with:
         name: ${{ inputs.python-sarif-artifact }}
         path: reports/
@@ -161,7 +161,7 @@ runs:
 
     - name: Download Rust Lint SARIF
       if: inputs.rust-sarif-artifact != ''
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v6
       with:
         name: ${{ inputs.rust-sarif-artifact }}
         path: reports/
@@ -169,7 +169,7 @@ runs:
 
     - name: Download C Lint SARIF
       if: inputs.c-sarif-artifact != ''
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v6
       with:
         name: ${{ inputs.c-sarif-artifact }}
         path: reports/
@@ -177,7 +177,7 @@ runs:
 
     - name: Download Rust Coverage
       if: inputs.rust-coverage-artifact != ''
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v6
       with:
         name: ${{ inputs.rust-coverage-artifact }}
         path: reports/

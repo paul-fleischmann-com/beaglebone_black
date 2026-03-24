@@ -13,11 +13,11 @@ RELATIONS:
 - TYPE: Parent
   VALUE: SYS-004
 - TYPE: File
-  VALUE: c-lib/include/bme280.h
+  VALUE: project/c/include/bme280.h
 - TYPE: File
   VALUE: project/rust-lib/src/bme280.rs
 - TYPE: File
-  VALUE: go-api/pkg/hal/hal_test.go
+  VALUE: project/go-api/pkg/hal/hal_test.go
 
 [HW_REQUIREMENT]
 UID: HW-DRV-002
@@ -28,11 +28,11 @@ RELATIONS:
 - TYPE: Parent
   VALUE: SYS-004
 - TYPE: File
-  VALUE: c-lib/include/gpio.h
+  VALUE: project/c/include/gpio.h
 - TYPE: File
   VALUE: project/rust-lib/src/gpio.rs
 - TYPE: File
-  VALUE: go-api/pkg/hal/hal_test.go
+  VALUE: project/go-api/pkg/hal/hal_test.go
 
 [HW_REQUIREMENT]
 UID: HW-DRV-003
@@ -43,11 +43,11 @@ RELATIONS:
 - TYPE: Parent
   VALUE: SYS-004
 - TYPE: File
-  VALUE: c-lib/include/uart.h
+  VALUE: project/c/include/uart.h
 - TYPE: File
   VALUE: project/rust-lib/src/uart.rs
 - TYPE: File
-  VALUE: go-api/pkg/hal/hal_test.go
+  VALUE: project/go-api/pkg/hal/hal_test.go
 
 [HW_REQUIREMENT]
 UID: HW-DRV-004
@@ -58,11 +58,11 @@ RELATIONS:
 - TYPE: Parent
   VALUE: SYS-004
 - TYPE: File
-  VALUE: c-lib/include/spi.h
+  VALUE: project/c/include/spi.h
 - TYPE: File
   VALUE: project/rust-lib/src/spi.rs
 - TYPE: File
-  VALUE: go-api/pkg/hal/hal_test.go
+  VALUE: project/go-api/pkg/hal/hal_test.go
 
 [SOURCE_CODE]
 UID: SC-HW-001
@@ -73,7 +73,7 @@ RELATIONS:
 - TYPE: Parent
   VALUE: HW-DRV-001
 - TYPE: File
-  VALUE: c-lib/include/bme280.h
+  VALUE: project/c/include/bme280.h
 
 [SOURCE_CODE]
 UID: SC-HW-002
@@ -84,7 +84,7 @@ RELATIONS:
 - TYPE: Parent
   VALUE: HW-DRV-002
 - TYPE: File
-  VALUE: c-lib/include/gpio.h
+  VALUE: project/c/include/gpio.h
 
 [SOURCE_CODE]
 UID: SC-HW-003
@@ -112,7 +112,7 @@ RELATIONS:
 - TYPE: Parent
   VALUE: HW-DRV-001
 - TYPE: File
-  VALUE: go-api/pkg/hal/hal_test.go
+  VALUE: project/go-api/pkg/hal/hal_test.go
 
 [TEST_CASE]
 UID: TC-HW-002
@@ -123,7 +123,7 @@ RELATIONS:
 - TYPE: Parent
   VALUE: HW-DRV-002
 - TYPE: File
-  VALUE: go-api/pkg/hal/hal_test.go
+  VALUE: project/go-api/pkg/hal/hal_test.go
 
 [TEST_CASE]
 UID: TC-HW-003
@@ -134,7 +134,7 @@ RELATIONS:
 - TYPE: Parent
   VALUE: HW-DRV-003
 - TYPE: File
-  VALUE: go-api/pkg/hal/hal_test.go
+  VALUE: project/go-api/pkg/hal/hal_test.go
 
 [TEST_CASE]
 UID: TC-HW-004
@@ -145,4 +145,4 @@ RELATIONS:
 - TYPE: Parent
   VALUE: HW-DRV-004
 - TYPE: File
-  VALUE: go-api/pkg/hal/hal_test.go
+  VALUE: project/go-api/pkg/hal/hal_test.go
