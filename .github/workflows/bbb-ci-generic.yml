@@ -50,9 +50,10 @@ jobs:
             cargo build \
               --target armv7-unknown-linux-gnueabihf \
               --release \
-              --manifest-path /src/rust/Cargo.toml
+              --manifest-path /src/rust-lib/Cargo.toml
 
-            cp /src/rust/target/armv7-unknown-linux-gnueabihf/release/rust_app /output/
+            cp /src/rust-lib/target/armv7-unknown-linux-gnueabihf/release/libhardware_rs.so /output/
+            cp /src/rust-lib/target/armv7-unknown-linux-gnueabihf/release/rust_app /output/
 
             echo "=== Build Go ==="
             GOOS=linux GOARCH=arm GOARM=7 go build -o /output/go_app /src/go/main.go

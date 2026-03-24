@@ -5,6 +5,10 @@ edition = "2021"
 [lib]
 name       = "hardware_rs"
 crate-type = ["cdylib","staticlib"]
+
+[[bin]]
+name = "rust_app"
+path = "test/main.rs"
 [dependencies]
 linux-embedded-hal = "0.4"
 bme280             = "0.3"

@@ -21,7 +21,11 @@ jobs:
             echo "=== Build C ==="
             arm-linux-gnueabihf-gcc -o /output/bme280_main /src/c/main.c /src/c/bme280.c -I /src/c/include -lm &&
             echo "=== Build Rust ==="
-            rustc --target=armv7-unknown-linux-gnueabihf -o /output/rust_app /src/rust/rust_app.rs &&
+            cargo build \
+              --target armv7-unknown-linux-gnueabihf \
+              --release \
+              --manifest-path /src/rust-lib/Cargo.toml &&
+            cp /src/rust-lib/target/armv7-unknown-linux-gnueabihf/release/libhardware_rs.so /output/ &&
             echo "=== Build Go ==="
             GOOS=linux GOARCH=arm GOARM=7 go build -o /output/go_app /src/go/main.go
           test_commands: |
