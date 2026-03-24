@@ -28,8 +28,23 @@ fn err(code: i32) -> RsBme280Data {
 // Wrap blocking I2cdev to implement embedded-hal-async's I2c trait
 struct SyncI2c(I2cdev);
 
-impl embedded_hal_async::i2c::ErrorType for SyncI2c {
+impl embedded_hal::i2c::ErrorType for SyncI2c {
     type Error = <I2cdev as embedded_hal::i2c::ErrorType>::Error;
+}
+
+impl embedded_hal::i2c::I2c for SyncI2c {
+    fn read(&mut self, addr: u8, buf: &mut [u8]) -> Result<(), Self::Error> {
+        BlockingI2c::read(&mut self.0, addr, buf)
+    }
+    fn write(&mut self, addr: u8, buf: &[u8]) -> Result<(), Self::Error> {
+        BlockingI2c::write(&mut self.0, addr, buf)
+    }
+    fn write_read(&mut self, addr: u8, w: &[u8], r: &mut [u8]) -> Result<(), Self::Error> {
+        BlockingI2c::write_read(&mut self.0, addr, w, r)
+    }
+    fn transaction(&mut self, addr: u8, ops: &mut [embedded_hal::i2c::Operation<'_>]) -> Result<(), Self::Error> {
+        BlockingI2c::transaction(&mut self.0, addr, ops)
+    }
 }
 
 impl embedded_hal_async::i2c::I2c for SyncI2c {
