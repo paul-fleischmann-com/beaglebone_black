@@ -60,12 +60,12 @@ jobs:
             echo "=== Build Go ==="
             GOOS=linux GOARCH=arm GOARM=7 go build -o /output/go_app /src/go/main.go
             
-          test_commands: |
+          unit_test_commands: |
             echo "=== Run Go Unit Tests ==="
             cd /src/go-api && CGO_ENABLED=0 gotestsum \
               --junitfile /output/go-test-results.xml \
               ./pkg/hal/... ./pkg/api/... ./pkg/hal/config/...
-
+          test_commands: |
             echo "=== Run Python Tests ==="
             /opt/venv/bin/coverage run --source=/tests /tests/run_tests.py
             /opt/venv/bin/coverage report -m

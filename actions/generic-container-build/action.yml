@@ -17,6 +17,10 @@ inputs:
   build_commands:
      description: Multi-line shell commands to build binaries
      required: true
+  unit_test_commands:
+    description: Shell commands for unit tests that always run (e.g. Go tests, x86-native)
+    required: false
+    default: ""
   test_commands:
     description: Multi-line shell commands to run tests
     required: false
@@ -60,6 +64,27 @@ runs:
         SOURCE_DIR: ${{ inputs.source_dir }}
         CONTAINER_IMAGE: ${{ inputs.container_image }}
         BUILD_COMMANDS: ${{ inputs.build_commands }}
+
+    # =========================
+    # UNIT TESTS (always, x86 container)
+    # =========================
+    - name: Run unit tests in container (always)
+      if: ${{ inputs.unit_test_commands != '' }}
+      shell: bash
+      run: |
+        echo "=== UNIT TESTS (x86 container) ==="
+
+        podman run --rm \
+          -v "$OUTPUT_DIR:/output" \
+          -v "$SOURCE_DIR:/src" \
+          "$CONTAINER_IMAGE" \
+          -c "${UNIT_TEST_COMMANDS}"
+
+      env:
+        OUTPUT_DIR: ${{ inputs.output_dir }}
+        SOURCE_DIR: ${{ inputs.source_dir }}
+        CONTAINER_IMAGE: ${{ inputs.container_image }}
+        UNIT_TEST_COMMANDS: ${{ inputs.unit_test_commands }}
 
     # =========================
     # DETECT ARCH
