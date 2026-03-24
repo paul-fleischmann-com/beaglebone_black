@@ -13,7 +13,7 @@ path = "test/main.rs"
 linux-embedded-hal = "0.3"
 bme280             = "0.3"
 serialport         = "4"
-spidev             = "0.5"
+spidev             = "0.7"
 libc               = "0.2"
 [build-dependencies]
 cbindgen = "0.26"
