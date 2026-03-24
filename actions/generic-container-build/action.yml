@@ -248,6 +248,13 @@ runs:
         GITHUB_SHA: ${{ github.sha }}
         COVERAGE_SOURCE_PREFIX: project/c
 
+    - name: Upload SARIF to Code Scanning
+      if: ${{ env.ARCH == 'ARM' && inputs.bbb_host != '' }}
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: ${{ inputs.output_dir }}/coverage.sarif
+        category: c-coverage
+
     - name: Upload C Coverage
       if: ${{ env.ARCH == 'ARM' && inputs.bbb_host != '' }}
       uses: actions/upload-artifact@v4
