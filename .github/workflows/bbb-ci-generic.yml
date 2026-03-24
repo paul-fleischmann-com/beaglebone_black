@@ -8,6 +8,9 @@ on:
     branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
 
   # ── BBB Build, Test & Deploy (self-hosted) ────
@@ -84,7 +87,7 @@ jobs:
   # ── Go HAL Unit Tests ─────────────────────────
   test-go:
     name: Go Unit Tests
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     permissions:
       security-events: write
     steps:
@@ -98,7 +101,7 @@ jobs:
   # ── C Coverage ───────────────────────────────
   test-c:
     name: C Coverage
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - uses: actions/checkout@v6
       - uses: ./.github/actions/c-test
@@ -106,7 +109,7 @@ jobs:
   # ── Go Lint ──────────────────────────────────
   lint-go:
     name: Go Lint
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - uses: actions/checkout@v6
       - uses: ./.github/actions/go-lint
@@ -114,7 +117,7 @@ jobs:
   # ── Web GUI Validierung ───────────────────────
   test-web:
     name: Web GUI Tests
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - uses: actions/checkout@v6
       - uses: ./.github/actions/html-validate
@@ -122,7 +125,7 @@ jobs:
   # ── Shell Script Syntax ───────────────────────
   test-scripts:
     name: Script Syntax
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - uses: actions/checkout@v6
       - uses: ./.github/actions/shellcheck
@@ -134,7 +137,7 @@ jobs:
   # ── Python Tests (API Mock) ───────────────────
   test-python:
     name: Python Tests
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     permissions:
       security-events: write
     steps:
@@ -144,7 +147,7 @@ jobs:
   # ── CLI Build (Multi-Plattform) ───────────────
   build-cli:
     name: Build CLI
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     needs: [test-go, lint-go]
     strategy:
       matrix:
@@ -180,7 +183,7 @@ jobs:
   # ── TUI Build ────────────────────────────────
   build-tui:
     name: Build TUI
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     needs: [lint-go]
     strategy:
       matrix:
@@ -209,7 +212,7 @@ jobs:
   # ── StrictDoc Requirements Export ────────────
   strictdoc:
     name: StrictDoc Export & Validation
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     permissions:
       security-events: write
     steps:
@@ -219,7 +222,7 @@ jobs:
   # ── Python Security Scan (bandit) ────────────
   security-python:
     name: Python Security Scan
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     permissions:
       security-events: write
     steps:
@@ -229,7 +232,7 @@ jobs:
   # ── SonarCloud Quality Analysis ───────────────
   sonarcloud:
     name: SonarCloud Analysis
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     needs: [build-deploy, test-go, test-c, test-python, strictdoc, security-python]
     if: always()
     steps:
@@ -257,7 +260,7 @@ jobs:
   # ── Test Report + Trend ───────────────────────
   report:
     name: Test Report
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     needs: [build-deploy, test-go, lint-go, test-web, test-scripts, test-python, build-cli, strictdoc, sonarcloud]
     if: always()
     permissions:
@@ -273,7 +276,7 @@ jobs:
   # ── Changelog Update ──────────────────────────
   changelog:
     name: Update Changelog
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     permissions:
       contents: write
@@ -324,7 +327,7 @@ jobs:
   # ── Release ───────────────────────────────────
   release:
     name: GitHub Release
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     needs: [build-cli, build-tui, test-python, test-scripts]
     if: startsWith(github.ref, 'refs/tags/v')
     permissions:
