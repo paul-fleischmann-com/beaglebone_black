@@ -11,7 +11,7 @@ name = "rust_app"
 path = "test/main.rs"
 [dependencies]
 linux-embedded-hal = "0.4"
-bme280             = "0.3"
+bme280             = "0.5"
 serialport         = "4"
 spidev             = "0.7"
 libc               = "0.2"
