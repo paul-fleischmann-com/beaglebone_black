@@ -284,7 +284,7 @@ runs:
       uses: dorny/test-reporter@v1
       with:
         name: Test Results
-        path: "logs/test-results.xml,bin/go-test-results.xml"
+        path: "logs/test-results.xml"
         reporter: java-junit
         fail-on-error: false
 

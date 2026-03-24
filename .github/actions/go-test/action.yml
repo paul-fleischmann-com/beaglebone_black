@@ -133,6 +133,15 @@ runs:
         sarif_file: reports/go-tests.sarif
         category: ${{ inputs.sarif-category }}
 
+    - name: Publish Go Test Results
+      if: always()
+      uses: dorny/test-reporter@v1
+      with:
+        name: Go Test Results
+        path: reports/go-tests-junit.xml
+        reporter: java-junit
+        fail-on-error: false
+
     - name: Upload Go reports
       if: inputs.upload-artifact == 'true'
       uses: actions/upload-artifact@v6
