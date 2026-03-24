@@ -3,15 +3,30 @@ import xml.etree.ElementTree as ET
 import os
 import sys
 
-xml_path = os.path.join(os.environ.get("OUTPUT_DIR", "bin"), "coverage.xml")
+output_dir = os.environ.get("OUTPUT_DIR", "bin")
+xml_path = os.path.join(output_dir, "coverage.xml")
+summary_file = os.environ.get("GITHUB_STEP_SUMMARY", "")
+
+print(f"[coverage_summary] OUTPUT_DIR={output_dir}")
+print(f"[coverage_summary] xml_path={xml_path} exists={os.path.exists(xml_path)}")
+print(f"[coverage_summary] GITHUB_STEP_SUMMARY={summary_file!r}")
+
 if not os.path.exists(xml_path):
-    print("coverage.xml not found, skipping summary")
+    print("[coverage_summary] coverage.xml not found — skipping summary")
     sys.exit(0)
 
 tree = ET.parse(xml_path)
 root = tree.getroot()
-line_rate   = float(root.get("line-rate",   0)) * 100
-branch_rate = float(root.get("branch-rate", 0)) * 100
+
+# gcovr Cobertura: root tag may be 'coverage' or wrapped in 'coverages'
+cov_el = root if root.tag == "coverage" else root.find("coverage")
+if cov_el is None:
+    print(f"[coverage_summary] unexpected root tag: {root.tag} — skipping")
+    sys.exit(0)
+
+line_rate   = float(cov_el.get("line-rate",   0)) * 100
+branch_rate = float(cov_el.get("branch-rate", 0)) * 100
+print(f"[coverage_summary] lines={line_rate:.1f}% branches={branch_rate:.1f}%")
 
 
 def badge(pct):
@@ -21,7 +36,7 @@ def badge(pct):
 
 
 rows = []
-for pkg in root.iter("package"):
+for pkg in cov_el.iter("package"):
     name = pkg.get("name", "")
     lr   = float(pkg.get("line-rate",   0)) * 100
     br   = float(pkg.get("branch-rate", 0)) * 100
@@ -36,14 +51,17 @@ md = f"""## C Coverage Report
 
 | Package | Lines | Branches |
 |---|---|---|
-{chr(10).join(rows)}
+{chr(10).join(rows) if rows else "| — | — | — |"}
 </details>
 
 > Thresholds: 🟢 >=90%  🟡 >=75%  🔴 <75%
 """
 
-summary_file = os.environ.get("GITHUB_STEP_SUMMARY", "")
 if summary_file:
     with open(summary_file, "a") as f:
         f.write(md)
+    print("[coverage_summary] written to GITHUB_STEP_SUMMARY")
+else:
+    print("[coverage_summary] GITHUB_STEP_SUMMARY not set — printing only")
+
 print(md)
