@@ -167,7 +167,7 @@ runs:
     - name: Trend Summary schreiben
       if: always()
       shell: bash
-      run: python3 "$GITHUB_WORKSPACE/scripts/trend_summary.py"
+      run: python3 "$GITHUB_ACTION_PATH/../../../scripts/trend_summary.py"
 
     # ── Trend-Cache speichern ───────────────────────────────────────────────
     - name: Trend-Cache speichern
@@ -212,7 +212,7 @@ runs:
       shell: bash
       run: |
         if [ -f reports/requirements.json ]; then
-          python3 "$GITHUB_WORKSPACE/scripts/generate_reports.py" \
+          python3 "$GITHUB_ACTION_PATH/../../../scripts/generate_reports.py" \
             --requirements reports/requirements.json \
             --results      reports/test_results.json \
             --output       reports \

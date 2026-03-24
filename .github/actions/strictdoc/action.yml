@@ -108,13 +108,13 @@ runs:
     - name: Traceability Report in Workflow Summary schreiben
       if: always()
       shell: bash
-      run: python3 "$GITHUB_WORKSPACE/scripts/req_tracing_summary.py"
+      run: python3 "$GITHUB_ACTION_PATH/../../../scripts/req_tracing_summary.py"
 
     - name: Requirements Coverage → SARIF
       if: always()
       shell: bash
       run: |
-        python3 "$GITHUB_WORKSPACE/scripts/strictdoc_to_sarif.py" \
+        python3 "$GITHUB_ACTION_PATH/../../../scripts/strictdoc_to_sarif.py" \
           --sdoc-glob "${{ inputs.sdoc-glob }}" \
           --output reports/requirements-coverage.sarif
 

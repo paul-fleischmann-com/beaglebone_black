@@ -49,7 +49,7 @@ runs:
     - name: Generate C coverage report
       shell: bash
       run: |
-        "$GITHUB_WORKSPACE/scripts/c_coverage.sh" \
+        "$GITHUB_ACTION_PATH/../../../scripts/c_coverage.sh" \
           "${{ inputs.source-dir }}" \
           "${{ inputs.output-file }}" \
           ${{ inputs.filter-patterns }}
