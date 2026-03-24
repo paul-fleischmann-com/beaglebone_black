@@ -7,8 +7,8 @@ def create_config():
         include_doc_paths=["docs/requirements", "reports"],
         # Nur Quellcode-Verzeichnisse für Source-Traceability scannen
         include_source_paths=[
-            "go-api/",
-            "c-lib/",
+            "project/go-api/",
+            "project/c/",
             "project/rust-lib/",
             "tests/",
             "Makefile",

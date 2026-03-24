@@ -53,12 +53,16 @@ runs:
         missing=()
         command -v bear >/dev/null 2>&1 || missing+=(bear)
         command -v lcov >/dev/null 2>&1 || missing+=(lcov)
-        if [ ${#missing[@]} -gt 0 ]; then
-          if [ "$(id -u)" = "0" ]; then
-            apt-get install -y --no-install-recommends "${missing[@]}"
-          else
-            sudo apt-get install -y --no-install-recommends "${missing[@]}"
-          fi
+        if [ ${#missing[@]} -eq 0 ]; then exit 0; fi
+        echo "Missing tools: ${missing[*]} — trying to install..."
+        if [ "$(id -u)" = "0" ]; then
+          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends "${missing[@]}"
+        else
+          DEBIAN_FRONTEND=noninteractive sudo -n apt-get install -y --no-install-recommends "${missing[@]}" || {
+            echo "❌ Cannot install ${missing[*]} — sudo requires a password."
+            echo "   Fix: run once on the runner: sudo apt-get install -y bear lcov"
+            exit 1
+          }
         fi
 
     - name: Build with coverage + Compilation Database
