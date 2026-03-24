@@ -68,9 +68,9 @@ runs:
         mkdir -p "$(dirname "${{ inputs.output-file }}")"
         FINDINGS=$(find . -name "*.sh" -not -path "*/.git/*"           | xargs shellcheck --format=json 2>/dev/null || true)
         if [ -z "$FINDINGS" ] || [ "$FINDINGS" = "[]" ]; then
-          echo "[]" | python3 "$GITHUB_ACTION_PATH/../../../tooling/shellcheck_to_sarif.py" > "${{ inputs.output-file }}"
+          echo "[]" | python3 "$GITHUB_ACTION_PATH/../../../scripts/shellcheck_to_sarif.py" > "${{ inputs.output-file }}"
         else
-          echo "$FINDINGS" | python3 "$GITHUB_ACTION_PATH/../../../tooling/shellcheck_to_sarif.py" > "${{ inputs.output-file }}"
+          echo "$FINDINGS" | python3 "$GITHUB_ACTION_PATH/../../../scripts/shellcheck_to_sarif.py" > "${{ inputs.output-file }}"
         fi
         echo "✅ ShellCheck SARIF: ${{ inputs.output-file }}"
 

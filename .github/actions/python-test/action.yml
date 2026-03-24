@@ -83,7 +83,7 @@ runs:
       if: inputs.upload-sarif == 'true'
       shell: bash
       run: |
-        python3 "$GITHUB_ACTION_PATH/../../../tooling/junit_to_sarif.py" \
+        python3 "$GITHUB_ACTION_PATH/../../../scripts/junit_to_sarif.py" \
           ${{ inputs.junit-xml }} reports/python-tests.sarif python-tests
 
     - name: Upload Python Test SARIF to GitHub Code Scanning
