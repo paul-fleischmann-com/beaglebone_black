@@ -17,7 +17,7 @@ jobs:
     permissions:
       security-events: write
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
         with:                                                                                                                 
          token: ${{ secrets.GITHUB_TOKEN }}  
 
@@ -32,7 +32,7 @@ jobs:
     name: C Coverage
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
         with:                                                                                                                 
          token: ${{ secrets.GITHUB_TOKEN }}  
       - uses: ./.github/actions/c-test
@@ -42,7 +42,7 @@ jobs:
     name: Go Lint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
         with:                                                                                                                 
          token: ${{ secrets.GITHUB_TOKEN }}  
       - uses: ./.github/actions/go-lint
@@ -52,7 +52,7 @@ jobs:
     name: Web GUI Tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
         with:                                                                                                                 
          token: ${{ secrets.GITHUB_TOKEN }}  
       - uses: ./.github/actions/html-validate
@@ -62,7 +62,7 @@ jobs:
     name: Script Syntax
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
         with:                                                                                                                 
          token: ${{ secrets.GITHUB_TOKEN }}  
       - uses: ./.github/actions/shellcheck
@@ -78,7 +78,7 @@ jobs:
     permissions:
       security-events: write
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
         with:                                                                                                                 
          token: ${{ secrets.GITHUB_TOKEN }}  
       - uses: ./.github/actions/python-test
@@ -108,7 +108,7 @@ jobs:
             goarch: amd64
             name: bbcli-windows-amd64.exe
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
         with:                                                                                                                 
          token: ${{ secrets.GITHUB_TOKEN }}  
       - uses: ./.github/actions/go-build
@@ -140,7 +140,7 @@ jobs:
             goarch: amd64
             name: bbtui-darwin-amd64
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
         with:                                                                                                                 
          token: ${{ secrets.GITHUB_TOKEN }}  
       - uses: ./.github/actions/go-build
@@ -159,7 +159,7 @@ jobs:
     permissions:
       security-events: write
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
         with:                                                                                                                 
          token: ${{ secrets.GITHUB_TOKEN }}  
 
@@ -172,7 +172,7 @@ jobs:
     permissions:
       security-events: write
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
         with:                                                                                                                 
          token: ${{ secrets.GITHUB_TOKEN }}  
       - uses: ./.github/actions/python-security
@@ -184,14 +184,14 @@ jobs:
     needs: [test-go, test-c, test-python, strictdoc, security-python]
     if: always()
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
         with:                                                                                                                 
          token: ${{ secrets.GITHUB_TOKEN }}  
         with:
           fetch-depth: 0  # vollständige History für blame/annotations
 
       - name: Checkout tooling scripts for SARIF path resolution
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
         with:
           repository: paulefl/beaglebone-tooling
           ref: main
@@ -227,7 +227,7 @@ jobs:
       pages:    write
       id-token: write
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
         with:                                                                                                                 
          token: ${{ secrets.GITHUB_TOKEN }}  
 
@@ -245,7 +245,7 @@ jobs:
       contents: write
       pull-requests: write
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}  
           fetch-depth: 0
@@ -300,7 +300,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
         with:                                                                                                                 
          token: ${{ secrets.GITHUB_TOKEN }}  
       - uses: actions/download-artifact@v8

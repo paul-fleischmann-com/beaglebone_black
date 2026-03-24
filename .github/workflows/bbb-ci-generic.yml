@@ -32,7 +32,7 @@ jobs:
           git config --global --list 2>/dev/null || echo "(no global config)"
           echo "=== credential helpers ==="
           git config --list --show-origin 2>/dev/null | grep -i credential || echo "(none)"
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
       - uses: ./actions/build_container
@@ -101,7 +101,7 @@ jobs:
     permissions:
       security-events: write
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
       - uses: ./.github/actions/go-test
@@ -115,7 +115,7 @@ jobs:
     name: C Coverage
     runs-on: self-hosted
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
       - uses: ./.github/actions/c-test
@@ -125,7 +125,7 @@ jobs:
     name: Go Lint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
       - uses: ./.github/actions/go-lint
@@ -135,7 +135,7 @@ jobs:
     name: Web GUI Tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
       - uses: ./.github/actions/html-validate
@@ -145,7 +145,7 @@ jobs:
     name: Script Syntax
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
       - uses: ./.github/actions/shellcheck
@@ -161,7 +161,7 @@ jobs:
     permissions:
       security-events: write
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
       - uses: ./.github/actions/python-test
@@ -191,7 +191,7 @@ jobs:
             goarch: amd64
             name: bbcli-windows-amd64.exe
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
       - uses: ./.github/actions/go-build
@@ -223,7 +223,7 @@ jobs:
             goarch: amd64
             name: bbtui-darwin-amd64
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
       - uses: ./.github/actions/go-build
@@ -242,7 +242,7 @@ jobs:
     permissions:
       security-events: write
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
       - uses: ./.github/actions/strictdoc
@@ -254,7 +254,7 @@ jobs:
     permissions:
       security-events: write
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
       - uses: ./.github/actions/python-security
@@ -266,7 +266,7 @@ jobs:
     needs: [build-deploy, test-go, test-c, test-python, strictdoc, security-python]
     if: always()
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}  
           fetch-depth: 0
@@ -299,7 +299,7 @@ jobs:
       pages: write
       id-token: write
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
         with:                                                                                                                 
          token: ${{ secrets.GITHUB_TOKEN }}
       - uses: ./.github/actions/test-report
@@ -315,7 +315,7 @@ jobs:
       contents: write
       pull-requests: write
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}  
           fetch-depth: 0
@@ -367,7 +367,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
         with:                                                                                                                 
          token: ${{ secrets.GITHUB_TOKEN }}  
       - uses: actions/download-artifact@v4
