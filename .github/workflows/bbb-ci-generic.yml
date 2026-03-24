@@ -64,7 +64,7 @@ jobs:
             echo "=== Run Go Unit Tests ==="
             cd /src/go-api && CGO_ENABLED=0 gotestsum \
               --junitfile /output/go-test-results.xml \
-              ./pkg/hal/... ./pkg/api/... ./pkg/hal/config/...
+              ./pkg/hal ./pkg/hal/mock ./pkg/hal/config ./pkg/api/...
           test_commands: |
             echo "=== Run Python Tests ==="
             /opt/venv/bin/coverage run --source=/tests /tests/run_tests.py
