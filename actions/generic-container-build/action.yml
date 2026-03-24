@@ -258,7 +258,7 @@ runs:
 
     - name: Upload C Coverage
       if: ${{ env.ARCH == 'ARM' && inputs.bbb_host != '' }}
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: c-coverage-html
         path: bin/html/
@@ -269,7 +269,7 @@ runs:
     # =========================
     - name: Upload BBB Logs
       if: ${{ env.ARCH == 'ARM' && inputs.bbb_host != '' }}
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: bbb-test-logs
         path: logs/
@@ -307,7 +307,7 @@ runs:
       env:
         OUTPUT_DIR: ${{ inputs.output_dir }}
     - name: Upload output files
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: output_dir
         path: ${{ inputs.output_dir }}/
