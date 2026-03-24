@@ -21,7 +21,7 @@ jobs:
           build_commands: |
             echo "=== Build C ==="
             arm-linux-gnueabihf-gcc -o /output/bme280_main \
-              /src/c/test/test_c_lib.c \
+              /src/c/test/bbb_smoke.c \
               /src/c/src/bme280.c /src/c/src/gpio.c /src/c/src/uart.c /src/c/src/spi.c \
               -I /src/c/include -lm &&
             echo "=== Build Rust ==="

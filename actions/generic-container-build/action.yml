@@ -156,7 +156,7 @@ runs:
 
         # Execute
         ssh -o StrictHostKeyChecking=no $BBB_USER@$BBB_HOST <<EOF
-          rm -rf /home/$BBB_USER/bin/logs
+          rm -rf /home/$BBB_USER/bin/logs /home/$BBB_USER/bin/coverage
           mkdir -p /home/$BBB_USER/bin/logs
           chmod +x /home/$BBB_USER/bin/*
           python3 /home/$BBB_USER/run_tests.py \

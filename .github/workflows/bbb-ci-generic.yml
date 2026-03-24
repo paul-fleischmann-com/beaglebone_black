@@ -58,7 +58,7 @@ jobs:
             arm-linux-gnueabihf-gcc \
               --coverage \
               -o /output/bme280_main \
-              /src/c/test/test_c_lib.c \
+              /src/c/test/bbb_smoke.c \
               -I /src/c/include \
               -L /output -lhardware -lm
             find /src/c -name "*.gcno" -exec cp {} /output/ \; || true
