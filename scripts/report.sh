@@ -21,7 +21,7 @@ RED='\033[0;31m'; BOLD='\033[1m'; GRAY='\033[0;37m'; NC='\033[0m'
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-GO_API="$REPO_ROOT/go-api"
+GO_API="$REPO_ROOT/project/go-api"
 REPORT_DIR="$REPO_ROOT/reports"
 OPEN_HTML=false
 [[ "${1:-}" == "--open" ]] && OPEN_HTML=true

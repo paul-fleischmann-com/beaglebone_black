@@ -58,11 +58,11 @@ tooling-download:
 	chmod +x tooling/*.sh tooling/bausteinsicht
 	@echo "✅ Tooling in tooling/ bereit"
 
-test-report: tooling-download
-	./tooling/report.sh
+test-report:
+	./scripts/report.sh
 
-test-report-open: tooling-download
-	./tooling/report.sh --open
+test-report-open:
+	./scripts/report.sh --open
 
 deploy:
 	scp bin/embedded project/go-api/libs/libhardware.so project/go-api/libs/libhardware_rs.so \
