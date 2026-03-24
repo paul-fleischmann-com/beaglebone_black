@@ -33,22 +33,10 @@ inputs:
 runs:
   using: composite
   steps:
-    - name: Download tooling scripts
+    - name: Tooling scripts available locally
       if: inputs.include-tooling == 'true'
       shell: bash
-      env:
-        GH_TOKEN: ${{ env.GH_TOKEN || env.GITHUB_TOKEN }}
-      run: |
-        mkdir -p "${{ inputs.tooling-dest }}"
-        for attempt in 1 2 3; do
-          rm -rf /tmp/tooling-dl && mkdir -p /tmp/tooling-dl
-          gh release download             --repo paulefl/beaglebone-tooling             --pattern "tooling-*.tar.gz"             --dir /tmp/tooling-dl && break
-          echo "⏳ Attempt ${attempt}/3 failed — waiting 10s..."
-          sleep 10
-        done
-        tar xf /tmp/tooling-dl/tooling-*.tar.gz -C "${{ inputs.tooling-dest }}"
-        chmod +x "${{ inputs.tooling-dest }}"/*.sh "${{ inputs.tooling-dest }}"/bausteinsicht
-        echo "✅ Tooling downloaded to ${{ inputs.tooling-dest }}/"
+      run: echo "Tooling scripts are in scripts/ — no download needed"
 
     - name: Bash Syntax Check
       shell: bash
@@ -60,7 +48,13 @@ runs:
 
     - name: Install shellcheck
       shell: bash
-      run: sudo apt-get install -y --no-install-recommends shellcheck
+      run: |
+        command -v shellcheck >/dev/null 2>&1 && exit 0
+        if [ "$(id -u)" = "0" ]; then
+          apt-get install -y --no-install-recommends shellcheck
+        else
+          sudo apt-get install -y --no-install-recommends shellcheck
+        fi
 
     - name: ShellCheck SARIF
       shell: bash

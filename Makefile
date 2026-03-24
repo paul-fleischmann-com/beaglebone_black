@@ -21,8 +21,8 @@ rust-lib:
 	cbindgen --config project/rust-lib/cbindgen.toml --output project/go-api/libs/include/hardware_rs.h 2>/dev/null || true
 
 go-api: c-lib rust-lib
-	cd go-api && GOOS=linux GOARCH=arm GOARM=7 CGO_ENABLED=1 CC=$(CC) \
-	  go build -ldflags="-s -w" -o ../bin/embedded ./cmd/
+	cd project/go-api && GOOS=linux GOARCH=arm GOARM=7 CGO_ENABLED=1 CC=$(CC) \
+	  go build -ldflags="-s -w" -o ../../bin/embedded ./cmd/
 
 cli:
 	cd tools/cli && GOOS=linux GOARCH=amd64 CGO_ENABLED=0 \
@@ -38,7 +38,7 @@ test-cover:
 	./scripts/test.sh -cover -html
 
 lint:
-	cd go-api && go vet ./pkg/hal/ ./pkg/hal/mock/ ./pkg/hal/config/
+	cd project/go-api && go vet ./pkg/hal/ ./pkg/hal/mock/ ./pkg/hal/config/
 	cd tools/cli && go mod tidy && go vet ./...
 	cd tools/tui && go mod tidy && go vet ./...
 	test -z "$$(gofmt -l project/go-api/ tools/)" || (echo "❌ Formatierung prüfen: gofmt -w ." && exit 1)

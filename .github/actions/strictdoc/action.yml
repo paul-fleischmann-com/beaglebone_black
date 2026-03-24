@@ -94,7 +94,12 @@ runs:
     - name: Chromium installieren
       if: steps.check-chrome.outputs.available == 'false'
       shell: bash
-      run: sudo apt-get install -y --no-install-recommends chromium-driver
+      run: |
+        if [ "$(id -u)" = "0" ]; then
+          apt-get install -y --no-install-recommends chromium-driver
+        else
+          sudo apt-get install -y --no-install-recommends chromium-driver
+        fi
 
     - name: StrictDoc Export
       shell: bash
