@@ -10,7 +10,7 @@ jobs:
     runs-on: self-hosted
     name: Build, Test, Deploy & Release
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - uses: ./actions/generic-container-build
         with:
