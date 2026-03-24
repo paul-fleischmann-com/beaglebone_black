@@ -12,9 +12,6 @@ path = "test/main.rs"
 [dependencies]
 linux-embedded-hal  = "0.4"
 bme280              = "0.5"
-embedded-hal        = "1"
-embedded-hal-async  = "1"
-futures             = { version = "0.3", default-features = false, features = ["executor"] }
 serialport          = "4"
 spidev              = "0.7"
 libc                = "0.2"
