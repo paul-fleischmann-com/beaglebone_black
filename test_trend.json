@@ -1,0 +1,134 @@
+[
+  {
+    "timestamp": "2026-03-18T10:30:35.795206+00:00",
+    "build": "19",
+    "branch": "main",
+    "commit": "34fbb7fb",
+    "total_tests": 20,
+    "bestanden": 20,
+    "fehlgeschlagen": 0,
+    "erfolgsrate": 100.0,
+    "avg_coverage": 1.3
+  },
+  {
+    "timestamp": "2026-03-18T11:52:44.888171+00:00",
+    "build": "38",
+    "branch": "main",
+    "commit": "bf616ecf",
+    "total_tests": 20,
+    "bestanden": 20,
+    "fehlgeschlagen": 0,
+    "erfolgsrate": 100.0,
+    "avg_coverage": 1.3
+  },
+  {
+    "timestamp": "2026-03-18T12:01:24.914208+00:00",
+    "build": "39",
+    "branch": "main",
+    "commit": "3e94d17b",
+    "total_tests": 20,
+    "bestanden": 20,
+    "fehlgeschlagen": 0,
+    "erfolgsrate": 100.0,
+    "avg_coverage": 1.3
+  },
+  {
+    "timestamp": "2026-03-18T12:06:40.020393+00:00",
+    "build": "40",
+    "branch": "main",
+    "commit": "363cd1e4",
+    "total_tests": 20,
+    "bestanden": 20,
+    "fehlgeschlagen": 0,
+    "erfolgsrate": 100.0,
+    "avg_coverage": 1.3
+  },
+  {
+    "timestamp": "2026-03-18T13:22:13.931813+00:00",
+    "build": "41",
+    "branch": "main",
+    "commit": "33c2f559",
+    "total_tests": 20,
+    "bestanden": 20,
+    "fehlgeschlagen": 0,
+    "erfolgsrate": 100.0,
+    "avg_coverage": 1.3
+  },
+  {
+    "timestamp": "2026-03-18T13:35:25.686122+00:00",
+    "build": "42",
+    "branch": "main",
+    "commit": "479abfa6",
+    "total_tests": 20,
+    "bestanden": 20,
+    "fehlgeschlagen": 0,
+    "erfolgsrate": 100.0,
+    "avg_coverage": 1.3
+  },
+  {
+    "timestamp": "2026-03-18T13:46:09.433094+00:00",
+    "build": "43",
+    "branch": "main",
+    "commit": "c15966c2",
+    "total_tests": 20,
+    "bestanden": 20,
+    "fehlgeschlagen": 0,
+    "erfolgsrate": 100.0,
+    "avg_coverage": 1.3
+  },
+  {
+    "timestamp": "2026-03-18T13:48:39.297257+00:00",
+    "build": "44",
+    "branch": "main",
+    "commit": "4c634571",
+    "total_tests": 20,
+    "bestanden": 20,
+    "fehlgeschlagen": 0,
+    "erfolgsrate": 100.0,
+    "avg_coverage": 1.3
+  },
+  {
+    "timestamp": "2026-03-18T14:00:45.217546+00:00",
+    "build": "45",
+    "branch": "main",
+    "commit": "362ef356",
+    "total_tests": 20,
+    "bestanden": 20,
+    "fehlgeschlagen": 0,
+    "erfolgsrate": 100.0,
+    "avg_coverage": 1.3
+  },
+  {
+    "timestamp": "2026-03-18T14:21:07.831054+00:00",
+    "build": "46",
+    "branch": "main",
+    "commit": "2a8b0046",
+    "total_tests": 20,
+    "bestanden": 20,
+    "fehlgeschlagen": 0,
+    "erfolgsrate": 100.0,
+    "avg_coverage": 1.3
+  },
+  {
+    "timestamp": "2026-03-18T14:32:33.353833+00:00",
+    "build": "47",
+    "branch": "main",
+    "commit": "c96909e6",
+    "total_tests": 20,
+    "bestanden": 20,
+    "fehlgeschlagen": 0,
+    "erfolgsrate": 100.0,
+    "avg_coverage": 1.3
+  },
+  {
+    "timestamp": "2026-03-25T07:16:26.936580+00:00",
+    "build": "4",
+    "branch": "main",
+    "commit": "76c2636b",
+    "total_tests": 0,
+    "bestanden": 0,
+    "fehlgeschlagen": 0,
+    "erfolgsrate": 0.0,
+    "avg_coverage": 0.0
+  }
+]
