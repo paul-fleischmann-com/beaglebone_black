@@ -74,3 +74,4 @@ runs:
       with:
         name: ${{ inputs.artifact-name }}
         path: ${{ inputs.output-file }}
+        retention-days: 1

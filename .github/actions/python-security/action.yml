@@ -34,6 +34,7 @@ inputs:
   retention-days:
     description: Artifact retention in days.
     required: false
+    default: '1'
     default: '30'
 
   upload-sarif:

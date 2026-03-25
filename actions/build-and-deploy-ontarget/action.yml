@@ -269,6 +269,7 @@ runs:
         name: bbb-sonar-coverage
         path: ${{ inputs.output_dir }}/sonar-coverage.xml
         if-no-files-found: ignore
+        retention-days: 1
 
     - name: Upload C Coverage
       if: ${{ env.ARCH == 'ARM' && inputs.bbb_host != '' }}
@@ -277,6 +278,7 @@ runs:
         name: c-coverage-html
         path: bin/html/
         if-no-files-found: ignore
+        retention-days: 7
 
     # =========================
     # UPLOAD LOGS
@@ -288,6 +290,7 @@ runs:
         name: bbb-test-logs
         path: logs/
         if-no-files-found: ignore
+        retention-days: 3
 
     # =========================
     # TEST REPORT
@@ -326,3 +329,4 @@ runs:
         name: ${{ inputs.artifact-name }}
         path: ${{ inputs.output_dir }}/
         if-no-files-found: ignore
+        retention-days: 1
