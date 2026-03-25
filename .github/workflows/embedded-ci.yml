@@ -464,6 +464,33 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+  # ── Artifact Cleanup ──────────────────────────
+  cleanup:
+    name: Cleanup CI Artifacts
+    runs-on: ubuntu-latest
+    needs: [sonarcloud, sonar-report, test-cli-bbb, test-tui-bbb, report]
+    if: always()
+    permissions:
+      actions: write
+    steps:
+      - name: Delete CI-internal artifacts
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          REPO="${{ github.repository }}"
+          RUN_ID="${{ github.run_id }}"
+
+          # Nur Artifacts dieses Runs löschen die nur CI-intern gebraucht werden
+          PATTERN="arm-binaries|bbb-output|bbb-sonar-coverage|go-reports|python-reports|c-reports|shell-sarif|go-sarif|python-sarif|rust-sarif|c-sarif|rust-coverage|requirements-sarif"
+
+          gh api "repos/$REPO/actions/runs/$RUN_ID/artifacts" --paginate \
+            --jq ".artifacts[] | select(.name | test(\"$PATTERN\")) | .id" | \
+            while read -r id; do
+              echo "Deleting artifact $id"
+              gh api "repos/$REPO/actions/artifacts/$id" -X DELETE
+            done
+          echo "✅ CI artifact cleanup done"
+
   # ── Changelog Update ──────────────────────────
   changelog:
     name: Update Changelog

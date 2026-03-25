@@ -55,6 +55,25 @@ runs:
         OUTPUT_DIR: ${{ inputs.output_dir }}
 
     # =========================
+    # CACHE
+    # =========================
+    - name: Cache Cargo registry
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+        key: cargo-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: cargo-${{ runner.os }}-
+
+    - name: Cache Go modules (container build)
+      uses: actions/cache@v4
+      with:
+        path: ~/go/pkg/mod
+        key: go-mod-${{ runner.os }}-${{ hashFiles('**/go.sum') }}
+        restore-keys: go-mod-${{ runner.os }}-
+
+    # =========================
     # BUILD
     # =========================
     - name: Build inside container
@@ -63,9 +82,14 @@ runs:
         set -e
         echo "=== BUILD ==="
 
+        mkdir -p "$HOME/.cargo/registry" "$HOME/.cargo/git" "$HOME/go/pkg/mod"
+
         podman run --rm \
           -v "$OUTPUT_DIR:/output" \
           -v "$SOURCE_DIR:/src" \
+          -v "$HOME/.cargo/registry:/root/.cargo/registry" \
+          -v "$HOME/.cargo/git:/root/.cargo/git" \
+          -v "$HOME/go/pkg/mod:/root/go/pkg/mod" \
           "$CONTAINER_IMAGE" \
           -c "${BUILD_COMMANDS}"
 
