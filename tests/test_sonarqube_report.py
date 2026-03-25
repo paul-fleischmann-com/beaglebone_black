@@ -38,54 +38,62 @@ SAMPLE_ISSUES = [
 ]
 
 
+def _require(condition, msg):
+    """Raise AssertionError with a message if condition is False."""
+    if not condition:
+        raise AssertionError(msg)
+
+
 class TestBuildReport:
     def test_contains_project_key(self):
         report = build_report("my-project", SAMPLE_ISSUES, 3, "OK",
                               "BLOCKER,CRITICAL,MAJOR", "BUG,VULNERABILITY,CODE_SMELL")
-        assert "my-project" in report
+        _require("my-project" in report, "Project key missing from report")
 
     def test_quality_gate_ok(self):
         report = build_report("p", SAMPLE_ISSUES, 3, "OK",
                               "BLOCKER,CRITICAL,MAJOR", "BUG,VULNERABILITY,CODE_SMELL")
-        assert "✅" in report
-        assert "OK" in report
+        _require("✅" in report, "OK gate should show ✅")
+        _require("OK" in report, "'OK' missing from report")
 
     def test_quality_gate_error(self):
         report = build_report("p", SAMPLE_ISSUES, 3, "ERROR",
                               "BLOCKER,CRITICAL,MAJOR", "BUG,VULNERABILITY,CODE_SMELL")
-        assert "❌" in report
-        assert "ERROR" in report
+        _require("❌" in report, "ERROR gate should show ❌")
+        _require("ERROR" in report, "'ERROR' missing from report")
 
     def test_severity_counts_in_table(self):
         report = build_report("p", SAMPLE_ISSUES, 3, "OK",
                               "BLOCKER,CRITICAL,MAJOR", "BUG,VULNERABILITY,CODE_SMELL")
-        assert "BLOCKER" in report
-        assert "CRITICAL" in report
-        assert "MAJOR" in report
+        _require("BLOCKER" in report, "'BLOCKER' missing from report")
+        _require("CRITICAL" in report, "'CRITICAL' missing from report")
+        _require("MAJOR" in report, "'MAJOR' missing from report")
 
     def test_top_issues_listed(self):
         report = build_report("p", SAMPLE_ISSUES, 3, "OK",
                               "BLOCKER,CRITICAL,MAJOR", "BUG,VULNERABILITY,CODE_SMELL")
-        assert "gpio.c" in report
-        assert "Null pointer dereference" in report
-        assert "c:S1035" in report
+        _require("gpio.c" in report, "'gpio.c' missing from report")
+        _require("Null pointer dereference" in report, "Issue message missing from report")
+        _require("c:S1035" in report, "Rule ID missing from report")
 
     def test_component_prefix_stripped(self):
         report = build_report("p", SAMPLE_ISSUES, 3, "OK",
                               "BLOCKER,CRITICAL,MAJOR", "BUG,VULNERABILITY,CODE_SMELL")
         # "myproject:" prefix should be stripped from component
-        assert "myproject:" not in report
-        assert "c-lib/src/gpio.c" in report
+        _require("myproject:" not in report, "'myproject:' prefix should be stripped")
+        _require("c-lib/src/gpio.c" in report, "Stripped component path missing from report")
 
     def test_none_issues_graceful(self):
         report = build_report("p", None, 0, "UNKNOWN",
                               "BLOCKER,CRITICAL,MAJOR", "BUG,VULNERABILITY,CODE_SMELL")
-        assert "nicht erreichbar" in report or "kein Report" in report
+        _require("nicht erreichbar" in report or "kein Report" in report,
+                 "Expected fallback message for None issues")
 
     def test_empty_issues(self):
         report = build_report("p", [], 0, "OK",
                               "BLOCKER,CRITICAL,MAJOR", "BUG,VULNERABILITY,CODE_SMELL")
-        assert "Keine Issues" in report or "✅" in report
+        _require("Keine Issues" in report or "✅" in report,
+                 "Expected empty-issues indicator in report")
 
     def test_pipe_in_message_escaped(self):
         issues = [{
@@ -99,7 +107,7 @@ class TestBuildReport:
         report = build_report("p", issues, 1, "OK",
                               "MAJOR", "BUG")
         # Pipe in message must be escaped so Markdown table is valid
-        assert "foo \\| bar" in report
+        _require("foo \\| bar" in report, "Pipe in message must be escaped as '\\|'")
 
     def test_top_50_limit(self):
         many_issues = [
@@ -115,7 +123,7 @@ class TestBuildReport:
         ]
         report = build_report("p", many_issues, 100, "OK",
                               "MAJOR", "BUG")
-        assert "50 weitere Issues" in report
+        _require("50 weitere Issues" in report, "Expected truncation notice for >50 issues")
 
     def test_output_file_written(self, tmp_path):
         outfile = tmp_path / "report.md"
@@ -123,18 +131,22 @@ class TestBuildReport:
                               "BLOCKER,CRITICAL,MAJOR", "BUG,VULNERABILITY,CODE_SMELL")
         outfile.write_text(report, encoding="utf-8")
         content = outfile.read_text(encoding="utf-8")
-        assert "SonarQube Overview" in content
+        _require("SonarQube Overview" in content, "Report file missing 'SonarQube Overview' header")
 
 
 class TestSeverityEmoji:
     def test_all_severities_have_emoji(self):
         for sev in ["BLOCKER", "CRITICAL", "MAJOR", "MINOR", "INFO"]:
-            assert sev in SEVERITY_EMOJI
-            assert SEVERITY_EMOJI[sev]
+            if sev not in SEVERITY_EMOJI:
+                raise KeyError(f"SEVERITY_EMOJI missing key: {sev!r}")
+            if not SEVERITY_EMOJI[sev]:
+                raise ValueError(f"SEVERITY_EMOJI[{sev!r}] is empty or falsy")
 
 
 class TestTypeLabel:
     def test_all_types_have_label(self):
         for t in ["BUG", "VULNERABILITY", "CODE_SMELL"]:
-            assert t in TYPE_LABEL
-            assert TYPE_LABEL[t]
+            if t not in TYPE_LABEL:
+                raise KeyError(f"TYPE_LABEL missing key: {t!r}")
+            if not TYPE_LABEL[t]:
+                raise ValueError(f"TYPE_LABEL[{t!r}] is empty or falsy")

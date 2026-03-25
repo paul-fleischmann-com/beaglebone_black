@@ -160,7 +160,7 @@ run_shell_syntax() {
     : > "$log_file"
 
     while IFS= read -r f; do
-        local rel="${f#$REPO_ROOT/}"
+        local rel="${f#"$REPO_ROOT/"}"
         if bash -n "$f" 2>/dev/null; then
             echo -e "  ${GREEN}✅${NC} $rel"
             echo "✅ $rel" >> "$log_file"

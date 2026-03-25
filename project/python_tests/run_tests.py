@@ -35,8 +35,9 @@ def _run(cmd, log, extra_env=None):
     env = {**os.environ, **(extra_env or {})}
     t0 = time.monotonic()
     try:
-        result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                                text=True, check=True, env=env)
+        result = subprocess.run(  # nosec B603 — cmd contains resolved binary paths; shell=False prevents injection
+            cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            text=True, check=True, env=env, timeout=120)
         duration = time.monotonic() - t0
         os.makedirs(os.path.dirname(log), exist_ok=True)
         with open(log, "w") as f:
