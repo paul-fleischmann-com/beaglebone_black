@@ -43,6 +43,7 @@ inputs:
   retention-days:
     description: Artifact retention in days.
     required: false
+    default: '7'
     default: '30'
 
 runs:
@@ -65,6 +66,22 @@ runs:
           --severities "${{ inputs.severities }}" \
           --types "${{ inputs.types }}" \
           --output-file "${{ inputs.output-file }}" \
+          --step-summary
+      env:
+        GITHUB_STEP_SUMMARY: ${{ env.GITHUB_STEP_SUMMARY }}
+
+    - name: Generate SonarQube Report -- 2
+      if: inputs.sonar-token != ''
+      shell: bash
+      run: |
+        mkdir -p "$(dirname "${{ inputs.output-file }}")"
+        python3 "${{ github.action_path }}/sonarqube_report2.py" \
+          --host "${{ inputs.sonar-host-url }}" \
+          --token "${{ inputs.sonar-token }}" \
+          --project-key "${{ inputs.project-key }}" \
+          --severities "${{ inputs.severities }}" \
+          --types "${{ inputs.types }}" \
+          --output-file "reports/sonarqube-report_2.md" \
           --step-summary
       env:
         GITHUB_STEP_SUMMARY: ${{ env.GITHUB_STEP_SUMMARY }}

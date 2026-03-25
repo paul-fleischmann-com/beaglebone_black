@@ -268,7 +268,23 @@ jobs:
         with:
           name: bbcli-linux-armv7
           path: bin/
-      - name: Deploy CLI to BBB & run smoke tests
+      - name: Deploy CLI to BBB
+        env:
+          BBB_HOST: ${{ secrets.BBB_HOST }}
+          BBB_USER: ${{ secrets.BBB_USER }}
+          BBB_SSH_KEY: ${{ secrets.BBB_SSH_KEY }}
+        run: |
+          set -e
+          KEY=$(mktemp)
+          trap "rm -f $KEY" EXIT
+          echo "$BBB_SSH_KEY" > "$KEY"
+          chmod 600 "$KEY"
+          chmod +x bin/bbcli-linux-armv7
+          scp -i "$KEY" -o StrictHostKeyChecking=no \
+            bin/bbcli-linux-armv7 $BBB_USER@$BBB_HOST:~/bbcli
+          echo "✅ CLI deployed to BBB"
+
+      - name: Run CLI Tests on BBB
         env:
           BBB_HOST: ${{ secrets.BBB_HOST }}
           BBB_USER: ${{ secrets.BBB_USER }}
@@ -280,16 +296,96 @@ jobs:
           echo "$BBB_SSH_KEY" > "$KEY"
           chmod 600 "$KEY"
           SSH="ssh -i $KEY -o StrictHostKeyChecking=no $BBB_USER@$BBB_HOST"
-          SCP="scp -i $KEY -o StrictHostKeyChecking=no"
 
-          chmod +x bin/bbcli-linux-armv7
-          $SCP bin/bbcli-linux-armv7 $BBB_USER@$BBB_HOST:~/bbcli
-
-          echo "=== Smoke Tests ==="
+          echo "=== CLI Smoke Tests (on BBB) ==="
           $SSH "~/bbcli --version"
           $SSH "~/bbcli --help"
           $SSH "~/bbcli sensor read || true"
-          echo "✅ CLI smoke tests passed"
+          echo "✅ CLI on-device tests passed"
+
+      - name: Download CLI binary (amd64)
+        uses: actions/download-artifact@v6
+        with:
+          name: bbcli-linux-amd64
+          path: bin/
+
+      - name: Run CLI Tests from external client
+        env:
+          BBB_HOST: ${{ secrets.BBB_HOST }}
+        run: |
+          set -e
+          chmod +x bin/bbcli-linux-amd64
+
+          echo "=== CLI Smoke Tests (external client → BBB API) ==="
+          bin/bbcli-linux-amd64 --version
+          bin/bbcli-linux-amd64 --help
+          bin/bbcli-linux-amd64 --host "$BBB_HOST" sensor read || true
+          echo "✅ CLI external client tests passed"
+
+  # ── TUI Integration Tests auf BBB ─────────────
+  test-tui-bbb:
+    name: TUI Integration Tests on BBB
+    runs-on: self-hosted
+    needs: [build-tui, deploy-bbb]
+    steps:
+      - name: Download TUI binary (ARMv7)
+        uses: actions/download-artifact@v6
+        with:
+          name: bbtui-linux-armv7
+          path: bin/
+
+      - name: Deploy TUI to BBB
+        env:
+          BBB_HOST: ${{ secrets.BBB_HOST }}
+          BBB_USER: ${{ secrets.BBB_USER }}
+          BBB_SSH_KEY: ${{ secrets.BBB_SSH_KEY }}
+        run: |
+          set -e
+          KEY=$(mktemp)
+          trap "rm -f $KEY" EXIT
+          echo "$BBB_SSH_KEY" > "$KEY"
+          chmod 600 "$KEY"
+          chmod +x bin/bbtui-linux-armv7
+          scp -i "$KEY" -o StrictHostKeyChecking=no \
+            bin/bbtui-linux-armv7 $BBB_USER@$BBB_HOST:~/bbtui
+          echo "✅ TUI deployed to BBB"
+
+      - name: Run TUI Tests on BBB
+        env:
+          BBB_HOST: ${{ secrets.BBB_HOST }}
+          BBB_USER: ${{ secrets.BBB_USER }}
+          BBB_SSH_KEY: ${{ secrets.BBB_SSH_KEY }}
+        run: |
+          set -e
+          KEY=$(mktemp)
+          trap "rm -f $KEY" EXIT
+          echo "$BBB_SSH_KEY" > "$KEY"
+          chmod 600 "$KEY"
+          SSH="ssh -i $KEY -o StrictHostKeyChecking=no $BBB_USER@$BBB_HOST"
+
+          echo "=== TUI Smoke Tests (on BBB) ==="
+          $SSH "~/bbtui --version"
+          $SSH "~/bbtui --help"
+          echo "✅ TUI on-device tests passed"
+
+      - name: Download TUI binary (amd64)
+        uses: actions/download-artifact@v6
+        with:
+          name: bbtui-linux-amd64
+          path: bin/
+
+      - name: Run TUI Tests from external client
+        env:
+          BBB_HOST: ${{ secrets.BBB_HOST }}
+        run: |
+          set -e
+          chmod +x bin/bbtui-linux-amd64
+
+          echo "=== TUI Smoke Tests (external client → BBB API) ==="
+          bin/bbtui-linux-amd64 --version
+          bin/bbtui-linux-amd64 --help
+          bin/bbtui-linux-amd64 --host "$BBB_HOST" || true
+          echo "✅ TUI external client tests passed"
 
   # ── StrictDoc Requirements Export ────────────
   strictdoc:
@@ -334,6 +430,17 @@ jobs:
           sonar-token: ${{ secrets.SONAR_TOKEN }}
           qualitygate-wait: 'false'
 
+  # ── SonarQube Issues Report ───────────────────
+  sonar-report:
+    name: SonarQube Issues Report
+    runs-on: ubuntu-latest
+    needs: [sonarcloud]
+    if: always()
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
       - uses: ./.github/actions/sonarqube-report
         with:
           sonar-token: ${{ secrets.SONAR_TOKEN }}
@@ -343,7 +450,7 @@ jobs:
   report:
     name: Test Report
     runs-on: ubuntu-latest
-    needs: [build-arm, deploy-bbb, test-go, lint-go, test-web, test-scripts, test-python, build-cli, test-cli-bbb, strictdoc, sonarcloud]
+    needs: [build-arm, deploy-bbb, test-go, lint-go, test-web, test-scripts, test-python, build-cli, test-cli-bbb, build-tui, test-tui-bbb, strictdoc, sonarcloud]
     if: always()
     permissions:
       contents: write
@@ -356,6 +463,33 @@ jobs:
       - uses: ./.github/actions/test-report
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ── Artifact Cleanup ──────────────────────────
+  cleanup:
+    name: Cleanup CI Artifacts
+    runs-on: ubuntu-latest
+    needs: [sonarcloud, sonar-report, test-cli-bbb, test-tui-bbb, report]
+    if: always()
+    permissions:
+      actions: write
+    steps:
+      - name: Delete CI-internal artifacts
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          REPO="${{ github.repository }}"
+          RUN_ID="${{ github.run_id }}"
+
+          # Nur Artifacts dieses Runs löschen die nur CI-intern gebraucht werden
+          PATTERN="arm-binaries|bbb-output|bbb-sonar-coverage|go-reports|python-reports|c-reports|shell-sarif|go-sarif|python-sarif|rust-sarif|c-sarif|rust-coverage|requirements-sarif"
+
+          gh api "repos/$REPO/actions/runs/$RUN_ID/artifacts" --paginate \
+            --jq ".artifacts[] | select(.name | test(\"$PATTERN\")) | .id" | \
+            while read -r id; do
+              echo "Deleting artifact $id"
+              gh api "repos/$REPO/actions/artifacts/$id" -X DELETE
+            done
+          echo "✅ CI artifact cleanup done"
 
   # ── Changelog Update ──────────────────────────
   changelog:

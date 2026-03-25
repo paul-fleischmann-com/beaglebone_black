@@ -46,6 +46,7 @@ inputs:
     description: Artifact retention in days.
     required: false
     default: '30'
+    default: '30'
 
 runs:
   using: composite
@@ -54,6 +55,7 @@ runs:
       uses: actions/setup-go@v6
       with:
         go-version: ${{ inputs.go-version }}
+        cache: true
 
     - name: Build
       shell: bash

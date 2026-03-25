@@ -38,6 +38,7 @@ inputs:
   retention-days:
     description: Artifact retention in days.
     required: false
+    default: '7'
     default: '30'
 
   upload-artifacts:

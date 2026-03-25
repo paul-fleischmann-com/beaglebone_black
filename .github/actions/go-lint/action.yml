@@ -34,6 +34,7 @@ inputs:
   retention-days:
     description: Artifact retention in days.
     required: false
+    default: '1'
     default: '30'
 
   upload-sarif:
@@ -48,6 +49,7 @@ runs:
       uses: actions/setup-go@v6
       with:
         go-version: ${{ inputs.go-version }}
+        cache: true
 
     - name: Lint
       shell: bash
