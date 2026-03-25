@@ -14,7 +14,8 @@
 :source-highlighter: rouge
 :rouge-style: monokai
 :imagesdir: ../model/export/png
-:plantumldir: ../diagrams
+:diagramsdir: ../diagrams
+:plantumldir: ../diagrams/puml
 :xrefstyle: full
 :lang: de
 :numbered:

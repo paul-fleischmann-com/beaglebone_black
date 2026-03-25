@@ -3,7 +3,7 @@
 
 === Whitebox Gesamtsystem (Ebene 1)
 
-plantuml::../../diagrams/02_schichten.puml[format=svg,align=center]
+plantuml::{diagramsdir}/02_schichten.puml[format=svg,align=center]
 
 *Begründung der Zerlegung:*
 Das System ist in fünf klar getrennte Schichten aufgeteilt.
@@ -37,7 +37,7 @@ unabhängiges Testen jeder Schicht.
 
 === Ebene 2 — API Layer (Whitebox)
 
-plantuml::../../diagrams/04_api_layer.puml[format=svg,align=center]
+plantuml::{diagramsdir}/04_api_layer.puml[format=svg,align=center]
 
 [cols="2,4", options="header"]
 |===
@@ -64,7 +64,7 @@ plantuml::../../diagrams/04_api_layer.puml[format=svg,align=center]
 
 === Ebene 2 — HAL Layer (Whitebox)
 
-plantuml::../../diagrams/05_hal_layer.puml[format=svg,align=center]
+plantuml::{diagramsdir}/05_hal_layer.puml[format=svg,align=center]
 
 [cols="2,4", options="header"]
 |===
@@ -99,7 +99,7 @@ plantuml::../../diagrams/05_hal_layer.puml[format=svg,align=center]
 
 === Ebene 2 — Library Layer (Whitebox)
 
-plantuml::../../diagrams/07_library_layer.puml[format=svg,align=center]
+plantuml::{diagramsdir}/07_library_layer.puml[format=svg,align=center]
 
 ==== C Library (`libhardware.so`)
 
@@ -156,7 +156,7 @@ via CGO/FFI aus Go aufrufbar sind. Der C-Header wird automatisch per
 
 === Ebene 2 — Client Layer (Whitebox)
 
-plantuml::../../diagrams/03_client_layer.puml[format=svg,align=center]
+plantuml::{diagramsdir}/03_client_layer.puml[format=svg,align=center]
 
 [cols="2,2,3", options="header"]
 |===

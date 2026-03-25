@@ -3,7 +3,7 @@
 
 === Infrastruktur Ebene 1: Produktionsumgebung
 
-plantuml::../../diagrams/08_hardware_layer.puml[format=svg,align=center]
+plantuml::{diagramsdir}/08_hardware_layer.puml[format=svg,align=center]
 
 [cols="2,4", options="header"]
 |===

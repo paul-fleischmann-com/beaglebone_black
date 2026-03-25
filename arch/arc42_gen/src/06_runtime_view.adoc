@@ -3,7 +3,7 @@
 
 === Szenario 1: BME280-Messung (Normalfall, C-Backend)
 
-plantuml::../../diagrams/10_sequenz_bme280.puml[format=svg,align=center]
+plantuml::{diagramsdir}/10_sequenz_bme280.puml[format=svg,align=center]
 
 [cols="1,3", options="header"]
 |===
@@ -20,7 +20,7 @@ plantuml::../../diagrams/10_sequenz_bme280.puml[format=svg,align=center]
 
 === Szenario 2: Auto-Fallback (C fehlgeschlagen → Rust)
 
-plantuml::../../diagrams/11_sequenz_fallback.puml[format=svg,align=center]
+plantuml::{diagramsdir}/11_sequenz_fallback.puml[format=svg,align=center]
 
 [cols="1,3", options="header"]
 |===

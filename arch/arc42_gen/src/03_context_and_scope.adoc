@@ -3,7 +3,7 @@
 
 === Fachlicher Kontext
 
-plantuml::../../diagrams/01_systemkontext.puml[format=svg,align=center]
+plantuml::{diagramsdir}/01_systemkontext.puml[format=svg,align=center]
 
 [cols="2,2,3", options="header"]
 |===
@@ -48,7 +48,7 @@ plantuml::../../diagrams/01_systemkontext.puml[format=svg,align=center]
 
 === Technischer Kontext
 
-plantuml::../../diagrams/02_schichten.puml[format=svg,align=center]
+plantuml::{diagramsdir}/02_schichten.puml[format=svg,align=center]
 
 [cols="2,2,3", options="header"]
 |===
