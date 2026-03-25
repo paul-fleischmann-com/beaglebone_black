@@ -1,9 +1,9 @@
 name: "Build Container Image"
-description: "Builds a container image using podman"
+description: "Builds a podman container image, optionally pulls from or pushes to a registry."
 
 inputs:
   image_name:
-    description: "Name of the image (e.g. generic-builder)"
+    description: "Local image tag (e.g. generic-builder)"
     required: true
 
   dockerfile:
@@ -19,26 +19,87 @@ inputs:
     required: false
     default: ""
 
+  remote-tag:
+    description: >
+      Full remote image reference, e.g. docker.io/user/generic-builder:latest.
+      Required when push or pull is true.
+    required: false
+    default: ""
+
+  registry-url:
+    description: "Registry URL to log in to (e.g. ghcr.io, docker.io)."
+    required: false
+    default: "ghcr.io"
+
+  registry-username:
+    description: "Registry username for login."
+    required: false
+    default: ""
+
+  registry-token:
+    description: "Registry token / password for login."
+    required: false
+    default: ""
+
+  push:
+    description: "Build locally and push to remote-tag. Requires remote-tag + credentials."
+    required: false
+    default: "false"
+
+  pull:
+    description: >
+      Try to pull remote-tag and tag as image_name instead of building.
+      Falls back to local build if pull fails (e.g. image not yet on Hub).
+    required: false
+    default: "false"
+
 runs:
   using: "composite"
   steps:
 
-    - name: Debug inputs
+    - name: Login to registry
+      if: inputs.registry-username != '' && inputs.registry-token != ''
       shell: bash
       run: |
-        echo "Image: ${{ inputs.image_name }}"
-        echo "Dockerfile: ${{ inputs.dockerfile }}"
-        echo "Context: ${{ inputs.context }}"
-        echo "Extra args: ${{ inputs.additional_args }}"
+        echo "${{ inputs.registry-token }}" | \
+          podman login \
+            --username "${{ inputs.registry-username }}" \
+            --password-stdin \
+            "${{ inputs.registry-url }}"
+
+    - name: Pull from registry (with local build fallback)
+      if: inputs.pull == 'true'
+      shell: bash
+      run: |
+        REMOTE="${{ inputs.remote-tag }}"
+        LOCAL="${{ inputs.image_name }}"
+        if podman pull "$REMOTE" 2>/dev/null; then
+          podman tag "$REMOTE" "$LOCAL"
+          echo "✅ Pulled $REMOTE → $LOCAL"
+        else
+          echo "⚠️  Pull failed — building locally"
+          podman build \
+            -t "$LOCAL" \
+            -f "${{ inputs.dockerfile }}" \
+            ${{ inputs.additional_args }} \
+            "${{ inputs.context }}"
+        fi
 
     - name: Build container image
+      if: inputs.pull != 'true'
       shell: bash
       run: |
         set -e
-        set -x
-
         podman build \
           -t "${{ inputs.image_name }}" \
           -f "${{ inputs.dockerfile }}" \
           ${{ inputs.additional_args }} \
           "${{ inputs.context }}"
+
+    - name: Push to registry
+      if: inputs.push == 'true' && inputs.remote-tag != ''
+      shell: bash
+      run: |
+        podman tag "${{ inputs.image_name }}" "${{ inputs.remote-tag }}"
+        podman push "${{ inputs.remote-tag }}"
+        echo "✅ Pushed ${{ inputs.remote-tag }}"

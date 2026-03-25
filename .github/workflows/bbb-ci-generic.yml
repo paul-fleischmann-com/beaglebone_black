@@ -26,9 +26,13 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
       - uses: ./actions/build_container
         with:
-          image_name: generic-builder
-          dockerfile: docker/builder/Dockerfile
-          context: docker/builder
+          image_name:        generic-builder
+          dockerfile:        docker/builder/Dockerfile
+          context:           docker/builder
+          remote-tag:        ghcr.io/${{ github.repository_owner }}/generic-builder:latest
+          registry-username: ${{ github.actor }}
+          registry-token:    ${{ secrets.GITHUB_TOKEN }}
+          pull:              'true'
       - uses: ./actions/generic-container-build
         with:
           source_dir: ./project
@@ -92,9 +96,13 @@ jobs:
           path: bin/
       - uses: ./actions/build_container
         with:
-          image_name: generic-builder
-          dockerfile: docker/builder/Dockerfile
-          context: docker/builder
+          image_name:        generic-builder
+          dockerfile:        docker/builder/Dockerfile
+          context:           docker/builder
+          remote-tag:        ghcr.io/${{ github.repository_owner }}/generic-builder:latest
+          registry-username: ${{ github.actor }}
+          registry-token:    ${{ secrets.GITHUB_TOKEN }}
+          pull:              'true'
       - uses: ./actions/generic-container-build
         with:
           source_dir: ./project
