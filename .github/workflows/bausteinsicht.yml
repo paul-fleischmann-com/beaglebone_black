@@ -18,8 +18,9 @@ jobs:
       contents: write
 
     steps:
-      - uses: actions/checkout@v6
-
+      - uses: actions/checkout@v4
+        with:                                                                                                                 
+         token: ${{ secrets.GITHUB_TOKEN }}  
       - name: Make bausteinsicht binary executable
         run: chmod +x scripts/bausteinsicht
 

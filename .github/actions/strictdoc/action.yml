@@ -1,0 +1,167 @@
+name: StrictDoc Export & Validation
+description: >
+  Full StrictDoc pipeline: setup Python, install StrictDoc + test deps,
+  run pytest for test-traceability, install Chromium if needed,
+  run make req-tracing, write traceability summary via req_tracing_summary.py,
+  convert requirements coverage gaps to SARIF via strictdoc_to_sarif.py,
+  upload SARIF to GitHub Code Scanning, and upload HTML/PDF/Excel/ReqIF artifacts.
+  Requires actions/checkout to have run in the calling job.
+  Scripts are resolved via GITHUB_ACTION_PATH — no download-tooling needed.
+  Job must declare security-events: write when upload-sarif is true.
+
+inputs:
+  python-version:
+    description: Python version to use.
+    required: false
+    default: '3.12'
+
+  requirements-dev:
+    description: Path to requirements-dev.txt for test dependencies.
+    required: false
+    default: tests/requirements-dev.txt
+
+  pytest-tests:
+    description: Path to pytest tests directory for JUnit XML generation.
+    required: false
+    default: tests/api/
+
+  make-target:
+    description: Make target that runs the StrictDoc export.
+    required: false
+    default: req-tracing
+
+  output-base:
+    description: Base output directory for StrictDoc exports.
+    required: false
+    default: output/strictdoc
+
+  retention-days:
+    description: Artifact retention in days.
+    required: false
+    default: '30'
+
+  upload-artifacts:
+    description: Whether to upload HTML/PDF/Excel/ReqIF artifacts ('true'/'false').
+    required: false
+    default: 'true'
+
+  sdoc-glob:
+    description: Glob pattern to find .sdoc requirement files.
+    required: false
+    default: docs/requirements/**/*.sdoc
+
+  upload-sarif:
+    description: Convert requirements gaps to SARIF and upload to GitHub Code Scanning ('true'/'false'). Requires security-events:write in the calling job.
+    required: false
+    default: 'true'
+
+  sarif-artifact:
+    description: Artifact name for the requirements SARIF (empty = no upload).
+    required: false
+    default: requirements-sarif
+
+runs:
+  using: composite
+  steps:
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ inputs.python-version }}
+
+    - name: Install dependencies
+      shell: bash
+      run: |
+        pip install strictdoc --quiet
+        pip install -r ${{ inputs.requirements-dev }} --quiet
+
+    - name: Pytest JUnit XML erzeugen (für StrictDoc Test-Traceability)
+      shell: bash
+      run: |
+        mkdir -p reports
+        pytest ${{ inputs.pytest-tests }} --timeout=10 \
+          --junit-xml=reports/pytest-api.pytest.junit.xml -q 2>&1 || true
+
+    - name: Chromedriver verfügbar prüfen
+      id: check-chrome
+      shell: bash
+      run: |
+        if command -v chromedriver &>/dev/null; then
+          echo "available=true" >> $GITHUB_OUTPUT
+        else
+          echo "available=false" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Chromium installieren
+      if: steps.check-chrome.outputs.available == 'false'
+      shell: bash
+      run: |
+        if [ "$(id -u)" = "0" ]; then
+          apt-get install -y --no-install-recommends chromium-driver
+        else
+          sudo apt-get install -y --no-install-recommends chromium-driver
+        fi
+
+    - name: StrictDoc Export
+      shell: bash
+      run: make ${{ inputs.make-target }}
+
+    - name: Traceability Report in Workflow Summary schreiben
+      if: always()
+      shell: bash
+      run: python3 "$GITHUB_ACTION_PATH/../../../scripts/req_tracing_summary.py"
+
+    - name: Requirements Coverage → SARIF
+      if: always()
+      shell: bash
+      run: |
+        python3 "$GITHUB_ACTION_PATH/../../../scripts/strictdoc_to_sarif.py" \
+          --sdoc-glob "${{ inputs.sdoc-glob }}" \
+          --output reports/requirements-coverage.sarif
+
+    - name: Upload Requirements SARIF to GitHub Code Scanning
+      if: inputs.upload-sarif == 'true'
+      continue-on-error: true
+      uses: github/codeql-action/upload-sarif@v4
+      with:
+        sarif_file: reports/requirements-coverage.sarif
+        category: requirements-coverage
+
+    - name: Upload Requirements SARIF Artifact
+      if: inputs.sarif-artifact != ''
+      uses: actions/upload-artifact@v6
+      with:
+        name: ${{ inputs.sarif-artifact }}
+        path: reports/requirements-coverage.sarif
+        retention-days: ${{ inputs.retention-days }}
+
+    - name: Upload StrictDoc HTML
+      if: inputs.upload-artifacts == 'true'
+      uses: actions/upload-artifact@v6
+      with:
+        name: strictdoc-html
+        path: ${{ inputs.output-base }}/html/
+        retention-days: ${{ inputs.retention-days }}
+
+    - name: Upload StrictDoc PDF
+      if: inputs.upload-artifacts == 'true'
+      uses: actions/upload-artifact@v6
+      with:
+        name: strictdoc-pdf
+        path: ${{ inputs.output-base }}/html2pdf/
+        retention-days: ${{ inputs.retention-days }}
+
+    - name: Upload StrictDoc Excel
+      if: inputs.upload-artifacts == 'true'
+      uses: actions/upload-artifact@v6
+      with:
+        name: strictdoc-excel
+        path: ${{ inputs.output-base }}/excel/
+        retention-days: ${{ inputs.retention-days }}
+
+    - name: Upload StrictDoc ReqIF
+      if: inputs.upload-artifacts == 'true'
+      uses: actions/upload-artifact@v6
+      with:
+        name: strictdoc-reqif
+        path: ${{ inputs.output-base }}/reqif-sdoc/
+        retention-days: ${{ inputs.retention-days }}

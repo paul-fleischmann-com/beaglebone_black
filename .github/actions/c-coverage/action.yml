@@ -1,0 +1,62 @@
+name: 'C Code Coverage'
+description: >
+  Erzeugt eine lcov .info-Datei aus gcov-Daten für SonarQube
+  (sonar.c.lcov.reportPaths). Setzt voraus, dass der C-Code mit
+  -fprofile-arcs -ftest-coverage gebaut und die Tests ausgeführt wurden.
+
+inputs:
+  source-dir:
+    description: 'Verzeichnis mit *.gcda/*.gcno Dateien (z.B. project/c/)'
+    required: true
+    default: 'project/c/'
+  output-file:
+    description: 'Zieldatei für lcov-Report (z.B. reports/c-coverage.info)'
+    required: true
+    default: 'reports/c-coverage.info'
+  filter-patterns:
+    description: >
+      Leerzeichen-getrennte Exclude-Muster für lcov --remove.
+      Standard: '/usr/*'
+    required: false
+    default: '/usr/*'
+  upload-artifact:
+    description: 'Coverage-Datei als GitHub-Artefakt hochladen (true/false)'
+    required: false
+    default: 'true'
+  artifact-name:
+    description: 'Name des GitHub-Artefakts'
+    required: false
+    default: 'c-coverage'
+
+outputs:
+  coverage-file:
+    description: 'Pfad zur erzeugten .info-Datei'
+    value: ${{ inputs.output-file }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Install lcov
+      shell: bash
+      run: |
+        command -v lcov >/dev/null 2>&1 && exit 0
+        if [ "$(id -u)" = "0" ]; then
+          apt-get install -y --no-install-recommends lcov
+        else
+          sudo apt-get install -y --no-install-recommends lcov
+        fi
+
+    - name: Generate C coverage report
+      shell: bash
+      run: |
+        "$GITHUB_ACTION_PATH/../../../scripts/c_coverage.sh" \
+          "${{ inputs.source-dir }}" \
+          "${{ inputs.output-file }}" \
+          ${{ inputs.filter-patterns }}
+
+    - name: Upload coverage artifact
+      if: inputs.upload-artifact == 'true'
+      uses: actions/upload-artifact@v6
+      with:
+        name: ${{ inputs.artifact-name }}
+        path: ${{ inputs.output-file }}

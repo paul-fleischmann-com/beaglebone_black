@@ -1,0 +1,78 @@
+name: SonarQube Issues Report
+description: >
+  Fetches open issues from the SonarQube API and produces a Markdown overview
+  report as GitHub Actions Job Summary and as a downloadable artifact.
+  Gracefully skips if sonar-token is empty or the server is unreachable.
+  Requires actions/checkout to have run in the calling job.
+
+inputs:
+  sonar-token:
+    description: SonarQube API token (SONAR_TOKEN secret). Empty = skip report.
+    required: false
+    default: ''
+
+  sonar-host-url:
+    description: SonarQube server URL.
+    required: false
+    default: https://sonarcloud.io
+
+  project-key:
+    description: sonar.projectKey from sonar-project.properties.
+    required: true
+
+  severities:
+    description: Comma-separated severities to include (BLOCKER,CRITICAL,MAJOR,MINOR,INFO).
+    required: false
+    default: BLOCKER,CRITICAL,MAJOR
+
+  types:
+    description: Comma-separated issue types (BUG,VULNERABILITY,CODE_SMELL).
+    required: false
+    default: BUG,VULNERABILITY,CODE_SMELL
+
+  output-file:
+    description: Path for the Markdown report file (empty = skip artifact).
+    required: false
+    default: reports/sonarqube-report.md
+
+  artifact-name:
+    description: Artifact name for the report (empty = no upload).
+    required: false
+    default: sonarqube-report
+
+  retention-days:
+    description: Artifact retention in days.
+    required: false
+    default: '30'
+
+runs:
+  using: composite
+  steps:
+    - name: Skip if no token
+      if: inputs.sonar-token == ''
+      shell: bash
+      run: echo "⚠️  sonar-token not set — skipping SonarQube report"
+
+    - name: Generate SonarQube Report
+      if: inputs.sonar-token != ''
+      shell: bash
+      run: |
+        mkdir -p "$(dirname "${{ inputs.output-file }}")"
+        python3 "${{ github.action_path }}/sonarqube_report.py" \
+          --host "${{ inputs.sonar-host-url }}" \
+          --token "${{ inputs.sonar-token }}" \
+          --project-key "${{ inputs.project-key }}" \
+          --severities "${{ inputs.severities }}" \
+          --types "${{ inputs.types }}" \
+          --output-file "${{ inputs.output-file }}" \
+          --step-summary
+      env:
+        GITHUB_STEP_SUMMARY: ${{ env.GITHUB_STEP_SUMMARY }}
+
+    - name: Upload SonarQube Report Artifact
+      if: inputs.sonar-token != '' && inputs.artifact-name != '' && inputs.output-file != ''
+      uses: actions/upload-artifact@v6
+      with:
+        name: ${{ inputs.artifact-name }}
+        path: ${{ inputs.output-file }}
+        retention-days: ${{ inputs.retention-days }}

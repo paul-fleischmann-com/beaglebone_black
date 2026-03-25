@@ -18,8 +18,8 @@ Fixes #<!-- Issue Nummer -->
 
 - [ ] C Library (`c-lib/`)
 - [ ] Rust Library (`project/rust-lib/`)
-- [ ] Go REST API (`go-api/`)
-- [ ] HAL Wrapper (`go-api/pkg/hal/`)
+- [ ] Go REST API (`project/go-api/`)
+- [ ] HAL Wrapper (`project/go-api/pkg/hal/`)
 - [ ] CLI Tools (`tools/cli/`)
 - [ ] TUI (`tools/tui/`)
 - [ ] Desktop GUI (`tools/desktop-gui/`)

@@ -1,0 +1,237 @@
+name: SonarCloud Analysis
+description: >
+  Downloads all coverage and SARIF report artifacts, arranges them for
+  SonarCloud, runs the scan and checks the result.
+  Requires actions/checkout with fetch-depth: 0 in the calling job.
+  Designed to grow as new SARIF report types are added (issues #5–#8, #9).
+
+inputs:
+  sonar-token:
+    description: SonarCloud token (SONAR_TOKEN secret).
+    required: true
+
+  qualitygate-wait:
+    description: >
+      Wait for Quality Gate result and fail if new issues are introduced.
+      Set to 'true' to block merges when new SonarQube issues are found.
+    required: false
+    default: 'true'
+
+  # ── Coverage Artifacts ──────────────────────────────────────────────────
+  go-reports-artifact:
+    description: Artifact name for Go reports (empty = skip).
+    required: false
+    default: go-reports
+
+  python-reports-artifact:
+    description: Artifact name for Python reports (empty = skip).
+    required: false
+    default: python-reports
+
+  c-reports-artifact:
+    description: Artifact name for C reports (empty = skip).
+    required: false
+    default: c-reports
+
+  c-coverage-source:
+    description: Path inside the c-reports artifact for the lcov .info file.
+    required: false
+    default: c-reports/reports/c-coverage.info
+
+  c-coverage-dest:
+    description: Destination path for the lcov .info file (matches sonar-project.properties).
+    required: false
+    default: reports/c-coverage.info
+
+  compile-commands-source:
+    description: Path inside the c-reports artifact for compile_commands.json.
+    required: false
+    default: c-reports/c-lib/compile_commands.json
+
+  compile-commands-dest:
+    description: Destination path for compile_commands.json (matches sonar-project.properties).
+    required: false
+    default: c-lib/compile_commands.json
+
+  # ── SARIF Artifacts ─────────────────────────────────────────────────────
+  shell-sarif-artifact:
+    description: Artifact name for ShellCheck SARIF (empty = skip). (#shellcheck-sarif action)
+    required: false
+    default: shell-sarif
+
+  requirements-sarif-artifact:
+    description: Artifact name for Requirements Coverage SARIF (empty = skip). (#4)
+    required: false
+    default: requirements-sarif
+
+  # Future SARIF artifacts — add inputs here as issues are implemented:
+  go-sarif-artifact:
+    description: Artifact name for Go Lint SARIF / golangci-lint (empty = skip). (#8)
+    required: false
+    default: go-sarif
+
+  python-sarif-artifact:
+    description: Artifact name for Python Security SARIF / bandit (empty = skip). (#5)
+    required: false
+    default: python-sarif
+
+  rust-sarif-artifact:
+    description: Artifact name for Rust Lint SARIF / clippy (empty = skip). (#6)
+    required: false
+    default: rust-sarif
+
+  c-sarif-artifact:
+    description: Artifact name for C Lint SARIF / clang-tidy (empty = skip). (#7)
+    required: false
+    default: c-sarif
+
+  rust-coverage-artifact:
+    description: Artifact name for Rust Coverage reports / cargo-llvm-cov (empty = skip). (#9)
+    required: false
+    default: rust-coverage
+
+runs:
+  using: composite
+  steps:
+    # ── Coverage Reports herunterladen ──────────────────────────────────────
+    - name: Download Go reports
+      if: inputs.go-reports-artifact != ''
+      uses: actions/download-artifact@v6
+      with:
+        name: ${{ inputs.go-reports-artifact }}
+        path: reports/
+      continue-on-error: true
+
+    - name: Download Python reports
+      if: inputs.python-reports-artifact != ''
+      uses: actions/download-artifact@v6
+      with:
+        name: ${{ inputs.python-reports-artifact }}
+        path: reports/
+      continue-on-error: true
+
+    - name: Download C reports
+      if: inputs.c-reports-artifact != ''
+      uses: actions/download-artifact@v6
+      with:
+        name: ${{ inputs.c-reports-artifact }}
+        path: c-reports/
+      continue-on-error: true
+
+    - name: Arrange C reports
+      if: inputs.c-reports-artifact != ''
+      shell: bash
+      run: |
+        mkdir -p reports c-lib
+        cp "${{ inputs.c-coverage-source }}" "${{ inputs.c-coverage-dest }}" 2>/dev/null || true
+        cp "${{ inputs.compile-commands-source }}" "${{ inputs.compile-commands-dest }}" 2>/dev/null || true
+
+
+    # ── SARIF Reports herunterladen ─────────────────────────────────────────
+    - name: Download Go Lint SARIF
+      if: inputs.go-sarif-artifact != ''
+      uses: actions/download-artifact@v6
+      with:
+        name: ${{ inputs.go-sarif-artifact }}
+        path: reports/
+      continue-on-error: true
+
+    - name: Download ShellCheck SARIF
+      if: inputs.shell-sarif-artifact != ''
+      uses: actions/download-artifact@v6
+      with:
+        name: ${{ inputs.shell-sarif-artifact }}
+        path: reports/
+      continue-on-error: true
+
+    - name: Download Requirements Coverage SARIF
+      if: inputs.requirements-sarif-artifact != ''
+      uses: actions/download-artifact@v6
+      with:
+        name: ${{ inputs.requirements-sarif-artifact }}
+        path: reports/
+      continue-on-error: true
+
+    - name: Download Python Security SARIF
+      if: inputs.python-sarif-artifact != ''
+      uses: actions/download-artifact@v6
+      with:
+        name: ${{ inputs.python-sarif-artifact }}
+        path: reports/
+      continue-on-error: true
+
+    - name: Download Rust Lint SARIF
+      if: inputs.rust-sarif-artifact != ''
+      uses: actions/download-artifact@v6
+      with:
+        name: ${{ inputs.rust-sarif-artifact }}
+        path: reports/
+      continue-on-error: true
+
+    - name: Download C Lint SARIF
+      if: inputs.c-sarif-artifact != ''
+      uses: actions/download-artifact@v6
+      with:
+        name: ${{ inputs.c-sarif-artifact }}
+        path: reports/
+      continue-on-error: true
+
+    - name: Download Rust Coverage
+      if: inputs.rust-coverage-artifact != ''
+      uses: actions/download-artifact@v6
+      with:
+        name: ${{ inputs.rust-coverage-artifact }}
+        path: reports/
+      continue-on-error: true
+
+    # All SARIF and coverage artifacts are now wired up (#3–#9 complete).
+
+    # ── BBB Coverage (optional, nur wenn BBB-Job lief) ──────────────────────
+    - name: Download BBB SonarQube Coverage
+      uses: actions/download-artifact@v6
+      with:
+        name: bbb-sonar-coverage
+        path: bin/
+      continue-on-error: true
+
+    - name: BBB Coverage Placeholder (falls kein BBB-Run)
+      shell: bash
+      run: |
+        mkdir -p bin
+        [ -f bin/sonar-coverage.xml ] || \
+          printf '<?xml version="1.0" ?>\n<coverage version="1">\n</coverage>\n' \
+            > bin/sonar-coverage.xml
+
+    # ── SonarCloud Scan ─────────────────────────────────────────────────────
+    - name: SonarCloud Scan
+      id: sonar
+      uses: SonarSource/sonarqube-scan-action@v6
+      continue-on-error: true
+      with:
+        args: >
+          -Dsonar.qualitygate.wait=${{ inputs.qualitygate-wait }}
+          -X 
+      env:
+        GITHUB_TOKEN: ${{ env.GITHUB_TOKEN }}
+        SONAR_TOKEN:  ${{ inputs.sonar-token }}
+        SONAR_HOST_URL: https://sonarcloud.io
+
+    - name: SonarCloud Ergebnis prüfen
+      if: always()
+      shell: bash
+      run: |
+        if [ "${{ steps.sonar.outcome }}" = "failure" ]; then
+          if [ -z "${{ inputs.sonar-token }}" ]; then
+            echo "⚠️  SonarCloud übersprungen: SONAR_TOKEN nicht gesetzt"
+          else
+            echo "❌ SonarCloud Scan fehlgeschlagen"
+            echo "   Mögliche Ursachen:"
+            echo "   - Compilation Database fehlt für C/C++ (sonar.cfamily.compile-commands)"
+            echo "   - Ungültiger SONAR_TOKEN"
+            echo "   - Falsches sonar.projectKey / sonar.organization"
+            exit 1
+          fi
+        else
+          echo "✅ SonarCloud Scan erfolgreich"
+        fi
+

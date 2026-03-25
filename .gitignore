@@ -5,8 +5,8 @@ bin/
 *.exe
 
 # ── Go ────────────────────────────────────
-go-api/libs/*.so
-go-api/libs/include/hardware_rs.h
+project/go-api/libs/*.so
+project/go-api/libs/include/hardware_rs.h
 vendor/
 *.test
 
@@ -15,12 +15,12 @@ project/rust-lib/target/
 Cargo.lock
 
 # ── C ────────────────────────────────────
-c-lib/src/*.o
+project/c/src/*.o
 c-lib/libhardware.so
-c-lib/tests/test_runner
-c-lib/**/*.gcda
-c-lib/**/*.gcno
-c-lib/**/*.gcov
+project/c/test/test_runner
+project/c/**/*.gcda
+project/c/**/*.gcno
+project/c/**/*.gcov
 
 # ── Python ───────────────────────────────
 __pycache__/
@@ -66,4 +66,4 @@ secrets/
 # ── Node (Web GUI) ────────────────────────
 node_modules/
 dist/
-go-api/coverage.out
+project/go-api/coverage.out

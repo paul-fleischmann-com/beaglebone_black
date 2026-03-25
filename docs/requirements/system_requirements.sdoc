@@ -11,7 +11,7 @@ STATEMENT: Das System muss auf einem BeagleBone Black mit ARM Cortex-A8 Prozesso
 STATUS: Active
 RELATIONS:
 - TYPE: File
-  VALUE: go-api/cmd/main.go
+  VALUE: project/go-api/cmd/main.go
 
 [SYS_REQUIREMENT]
 UID: SYS-002
@@ -20,7 +20,7 @@ STATEMENT: Das System muss unter Linux (Debian) auf dem BeagleBone Black betrieb
 STATUS: Active
 RELATIONS:
 - TYPE: File
-  VALUE: go-api/cmd/main.go
+  VALUE: project/go-api/cmd/main.go
 
 [SYS_REQUIREMENT]
 UID: SYS-003
@@ -29,7 +29,7 @@ STATEMENT: Das System muss eine REST API auf Port 5000 bereitstellen, die über 
 STATUS: Active
 RELATIONS:
 - TYPE: File
-  VALUE: go-api/cmd/main.go
+  VALUE: project/go-api/cmd/main.go
 - TYPE: File
   VALUE: tests/api/test_api.py
 
@@ -40,9 +40,9 @@ STATEMENT: Das System muss die Hardware-Schnittstellen BME280 (I2C), GPIO, UART 
 STATUS: Active
 RELATIONS:
 - TYPE: File
-  VALUE: go-api/pkg/hal/interface.go
+  VALUE: project/go-api/pkg/hal/interface.go
 - TYPE: File
-  VALUE: go-api/pkg/hal/hal_test.go
+  VALUE: project/go-api/pkg/hal/hal_test.go
 
 [SYS_REQUIREMENT]
 UID: SYS-005

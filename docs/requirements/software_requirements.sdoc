@@ -14,9 +14,9 @@ RELATIONS:
 - TYPE: Parent
   VALUE: SYS-004
 - TYPE: File
-  VALUE: go-api/pkg/hal/interface.go
+  VALUE: project/go-api/pkg/hal/interface.go
 - TYPE: File
-  VALUE: go-api/pkg/hal/hal_test.go
+  VALUE: project/go-api/pkg/hal/hal_test.go
 
 [SW_REQUIREMENT]
 UID: SWR-002
@@ -28,7 +28,7 @@ RELATIONS:
 - TYPE: Parent
   VALUE: SYS-004
 - TYPE: File
-  VALUE: go-api/pkg/hal/loader/factory.go
+  VALUE: project/go-api/pkg/hal/loader/factory.go
 - TYPE: File
   VALUE: tests/api/test_api.py
 
@@ -42,9 +42,9 @@ RELATIONS:
 - TYPE: Parent
   VALUE: SWR-001
 - TYPE: File
-  VALUE: go-api/pkg/hal/mock/driver.go
+  VALUE: project/go-api/pkg/hal/mock/driver.go
 - TYPE: File
-  VALUE: go-api/pkg/hal/hal_test.go
+  VALUE: project/go-api/pkg/hal/hal_test.go
 
 [SW_REQUIREMENT]
 UID: SWR-004
@@ -56,11 +56,11 @@ RELATIONS:
 - TYPE: Parent
   VALUE: SYS-004
 - TYPE: File
-  VALUE: go-api/pkg/hal/c/driver.go
+  VALUE: project/go-api/pkg/hal/c/driver.go
 - TYPE: File
-  VALUE: go-api/pkg/hal/rust/driver.go
+  VALUE: project/go-api/pkg/hal/rust/driver.go
 - TYPE: File
-  VALUE: c-lib/include/bme280.h
+  VALUE: project/c/include/bme280.h
 - TYPE: File
   VALUE: project/rust-lib/src/lib.rs
 
@@ -74,9 +74,9 @@ RELATIONS:
 - TYPE: Parent
   VALUE: SWR-002
 - TYPE: File
-  VALUE: go-api/pkg/hal/loader/factory.go
+  VALUE: project/go-api/pkg/hal/loader/factory.go
 - TYPE: File
-  VALUE: go-api/pkg/hal/hal_test.go
+  VALUE: project/go-api/pkg/hal/hal_test.go
 
 [SW_REQUIREMENT]
 UID: SWR-008
@@ -88,9 +88,9 @@ RELATIONS:
 - TYPE: Parent
   VALUE: SWR-002
 - TYPE: File
-  VALUE: go-api/pkg/hal/config/config.go
+  VALUE: project/go-api/pkg/hal/config/config.go
 - TYPE: File
-  VALUE: go-api/pkg/hal/config/config_test.go
+  VALUE: project/go-api/pkg/hal/config/config_test.go
 
 [TEST_CASE]
 UID: TC-008
@@ -101,7 +101,7 @@ RELATIONS:
 - TYPE: Parent
   VALUE: SWR-008
 - TYPE: File
-  VALUE: go-api/pkg/hal/config/config_test.go
+  VALUE: project/go-api/pkg/hal/config/config_test.go
 
 [SW_REQUIREMENT]
 UID: SWR-007
@@ -113,9 +113,9 @@ RELATIONS:
 - TYPE: Parent
   VALUE: SWR-001
 - TYPE: File
-  VALUE: go-api/pkg/api/handlers.go
+  VALUE: project/go-api/pkg/api/handlers.go
 - TYPE: File
-  VALUE: go-api/pkg/api/handlers_test.go
+  VALUE: project/go-api/pkg/api/handlers_test.go
 
 [TEST_CASE]
 UID: TC-007
@@ -126,7 +126,7 @@ RELATIONS:
 - TYPE: Parent
   VALUE: SWR-007
 - TYPE: File
-  VALUE: go-api/pkg/api/handlers_test.go
+  VALUE: project/go-api/pkg/api/handlers_test.go
 
 [SW_REQUIREMENT]
 UID: SWR-006
@@ -138,9 +138,9 @@ RELATIONS:
 - TYPE: Parent
   VALUE: SYS-004
 - TYPE: File
-  VALUE: go-api/pkg/api/server.go
+  VALUE: project/go-api/pkg/api/server.go
 - TYPE: File
-  VALUE: go-api/pkg/api/server_test.go
+  VALUE: project/go-api/pkg/api/server_test.go
 
 [TEST_CASE]
 UID: TC-006
@@ -151,7 +151,7 @@ RELATIONS:
 - TYPE: Parent
   VALUE: SWR-006
 - TYPE: File
-  VALUE: go-api/pkg/api/server_test.go
+  VALUE: project/go-api/pkg/api/server_test.go
 
 [SW_REQUIREMENT]
 UID: HW-API-007
@@ -163,9 +163,9 @@ RELATIONS:
 - TYPE: Parent
   VALUE: SWR-001
 - TYPE: File
-  VALUE: go-api/pkg/api/handlers.go
+  VALUE: project/go-api/pkg/api/handlers.go
 - TYPE: File
-  VALUE: go-api/pkg/api/handlers_test.go
+  VALUE: project/go-api/pkg/api/handlers_test.go
 
 [TEST_CASE]
 UID: TC-005
@@ -176,7 +176,7 @@ RELATIONS:
 - TYPE: Parent
   VALUE: HW-API-007
 - TYPE: File
-  VALUE: go-api/pkg/api/handlers_test.go
+  VALUE: project/go-api/pkg/api/handlers_test.go
 
 [SOURCE_CODE]
 UID: SC-001
@@ -187,7 +187,7 @@ RELATIONS:
 - TYPE: Parent
   VALUE: SWR-001
 - TYPE: File
-  VALUE: go-api/pkg/hal/interface.go
+  VALUE: project/go-api/pkg/hal/interface.go
 
 [SOURCE_CODE]
 UID: SC-002
@@ -198,7 +198,7 @@ RELATIONS:
 - TYPE: Parent
   VALUE: SWR-003
 - TYPE: File
-  VALUE: go-api/pkg/hal/mock/driver.go
+  VALUE: project/go-api/pkg/hal/mock/driver.go
 
 [SOURCE_CODE]
 UID: SC-003
@@ -209,7 +209,7 @@ RELATIONS:
 - TYPE: Parent
   VALUE: SWR-002
 - TYPE: File
-  VALUE: go-api/pkg/hal/loader/factory.go
+  VALUE: project/go-api/pkg/hal/loader/factory.go
 
 [TEST_CASE]
 UID: TC-001
@@ -220,7 +220,7 @@ RELATIONS:
 - TYPE: Parent
   VALUE: SWR-001
 - TYPE: File
-  VALUE: go-api/pkg/hal/hal_test.go
+  VALUE: project/go-api/pkg/hal/hal_test.go
 
 [TEST_CASE]
 UID: TC-002
@@ -231,7 +231,7 @@ RELATIONS:
 - TYPE: Parent
   VALUE: SWR-003
 - TYPE: File
-  VALUE: go-api/pkg/hal/hal_test.go
+  VALUE: project/go-api/pkg/hal/hal_test.go
 
 [TEST_CASE]
 UID: TC-003
@@ -242,7 +242,7 @@ RELATIONS:
 - TYPE: Parent
   VALUE: SWR-005
 - TYPE: File
-  VALUE: go-api/pkg/hal/hal_test.go
+  VALUE: project/go-api/pkg/hal/hal_test.go
 
 [TEST_CASE]
 UID: TC-004

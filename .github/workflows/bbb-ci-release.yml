@@ -10,16 +10,20 @@ jobs:
     runs-on: self-hosted
     name: Build, Test, Deploy & Release
     steps:
-      - uses: actions/checkout@v6
-
-      - uses: ./actions/generic-container-build
+      - uses: actions/checkout@v4
+        with:                                                                                                                 
+         token: ${{ secrets.GITHUB_TOKEN }}  
+      - uses: ./actions/build-and-deploy-ontarget
         with:
           source_dir: ./project
           output_dir: ./bin
           container_image: generic-builder
           build_commands: |
             echo "=== Build C ==="
-            arm-linux-gnueabihf-gcc -o /output/bme280_main /src/c/main.c /src/c/bme280.c -I /src/c/include -lm &&
+            arm-linux-gnueabihf-gcc -o /output/bme280_main \
+              /src/c/test/bbb_smoke.c \
+              /src/c/src/bme280.c /src/c/src/gpio.c /src/c/src/uart.c /src/c/src/spi.c \
+              -I /src/c/include -lm &&
             echo "=== Build Rust ==="
             cargo build \
               --target armv7-unknown-linux-gnueabihf \

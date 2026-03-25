@@ -28,12 +28,18 @@ RUN apt-get update && apt-get install -y \
     libudev-dev \
     libudev-dev:armhf \
     lcov \
-    golang \
     && rm -rf /var/lib/apt/lists/*
 
-    
+# ----------------------------
+# Install Go (official binary)
+# ----------------------------
+RUN curl -fsSL https://go.dev/dl/go1.24.1.linux-amd64.tar.gz \
+    | tar -C /usr/local -xz
 
 ENV PATH="/usr/local/go/bin:${PATH}"
+
+# Install gotestsum for JUnit XML test output
+RUN GOPATH=/usr/local go install gotest.tools/gotestsum@latest
 # ----------------------------
 # Install Rust + ARM Target
 # ----------------------------

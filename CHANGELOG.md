@@ -4151,7 +4151,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - StrictDoc GitHub Pages URL korrigiert (`output/strictdoc/html/`)
 - StrictDoc PDF-Ausgabepfad (`html2pdf/` statt `pdf/`)
 - `continue-on-error` für optionale StrictDoc-Artefakt-Downloads hinzugefügt
-- Source-Traceability auf relevante Verzeichnisse begrenzt (`go-api/`, `c-lib/`, `project/rust-lib/`, `tests/`)
+- Source-Traceability auf relevante Verzeichnisse begrenzt (`project/go-api/`, `c-lib/`, `project/rust-lib/`, `tests/`)
 - `Makefile` zu StrictDoc `include_source_paths` hinzugefügt (SYS-005)
 
 ### CI

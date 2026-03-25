@@ -11,8 +11,9 @@ jobs:
     name: Build ARMv7 & Deploy to BBB
     steps:
       # 1️⃣ Checkout
-      - uses: actions/checkout@v6
-
+      - uses: actions/checkout@v4
+        with:                                                                                                                 
+         token: ${{ secrets.GITHUB_TOKEN }}  
       # 2️⃣ Debug: Repo Struktur
       - name: Show files
         run: |

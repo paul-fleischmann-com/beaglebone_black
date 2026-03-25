@@ -80,7 +80,7 @@ beaglebone-embedded/
 │   ├── src/                    # Implementierungen
 │   └── Makefile
 │
-├── go-api/                     # Go REST API Server
+├── project/go-api/                     # Go REST API Server
 │   ├── cmd/main.go             # Einstiegspunkt (:5000)
 │   └── pkg/
 │       ├── hal/                # Hardware Abstraction Layer

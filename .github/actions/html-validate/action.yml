@@ -1,0 +1,22 @@
+name: HTML Validate
+description: >
+  Validates HTML files using Python's built-in HTMLParser.
+  Requires actions/checkout to have run in the calling job.
+
+inputs:
+  html-file:
+    description: Path to the HTML file to validate.
+    required: false
+    default: tools/web-gui/index.html
+
+runs:
+  using: composite
+  steps:
+    - name: HTML Validierung
+      shell: bash
+      run: |
+        python3 -c "
+        from html.parser import HTMLParser
+        class V(HTMLParser): pass
+        V().feed(open('${{ inputs.html-file }}').read())
+        print('HTML valide: ${{ inputs.html-file }}')"

@@ -1,0 +1,81 @@
+name: Python Security Scan
+description: >
+  Runs bandit (OWASP Python Security Scanner) and produces a SARIF report
+  for GitHub Code Scanning and SonarQube.
+  Requires actions/checkout to have run in the calling job.
+  Job must declare security-events: write when upload-sarif is true.
+
+inputs:
+  python-version:
+    description: Python version.
+    required: false
+    default: '3.12'
+
+  scan-targets:
+    description: Space-separated directories/files to scan with bandit.
+    required: false
+    default: tests/
+
+  bandit-args:
+    description: Additional bandit CLI arguments (e.g. '-ll' for high-severity only).
+    required: false
+    default: ''
+
+  sarif-output:
+    description: Path for the SARIF output file.
+    required: false
+    default: reports/python-security.sarif
+
+  artifact-name:
+    description: Artifact name for the SARIF report (empty = no upload).
+    required: false
+    default: python-sarif
+
+  retention-days:
+    description: Artifact retention in days.
+    required: false
+    default: '30'
+
+  upload-sarif:
+    description: Upload SARIF to GitHub Code Scanning ('true'/'false'). Requires security-events:write.
+    required: false
+    default: 'true'
+
+runs:
+  using: composite
+  steps:
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ inputs.python-version }}
+
+    - name: Install bandit
+      shell: bash
+      run: pip install bandit bandit-sarif-formatter --quiet
+
+    - name: Python Security Scan (bandit → SARIF)
+      shell: bash
+      run: |
+        mkdir -p "$(dirname "${{ inputs.sarif-output }}")"
+        bandit -r ${{ inputs.scan-targets }} \
+          --format sarif \
+          --output ${{ inputs.sarif-output }} \
+          ${{ inputs.bandit-args }} \
+          --exit-zero
+        echo "Findings: $(python3 -c "import json; d=json.load(open('${{ inputs.sarif-output }}')); print(len(d['runs'][0]['results']))" 2>/dev/null || echo '?')"
+
+    - name: Upload Python Security SARIF to GitHub Code Scanning
+      if: inputs.upload-sarif == 'true'
+      continue-on-error: true
+      uses: github/codeql-action/upload-sarif@v4
+      with:
+        sarif_file: ${{ inputs.sarif-output }}
+        category: python-security
+
+    - name: Upload Python Security SARIF Artifact
+      if: inputs.artifact-name != ''
+      uses: actions/upload-artifact@v6
+      with:
+        name: ${{ inputs.artifact-name }}
+        path: ${{ inputs.sarif-output }}
+        retention-days: ${{ inputs.retention-days }}

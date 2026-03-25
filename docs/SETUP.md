@@ -51,8 +51,8 @@ cd beaglebone-embedded
 make all
 
 # Einzeln
-make c-lib       # → go-api/libs/libhardware.so
-make rust-lib    # → go-api/libs/libhardware_rs.so
+make c-lib       # → project/go-api/libs/libhardware.so
+make rust-lib    # → project/go-api/libs/libhardware_rs.so
 make go-api      # → bin/embedded-armv7
 make cli         # → bin/bbcli-linux-amd64
 
@@ -68,8 +68,8 @@ make deploy
 
 # Manuell
 scp bin/embedded-armv7 \
-    go-api/libs/libhardware.so \
-    go-api/libs/libhardware_rs.so \
+    project/go-api/libs/libhardware.so \
+    project/go-api/libs/libhardware_rs.so \
     debian@192.168.7.2:/app/
 
 ssh debian@192.168.7.2 "systemctl restart embedded-sw"

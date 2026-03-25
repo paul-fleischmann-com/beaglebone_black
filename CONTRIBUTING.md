@@ -66,7 +66,7 @@ TITLE: Kurzer Titel
 STATEMENT: Die vollständige Anforderungsbeschreibung.
 RELATIONS:
 - TYPE: File
-  VALUE: go-api/pkg/hal/interface.go
+  VALUE: project/go-api/pkg/hal/interface.go
 ```
 
 **UID-Konvention:** Nächste freie Nummer je Präfix verwenden (`SYS-`, `SWR-`, `HW-DRV-`).

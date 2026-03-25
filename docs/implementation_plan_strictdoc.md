@@ -74,9 +74,9 @@ Anforderungen werden mit folgenden Dateien verknüpft:
 
 | Anforderungstyp | Verknüpfte Dateien |
 |-----------------|-------------------|
-| Systemanforderungen | `go-api/cmd/main.go`, `go-api/pkg/hal/interface.go` |
-| Softwareanforderungen | `go-api/pkg/hal/factory.go`, `go-api/pkg/hal/mock/driver.go` |
-| Treiberanforderungen | `c-lib/include/`, `project/rust-lib/src/lib.rs`, `go-api/pkg/hal/hal_test.go` |
+| Systemanforderungen | `project/go-api/cmd/main.go`, `project/go-api/pkg/hal/interface.go` |
+| Softwareanforderungen | `project/go-api/pkg/hal/factory.go`, `project/go-api/pkg/hal/mock/driver.go` |
+| Treiberanforderungen | `c-lib/include/`, `project/rust-lib/src/lib.rs`, `project/go-api/pkg/hal/hal_test.go` |
 
 ### 3.2 Beispiel-Relation (SWR-003 → HAL-Test)
 
@@ -86,12 +86,12 @@ UID: SWR-003
 TITLE: HAL Mock Driver must implement HardwareDriver interface
 RELATIONS:
 - TYPE: File
-  VALUE: go-api/pkg/hal/hal_test.go
+  VALUE: project/go-api/pkg/hal/hal_test.go
 ```
 
 ### 3.3 Vollständige Traceability-Kette (Mindestanforderung)
 
-`SWR-003` → `go-api/pkg/hal/interface.go` → `go-api/pkg/hal/hal_test.go` (TestInterfaceCompliance)
+`SWR-003` → `project/go-api/pkg/hal/interface.go` → `project/go-api/pkg/hal/hal_test.go` (TestInterfaceCompliance)
 
 ---
 

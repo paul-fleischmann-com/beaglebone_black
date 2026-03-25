@@ -1,0 +1,155 @@
+name: Go Test Pipeline
+description: >
+  Full Go test pipeline: setup-go, install report tools, run tests with
+  race detector + coverage, enforce quality gate, convert reports
+  (Cobertura, SonarQube Generic), optionally convert JUnit → SARIF and
+  upload to GitHub Code Scanning, upload Codecov and artifact.
+  Requires actions/checkout to have run in the calling job.
+  Scripts are resolved via GITHUB_ACTION_PATH — no download-tooling needed.
+  Job must declare security-events: write when upload-sarif is true.
+
+inputs:
+  go-version:
+    description: Go version (passed to actions/setup-go).
+    required: false
+    default: '1.24'
+
+  working-directory:
+    description: Directory containing go.mod, relative to workspace root.
+    required: false
+    default: project/go-api
+
+  coverpkg:
+    description: Comma-separated package list for -coverpkg flag.
+    required: true
+
+  test-packages:
+    description: Space-separated package list to test.
+    required: true
+
+  coverage-threshold:
+    description: Minimum total coverage percentage (integer) for quality gate.
+    required: false
+    default: '75'
+
+  codecov-flags:
+    description: Comma-separated flags passed to Codecov upload (empty = no upload).
+    required: false
+    default: ''
+
+  upload-artifact:
+    description: Whether to upload the go-reports artifact ('true'/'false').
+    required: false
+    default: 'true'
+
+  artifact-name:
+    description: Name of the uploaded reports artifact.
+    required: false
+    default: go-reports
+
+  upload-sarif:
+    description: Convert JUnit XML → SARIF and upload to GitHub Code Scanning ('true'/'false'). Requires security-events:write in the calling job.
+    required: false
+    default: 'true'
+
+  sarif-category:
+    description: Category label for the SARIF upload (used to distinguish multiple uploads).
+    required: false
+    default: go-tests
+
+runs:
+  using: composite
+  steps:
+    - name: Setup Go
+      uses: actions/setup-go@v6
+      with:
+        go-version: ${{ inputs.go-version }}
+        cache: true
+
+    - name: Install report tools
+      shell: bash
+      run: |
+        go install gotest.tools/gotestsum@v1.12.0
+        go install github.com/boumenot/gocover-cobertura@latest
+
+    - name: Go Unit Tests
+      shell: bash
+      run: |
+        mkdir -p "$GITHUB_WORKSPACE/reports"
+        cd ${{ inputs.working-directory }} && gotestsum \
+          --junitfile "$GITHUB_WORKSPACE/reports/go-tests-junit.xml" \
+          --jsonfile  "$GITHUB_WORKSPACE/reports/go-tests.json" \
+          -- \
+          -race -count=3 \
+          -coverprofile=coverage.out \
+          -covermode=atomic \
+          -coverpkg=${{ inputs.coverpkg }} \
+          ${{ inputs.test-packages }}
+
+    - name: Coverage Quality Gate
+      shell: bash
+      run: |
+        total=$(cd ${{ inputs.working-directory }} && \
+          go tool cover -func=coverage.out | grep "^total:" | awk '{print $3}' | tr -d '%')
+        echo "Coverage: ${total}%"
+        awk "BEGIN{exit !($total >= ${{ inputs.coverage-threshold }})}" || \
+          (echo "❌ Coverage gate: ${total}% < ${{ inputs.coverage-threshold }}%"; exit 1)
+        echo "✅ Coverage gate: ${total}% >= ${{ inputs.coverage-threshold }}%"
+
+    - name: Convert coverage to Cobertura XML
+      shell: bash
+      run: |
+        cp ${{ inputs.working-directory }}/coverage.out "$GITHUB_WORKSPACE/reports/go-coverage.out"
+        cd ${{ inputs.working-directory }} && \
+          gocover-cobertura < coverage.out > "$GITHUB_WORKSPACE/reports/go-coverage.xml"
+
+    - name: Convert JUnit XML to SonarQube Generic format
+      shell: bash
+      run: |
+        python3 "$GITHUB_ACTION_PATH/../../../scripts/junit_to_sonar_generic.py" \
+          reports/go-tests-junit.xml \
+          reports/go-tests-sonar.xml
+
+    - name: Upload Coverage (Codecov)
+      if: inputs.codecov-flags != ''
+      uses: codecov/codecov-action@v5
+      with:
+        file: ${{ inputs.working-directory }}/coverage.out
+        flags: ${{ inputs.codecov-flags }}
+
+    - name: Convert Go JUnit → SARIF
+      if: inputs.upload-sarif == 'true'
+      shell: bash
+      run: |
+        python3 "$GITHUB_ACTION_PATH/../../../scripts/junit_to_sarif.py" \
+          "$GITHUB_WORKSPACE/reports/go-tests-junit.xml" \
+          "$GITHUB_WORKSPACE/reports/go-tests.sarif" go-tests
+
+    - name: Upload Go Test SARIF to GitHub Code Scanning
+      if: inputs.upload-sarif == 'true'
+      continue-on-error: true
+      uses: github/codeql-action/upload-sarif@v4
+      with:
+        sarif_file: reports/go-tests.sarif
+        category: ${{ inputs.sarif-category }}
+
+    - name: Publish Go Test Results
+      if: always()
+      uses: dorny/test-reporter@v1
+      with:
+        name: Go Test Results
+        path: reports/go-tests-junit.xml
+        reporter: java-junit
+        fail-on-error: false
+
+    - name: Upload Go reports
+      if: inputs.upload-artifact == 'true'
+      uses: actions/upload-artifact@v6
+      with:
+        name: ${{ inputs.artifact-name }}
+        path: |
+          reports/go-tests-junit.xml
+          reports/go-tests-sonar.xml
+          reports/go-tests.json
+          reports/go-coverage.xml
+          reports/go-coverage.out

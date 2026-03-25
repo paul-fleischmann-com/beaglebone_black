@@ -2,7 +2,7 @@ Deploy the built binaries and shared libraries to the BeagleBone Black and resta
 
 First verify the binaries exist:
 ```bash
-ls -lh bin/embedded go-api/libs/libhardware.so go-api/libs/libhardware_rs.so
+ls -lh bin/embedded project/go-api/libs/libhardware.so project/go-api/libs/libhardware_rs.so
 ```
 
 If they are missing, run `make all` first before deploying.
