@@ -1,4 +1,4 @@
-name: BBB CI/CD
+name: Embedded CI/CD
 
 on:
   push:
