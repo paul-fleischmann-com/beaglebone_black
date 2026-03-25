@@ -143,17 +143,22 @@ NAME_MAP = {
     "test_gui_dark_theme":         ("python", "test_gui_dark_theme"),
 }
 
+# Kanonische Statuswerte
+_STATUS_BESTANDEN      = "BESTANDEN"
+_STATUS_FEHLGESCHLAGEN = "FEHLGESCHLAGEN"
+_STATUS_UEBERSPRUNGEN  = "ÜBERSPRUNGEN"
+
 # Status-Übersetzung: pytest/go → requirements.json
 _PY_STATUS = {
-    "passed":  "BESTANDEN",
-    "failed":  "FEHLGESCHLAGEN",
-    "skipped": "ÜBERSPRUNGEN",
-    "error":   "FEHLGESCHLAGEN",
+    "passed":  _STATUS_BESTANDEN,
+    "failed":  _STATUS_FEHLGESCHLAGEN,
+    "skipped": _STATUS_UEBERSPRUNGEN,
+    "error":   _STATUS_FEHLGESCHLAGEN,
 }
 _GO_STATUS = {
-    "pass": "BESTANDEN",
-    "fail": "FEHLGESCHLAGEN",
-    "skip": "ÜBERSPRUNGEN",
+    "pass": _STATUS_BESTANDEN,
+    "fail": _STATUS_FEHLGESCHLAGEN,
+    "skip": _STATUS_UEBERSPRUNGEN,
 }
 
 
@@ -208,7 +213,7 @@ def load_pytest_results(workspace: str) -> dict:
             outcome   = t.get("outcome", "")
             dur_s     = t.get("call", {}).get("duration", 0) or 0
             results[func_name] = {
-                "status":   _PY_STATUS.get(outcome, "ÜBERSPRUNGEN"),
+                "status":   _PY_STATUS.get(outcome, _STATUS_UEBERSPRUNGEN),
                 "dauer_ms": int(dur_s * 1000),
             }
     return results
@@ -244,6 +249,29 @@ def resolve_result(req_name: str, go: dict, python: dict) -> dict | None:
     return None  # Mapping vorhanden, aber Test nicht gelaufen → ❓
 
 
+def _index_requirements(data: dict) -> tuple[set[str], dict[str, str]]:
+    """Baut einen Index aller Test-Namen und ihrer Kategorie aus requirements."""
+    all_req_tests: set[str] = set()
+    kat_by_test: dict[str, str] = {}
+    for kat in data["kategorien"]:
+        for req in kat["requirements"]:
+            for t in req["tests"]:
+                all_req_tests.add(t)
+                kat_by_test[t] = kat["id"]
+    return all_req_tests, kat_by_test
+
+
+def _report_missing(all_req_tests: set[str], go_results: dict, python_results: dict, not_found: int) -> None:
+    """Gibt fehlende Test-Zuordnungen auf stdout aus."""
+    if not not_found:
+        return
+    missing = sorted(t for t in all_req_tests if resolve_result(t, go_results, python_results) is None)
+    print(f"❓ Ohne Ergebnis:        {not_found} Tests (kein Test implementiert)")
+    for m in missing:
+        reason = "kein Mapping" if m not in NAME_MAP else "Test nicht gelaufen"
+        print(f"   - {m}  ({reason})")
+
+
 def collect(workspace: str, requirements_path: str, output_path: str) -> None:
     # Test-Ergebnisse laden
     go_results     = load_go_results(workspace)
@@ -252,18 +280,10 @@ def collect(workspace: str, requirements_path: str, output_path: str) -> None:
     print(f"📥 Go-Tests geladen:     {len(go_results)} Ergebnisse")
     print(f"📥 Python-Tests geladen: {len(python_results)} Ergebnisse")
 
-    # Requirements laden
     with open(requirements_path) as f:
         data = json.load(f)
 
-    # Alle Test-Namen sammeln die in Requirements referenziert werden
-    all_req_tests: set[str] = set()
-    kat_by_test: dict[str, str] = {}
-    for kat in data["kategorien"]:
-        for req in kat["requirements"]:
-            for t in req["tests"]:
-                all_req_tests.add(t)
-                kat_by_test[t] = kat["id"]
+    all_req_tests, kat_by_test = _index_requirements(data)
 
     # test_ergebnisse neu aufbauen
     new_ergebnisse = []
@@ -280,23 +300,11 @@ def collect(workspace: str, requirements_path: str, output_path: str) -> None:
             not_found += 1
 
     print(f"✅ Zugeordnet:           {found}/{len(all_req_tests)} Tests")
-    if not_found:
-        # Zeige welche Tests kein Ergebnis haben
-        missing = sorted(
-            t for t in all_req_tests
-            if resolve_result(t, go_results, python_results) is None
-        )
-        print(f"❓ Ohne Ergebnis:        {not_found} Tests (kein Test implementiert)")
-        for m in missing:
-            mapping = NAME_MAP.get(m)
-            reason = "kein Mapping" if m not in NAME_MAP else "Test nicht gelaufen"
-            print(f"   - {m}  ({reason})")
+    _report_missing(all_req_tests, go_results, python_results, not_found)
 
     # Sortierung: nach Komponente dann Name
     kat_order = {k["id"]: i for i, k in enumerate(data["kategorien"])}
-    new_ergebnisse.sort(key=lambda t: (
-        kat_order.get(t["komponente"], 99), t["name"]
-    ))
+    new_ergebnisse.sort(key=lambda t: (kat_order.get(t["komponente"], 99), t["name"]))
 
     # Nur test_results.json schreiben (dynamischer Teil)
     os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)

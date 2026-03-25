@@ -693,6 +693,14 @@ def generate_arch_html():
         f.write(html)
     print(f"✅ SW Architektur HTML: {path}")
 
+# Protokoll-Beschriftung zwischen den Schichten
+_LAYER_PROTO = {
+    "HAL":     "CGO/FFI",
+    "API":     "HTTP/REST/SSE",
+    "Library": "sysfs/ioctl",
+}
+
+
 # ════════════════════════════════════════
 # 2. SW ARCHITEKTUR PDF
 # ════════════════════════════════════════
@@ -719,12 +727,9 @@ def generate_arch_pdf():
     C_BLUE   = colors.HexColor("#38bdf8")
     C_GREEN  = colors.HexColor("#4ade80")
     C_ORANGE = colors.HexColor("#fb923c")
-    C_PURPLE = colors.HexColor("#c084fc")
     C_YELLOW = colors.HexColor("#fbbf24")
-    C_RED    = colors.HexColor("#f87171")
     C_GRAY   = colors.HexColor("#475569")
     C_LIGHT  = colors.HexColor("#94a3b8")
-    C_WHITE  = colors.HexColor("#e2e8f0")
     C_BORDER = colors.HexColor("#1e3048")
 
     def S(name, **kw):
@@ -732,52 +737,16 @@ def generate_arch_pdf():
         return ParagraphStyle(name,
             parent=styles["Normal"], **kw)
 
-    sTitle = S("T", fontSize=18, textColor=C_BLUE,
+    s_title = S("T", fontSize=18, textColor=C_BLUE,
                spaceAfter=4, fontName="Helvetica-Bold",
                alignment=TA_CENTER)
-    sSub   = S("S", fontSize=9, textColor=C_GRAY,
+    s_sub   = S("S", fontSize=9, textColor=C_GRAY,
                spaceAfter=2, alignment=TA_CENTER)
-    sH1    = S("H1", fontSize=11, textColor=C_BLUE,
+    s_h1    = S("H1", fontSize=11, textColor=C_BLUE,
                spaceBefore=10, spaceAfter=6,
                fontName="Helvetica-Bold")
-    sH2    = S("H2", fontSize=9, textColor=C_LIGHT,
-               spaceBefore=6, spaceAfter=4,
-               fontName="Helvetica-Bold")
-    sBody  = S("B", fontSize=8, textColor=C_LIGHT,
-               spaceAfter=3, leading=12)
-    sSmall = S("SM", fontSize=7, textColor=C_GRAY,
+    s_small = S("SM", fontSize=7, textColor=C_GRAY,
                leading=10)
-    sMono  = S("M", fontSize=7, textColor=C_GREEN,
-               fontName="Courier")
-
-    def layer_table(title, num, color, rows):
-        """Erstellt eine Schicht-Tabelle"""
-        header = [[
-            Paragraph(f"<b>{num}  {title}</b>",
-                S("LH", fontSize=8, textColor=color,
-                  fontName="Helvetica-Bold"))
-        ]]
-        ht = Table(header, colWidths=[17*cm])
-        ht.setStyle(TableStyle([
-            ("BACKGROUND", (0,0), (-1,-1), C_SURF),
-            ("TOPPADDING", (0,0), (-1,-1), 5),
-            ("BOTTOMPADDING",(0,0),(-1,-1), 5),
-            ("LEFTPADDING", (0,0), (-1,-1), 8),
-            ("BOX", (0,0), (-1,-1), 1, color),
-        ]))
-        # Komponenten Tabelle
-        ct = Table(rows, colWidths=[3.4*cm]*5)
-        ct.setStyle(TableStyle([
-            ("BACKGROUND", (0,0), (-1,-1), C_CARD),
-            ("TEXTCOLOR",  (0,0), (-1,-1), C_LIGHT),
-            ("FONTSIZE",   (0,0), (-1,-1), 7),
-            ("GRID",       (0,0), (-1,-1), 0.3, C_BORDER),
-            ("TOPPADDING", (0,0), (-1,-1), 4),
-            ("BOTTOMPADDING",(0,0),(-1,-1), 4),
-            ("LEFTPADDING", (0,0), (-1,-1), 5),
-            ("VALIGN",     (0,0), (-1,-1), "TOP"),
-        ]))
-        return [ht, ct]
 
     def comp_cell(title, subtitle, lang_color, lang):
         return Paragraph(
@@ -806,18 +775,18 @@ def generate_arch_pdf():
 
     # ── Titel ──
     story += [
-        Paragraph("SW Architektur", sTitle),
-        Paragraph(PROJEKT, sSub),
+        Paragraph("SW Architektur", s_title),
+        Paragraph(PROJEKT, s_sub),
         Paragraph(
             f"Version {VERSION}  |  ARMv7 Cortex-A8  |  {DATUM}",
-            sSub),
+            s_sub),
         Spacer(1, 0.4*cm),
         HRFlowable(width="100%", color=C_BLUE, thickness=2),
         Spacer(1, 0.4*cm),
     ]
 
     # ── Systemübersicht ──
-    story.append(Paragraph("Systemübersicht", sH1))
+    story.append(Paragraph("Systemübersicht", s_h1))
 
     # KPI Tabelle
     kpi = [
@@ -850,7 +819,7 @@ def generate_arch_pdf():
     story += [kt, Spacer(1, 0.5*cm)]
 
     # ── Schicht Diagramm ──
-    story.append(Paragraph("Architektur-Schichten", sH1))
+    story.append(Paragraph("Architektur-Schichten", s_h1))
 
     # Schicht 1: Client
     layers = [
@@ -884,8 +853,8 @@ def generate_arch_pdf():
             [comp_cell("gpio.rs","sysfs Rust","#fb923c","RS"),
              comp_cell("uart.rs","serialport","#fb923c","RS"),
              comp_cell("spi.rs","spidev crate","#fb923c","RS"),
-             Paragraph("", sSmall),
-             Paragraph("", sSmall)],
+             Paragraph("", s_small),
+             Paragraph("", s_small)],
         ]),
         ("05 — Hardware Layer (ARMv7 · 1GHz · 512MB)", colors.HexColor("#f0abfc"), [
             [comp_cell("BME280","I2C-1 · 0x76","#c084fc","HW"),
@@ -896,8 +865,8 @@ def generate_arch_pdf():
         ]),
     ]
 
-    for title, color, rows in layers:
-        # Layer Header
+    def append_layer(title, color, rows):
+        """Hängt Header, Komponenten-Reihen und optionalen Pfeil an story."""
         hdr = Table([[
             Paragraph(f"<b>{title}</b>",
                 S("LH", fontSize=8, textColor=color,
@@ -913,7 +882,6 @@ def generate_arch_pdf():
         ]))
         story.append(hdr)
 
-        # Komponenten
         for row in rows:
             ct = Table([row], colWidths=[3.4*cm]*5)
             ct.setStyle(TableStyle([
@@ -928,29 +896,28 @@ def generate_arch_pdf():
             story.append(ct)
 
         # Pfeil nach unten (außer letzte Schicht)
-        if title != "05 — Hardware Layer (ARMv7 · 1GHz · 512MB)":
-            proto = ("CGO/FFI" if "HAL" in title
-                     else "HTTP/REST/SSE" if "API" in title
-                     else "sysfs/ioctl" if "Library" in title
-                     else "SSH/Deploy")
-            arrow_data = [[
-                Paragraph(
-                    f'<font color="#475569">▼ {proto}</font>',
-                    S("A", fontSize=7, textColor=C_GRAY,
-                      alignment=TA_CENTER))
-            ]]
-            at = Table(arrow_data, colWidths=[17*cm])
-            at.setStyle(TableStyle([
-                ("BACKGROUND", (0,0),(-1,-1), C_BG),
-                ("TOPPADDING", (0,0),(-1,-1), 2),
-                ("BOTTOMPADDING",(0,0),(-1,-1), 2),
-            ]))
-            story.append(at)
+        if title == "05 — Hardware Layer (ARMv7 · 1GHz · 512MB)":
+            return
+        proto_match = [p for k, p in _LAYER_PROTO.items() if k in title]
+        proto = proto_match[0] if proto_match else "SSH/Deploy"
+        at = Table([[
+            Paragraph(f'<font color="#475569">▼ {proto}</font>',
+                      S("A", fontSize=7, textColor=C_GRAY, alignment=TA_CENTER))
+        ]], colWidths=[17*cm])
+        at.setStyle(TableStyle([
+            ("BACKGROUND",    (0,0),(-1,-1), C_BG),
+            ("TOPPADDING",    (0,0),(-1,-1), 2),
+            ("BOTTOMPADDING", (0,0),(-1,-1), 2),
+        ]))
+        story.append(at)
+
+    for title, color, rows in layers:
+        append_layer(title, color, rows)
 
     story += [Spacer(1, 0.5*cm), PageBreak()]
 
     # ── Seite 2: Kommunikation + CI/CD ──
-    story.append(Paragraph("Kommunikationsflüsse", sH1))
+    story.append(Paragraph("Kommunikationsflüsse", s_h1))
 
     flows = [
         ["Verbindung", "Protokoll", "Richtung", "Beschreibung"],
@@ -987,19 +954,20 @@ def generate_arch_pdf():
     story += [ft, Spacer(1, 0.5*cm)]
 
     # ── CI/CD ──
-    story.append(Paragraph("CI/CD Pipelines", sH1))
+    _TRIGGER_STD = "push/PR/tag"
+    story.append(Paragraph("CI/CD Pipelines", s_h1))
     ci_data = [
         ["Pipeline", "Trigger", "Schritte", "Artefakte"],
-        ["1-Libraries",  "push/PR/tag",
+        ["1-Libraries",  _TRIGGER_STD,
          "build-c, build-rust, test-c, test-rust",
          "libhardware.so, libhardware_rs.so"],
-        ["2-Embedded SW","push/PR/tag",
+        ["2-Embedded SW", _TRIGGER_STD,
          "HAL Tests, build-api, QEMU, HW Deploy+Test",
          "embedded-armv7"],
-        ["3-Tools",      "push/PR/tag",
+        ["3-Tools",      _TRIGGER_STD,
          "lint, test, build CLI/TUI/GUI/Web (4 OS)",
          "bbcli/bbtui/bbgui (4 Plattformen)"],
-        ["4-WebApp",     "push/PR/tag",
+        ["4-WebApp",     _TRIGGER_STD,
          "test, build, package",
          "webapp.zip"],
         ["5-Release",    "tag only",
@@ -1029,7 +997,7 @@ def generate_arch_pdf():
     story += [cit, Spacer(1, 0.5*cm)]
 
     # ── Technologie Stack ──
-    story.append(Paragraph("Technologie Stack", sH1))
+    story.append(Paragraph("Technologie Stack", s_h1))
     stack = [
         ["Kategorie", "Technologie", "Version", "Zweck"],
         ["API Server",    "Go + gorilla/mux",    "1.22",    "REST API, SSE, Routing"],
@@ -1351,12 +1319,9 @@ volumes:
         f.write(yaml_content)
     print(f"✅ Drone Report Pipeline: {path}")
 
-# ════════════════════════════════════════
-# Main
-# ════════════════════════════════════════
 if __name__ == "__main__":
-    print(f"\n🏗  Generiere SW Architektur & CI Pipeline...")
+    print("\n🏗  Generiere SW Architektur & CI Pipeline...")
     generate_arch_html()
     generate_arch_pdf()
     generate_drone_report_pipeline()
-    print(f"\n✅ Alle Dateien erstellt!")
+    print("\n✅ Alle Dateien erstellt!")

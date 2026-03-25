@@ -487,7 +487,6 @@ int8_t bme280_set_regs(uint8_t *reg_addr, const uint8_t *reg_data, uint32_t len,
     int8_t rslt;
     uint8_t temp_buff[20]; /* Typically not to write more than 10 registers */
     uint32_t temp_len;
-    uint32_t reg_addr_cnt;
 
     if (len > BME280_MAX_LEN)
     {
@@ -497,52 +496,46 @@ int8_t bme280_set_regs(uint8_t *reg_addr, const uint8_t *reg_data, uint32_t len,
     /* Check for null pointer in the device structure */
     rslt = null_ptr_check(dev);
 
-    /* Check for arguments validity */
-    if ((rslt == BME280_OK) && (reg_addr != NULL) && (reg_data != NULL))
+    /* Guard: null pointer in dev, reg_addr or reg_data */
+    if ((rslt != BME280_OK) || (reg_addr == NULL) || (reg_data == NULL))
     {
-        if (len != 0)
+        return BME280_E_NULL_PTR;
+    }
+
+    /* Guard: zero-length write is invalid */
+    if (len == 0)
+    {
+        return BME280_E_INVALID_LEN;
+    }
+
+    temp_buff[0] = reg_data[0];
+
+    /* If interface selected is SPI, clear MSB of each register address */
+    if (dev->intf != BME280_I2C_INTF)
+    {
+        for (uint32_t reg_addr_cnt = 0; reg_addr_cnt < len; reg_addr_cnt++)
         {
-            temp_buff[0] = reg_data[0];
-
-            /* If interface selected is SPI */
-            if (dev->intf != BME280_I2C_INTF)
-            {
-                for (reg_addr_cnt = 0; reg_addr_cnt < len; reg_addr_cnt++)
-                {
-                    reg_addr[reg_addr_cnt] = reg_addr[reg_addr_cnt] & 0x7F;
-                }
-            }
-
-            /* Burst write mode */
-            if (len > 1)
-            {
-                /* Interleave register address w.r.t data for
-                 * burst write
-                 */
-                interleave_reg_addr(reg_addr, temp_buff, reg_data, len);
-                temp_len = ((len * 2) - 1);
-            }
-            else
-            {
-                temp_len = len;
-            }
-
-            dev->intf_rslt = dev->write(reg_addr[0], temp_buff, temp_len, dev->intf_ptr);
-
-            /* Check for communication error */
-            if (dev->intf_rslt != BME280_INTF_RET_SUCCESS)
-            {
-                rslt = BME280_E_COMM_FAIL;
-            }
+            reg_addr[reg_addr_cnt] = reg_addr[reg_addr_cnt] & 0x7F;
         }
-        else
-        {
-            rslt = BME280_E_INVALID_LEN;
-        }
+    }
+
+    /* Burst write mode: interleave register address w.r.t data */
+    if (len > 1)
+    {
+        interleave_reg_addr(reg_addr, temp_buff, reg_data, len);
+        temp_len = ((len * 2) - 1);
     }
     else
     {
-        rslt = BME280_E_NULL_PTR;
+        temp_len = len;
+    }
+
+    dev->intf_rslt = dev->write(reg_addr[0], temp_buff, temp_len, dev->intf_ptr);
+
+    /* Check for communication error */
+    if (dev->intf_rslt != BME280_INTF_RET_SUCCESS)
+    {
+        rslt = BME280_E_COMM_FAIL;
     }
 
     return rslt;
@@ -627,7 +620,7 @@ int8_t bme280_get_sensor_settings(struct bme280_settings *settings, struct bme28
 int8_t bme280_set_sensor_mode(uint8_t sensor_mode, struct bme280_dev *dev)
 {
     int8_t rslt;
-    uint8_t last_set_mode;
+    uint8_t last_set_mode = 0;
 
     rslt = bme280_get_sensor_mode(&last_set_mode, dev);
 
@@ -660,8 +653,11 @@ int8_t bme280_get_sensor_mode(uint8_t *sensor_mode, struct bme280_dev *dev)
         /* Read the power mode register */
         rslt = bme280_get_regs(BME280_REG_PWR_CTRL, sensor_mode, 1, dev);
 
-        /* Assign the power mode to variable */
-        *sensor_mode = BME280_GET_BITS_POS_0(*sensor_mode, BME280_SENSOR_MODE);
+        /* Assign the power mode to variable only if the read succeeded */
+        if (rslt == BME280_OK)
+        {
+            *sensor_mode = BME280_GET_BITS_POS_0(*sensor_mode, BME280_SENSOR_MODE);
+        }
     }
     else
     {
@@ -839,10 +835,10 @@ int8_t bme280_cal_meas_delay(uint32_t *max_delay, const struct bme280_settings *
             hum_osr = BME280_OVERSAMPLING_MAX;
         }
 
-        (*max_delay) =
-            (uint32_t)((BME280_MEAS_OFFSET + (BME280_MEAS_DUR * temp_osr) +
-                        ((BME280_MEAS_DUR * pres_osr) + BME280_PRES_HUM_MEAS_OFFSET) +
-                        ((BME280_MEAS_DUR * hum_osr) + BME280_PRES_HUM_MEAS_OFFSET)));
+        *max_delay =
+            (uint32_t)(BME280_MEAS_OFFSET + (BME280_MEAS_DUR * temp_osr) +
+                       (BME280_MEAS_DUR * pres_osr) + BME280_PRES_HUM_MEAS_OFFSET +
+                       (BME280_MEAS_DUR * hum_osr) + BME280_PRES_HUM_MEAS_OFFSET);
     }
     else
     {
@@ -1178,7 +1174,7 @@ static double compensate_pressure(const struct bme280_uncomp_data *uncomp_data,
     var1 = (1.0 + var1 / 32768.0) * ((double)calib_data->dig_p1);
 
     /* Avoid exception caused by division by zero */
-    if (var1 > (0.0))
+    if (var1 > 0.0)
     {
         pressure = 1048576.0 - (double) uncomp_data->pressure;
         pressure = (pressure - (var2 / 4096.0)) * 6250.0 / var1;
@@ -1474,9 +1470,8 @@ static int8_t get_calib_data(struct bme280_dev *dev)
  */
 static void interleave_reg_addr(const uint8_t *reg_addr, uint8_t *temp_buff, const uint8_t *reg_data, uint32_t len)
 {
-    uint32_t index;
 
-    for (index = 1; index < len; index++)
+    for (uint32_t index = 1; index < len; index++)
     {
         temp_buff[(index * 2) - 1] = reg_addr[index];
         temp_buff[index * 2] = reg_data[index];
@@ -1491,10 +1486,10 @@ static void parse_temp_press_calib_data(const uint8_t *reg_data, struct bme280_d
 {
     struct bme280_calib_data *calib_data = &dev->calib_data;
 
-    calib_data->dig_t1 = BME280_CONCAT_BYTES(reg_data[1], reg_data[0]);
+    calib_data->dig_t1 = (uint16_t)BME280_CONCAT_BYTES(reg_data[1], reg_data[0]);
     calib_data->dig_t2 = (int16_t)BME280_CONCAT_BYTES(reg_data[3], reg_data[2]);
     calib_data->dig_t3 = (int16_t)BME280_CONCAT_BYTES(reg_data[5], reg_data[4]);
-    calib_data->dig_p1 = BME280_CONCAT_BYTES(reg_data[7], reg_data[6]);
+    calib_data->dig_p1 = (uint16_t)BME280_CONCAT_BYTES(reg_data[7], reg_data[6]);
     calib_data->dig_p2 = (int16_t)BME280_CONCAT_BYTES(reg_data[9], reg_data[8]);
     calib_data->dig_p3 = (int16_t)BME280_CONCAT_BYTES(reg_data[11], reg_data[10]);
     calib_data->dig_p4 = (int16_t)BME280_CONCAT_BYTES(reg_data[13], reg_data[12]);
