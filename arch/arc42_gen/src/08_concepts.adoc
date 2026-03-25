@@ -1,0 +1,137 @@
+[[section-concepts]]
+== Querschnittliche Konzepte
+
+=== Interface-basierte Hardware-Abstraktion (HAL)
+
+Das `HardwareDriver`-Interface in `project/go-api/pkg/hal/interface.go`
+ist das zentrale Strukturelement der gesamten Software:
+
+[source,go]
+----
+type HardwareDriver interface {
+    Name()    string
+    Backend() Backend
+
+    BME280Read()                           (*BME280Data, error)
+    GPIOExport(pin uint32)                 error
+    GPIOSetDirection(pin uint32, out bool) error
+    GPIORead(pin uint32)                   (*GPIOData, error)
+    GPIOWrite(pin uint32, value int)       error
+    UARTOpen(port string, baud uint32)     error
+    UARTWrite(data []byte)                 (int, error)
+    UARTRead(timeoutMs int)                (*UARTData, error)
+    UARTClose()
+    SPITransfer(dev string, speed uint32, tx []byte) (*SPIData, error)
+    Init()  error
+    Close()
+}
+----
+
+Alle drei Implementierungen (C Driver, Rust Driver, Mock Driver)
+erfüllen dieses Interface vollständig.
+Neues Hardware-Backend = neue Struct, die dieses Interface implementiert.
+
+=== Konfiguration via Umgebungsvariablen
+
+Konfiguration erfolgt ausschließlich über Umgebungsvariablen (SWR-008).
+Keine Konfigurationsdateien im Produktionsbetrieb:
+
+[cols="2,2,3", options="header"]
+|===
+| Variable | Default | Beschreibung
+
+| `HW_BACKEND`
+| `auto`
+| Backend-Auswahl: `c`, `rust`, `auto`
+
+| `HW_I2C`
+| `/dev/i2c-1`
+| I2C-Bus-Device für BME280
+
+| `HW_UART`
+| `/dev/ttyO1`
+| UART-Device
+|===
+
+=== Fehlerbehandlung und Fallback-Strategie
+
+Der `autoDriver` implementiert das Decorator-Pattern:
+Er kapselt zwei `HardwareDriver`-Instanzen (primary = C, secondary = Rust)
+und delegiert jeden Aufruf zunächst an primary.
+Bei Fehler wird transparent auf secondary delegiert — ohne den Aufrufer
+zu informieren (transparenter Fallback).
+
+[source,go]
+----
+func (d *autoDriver) BME280Read() (*hal.BME280Data, error) {
+    if data, err := d.primary.BME280Read(); err == nil {
+        return data, nil
+    }
+    log.Printf("C BME280 fehlgeschlagen → Rust")
+    return d.secondary.BME280Read()
+}
+----
+
+=== CGO/FFI — C/Rust Integration in Go
+
+*C via CGO:*
+
+[source,go]
+----
+/*
+#cgo LDFLAGS: -L${SRCDIR}/../../libs -lhardware -Wl,-rpath,/app
+#include "../../libs/include/hardware.h"
+*/
+import "C"
+----
+
+*Rust via FFI:*
+
+Rust-Funktionen exportieren mit `#[no_mangle] pub extern "C" fn ...`.
+`cbindgen` generiert den C-Header `hardware_rs.h`.
+Go bindet via `#include "hardware_rs.h"` und CGO-Flags ein.
+
+=== Nebenläufigkeit und Threadsicherheit
+
+HTTP-Requests werden von gorilla/mux in separaten Goroutinen verarbeitet.
+Der gemeinsam genutzte `HardwareDriver` ist durch `sync.Mutex hwMu`
+geschützt:
+
+[source,go]
+----
+srv := &api.Server{HW: driver, HWMu: &hwMu}
+----
+
+Alle Handler sperren `hwMu` vor Hardware-Zugriffen.
+Die Backend-Umschaltung sperrt ebenfalls `hwMu` während des Tausches.
+
+=== Logging und Beobachtbarkeit
+
+* Strukturiertes Logging via `log.Printf()` in alle kritischen Pfade
+* Startup-Log: `"Driver: %s Backend: %s"`
+* Fallback-Log: `"C BME280 fehlgeschlagen → Rust"`
+* `GET /health` liefert System-Status, aktives Backend, Driver-Name
+* SSE-Stream `/api/v1/bme280/stream` für kontinuierliches Monitoring
+
+=== Cross-Compilation-Strategie
+
+[cols="2,2,2", options="header"]
+|===
+| Sprache | Ziel | Toolchain
+
+| C
+| `arm-linux-gnueabihf`
+| `arm-linux-gnueabihf-gcc`, `-shared -fPIC`
+
+| Rust
+| `armv7-unknown-linux-musleabihf`
+| `cross build --release --target ...`
+
+| Go
+| `linux/arm/v7`
+| `GOOS=linux GOARCH=arm GOARM=7 CGO_ENABLED=1 CC=arm-linux-gnueabihf-gcc`
+
+| Go (Tools)
+| `linux/amd64`, `darwin`, `windows`
+| `GOOS=... CGO_ENABLED=0 go build`
+|===

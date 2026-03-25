@@ -1,0 +1,59 @@
+[[section-architecture-constraints]]
+== Randbedingungen
+
+=== Technische Randbedingungen
+
+[cols="2,4", options="header"]
+|===
+| Randbedingung | Erläuterung
+
+| *Zielplattform: ARMv7*
+| Alle Binaries müssen für `armv7-unknown-linux-musleabihf` (Rust)
+  bzw. `arm-linux-gnueabihf` (C/Go) cross-compiliert werden.
+  Native amd64-Builds sind nicht deploybar.
+
+| *Speicherlimit: 512 MB RAM*
+| Go und Rust produzieren schlanke Binaries (~5 MB Server-Prozess).
+  Schwergewichtige Laufzeitumgebungen (JVM, CPython als Daemon) sind
+  unzulässig.
+
+| *Hardware-Zugriff nur in C und Rust*
+| Go darf *nicht* direkt auf Hardware zugreifen (SWR-004).
+  Alle Hardware-Operationen laufen über die shared Libraries.
+
+| *Linux sysfs / ioctl*
+| GPIO-Zugriff über `/sys/class/gpio/`, I2C über `/dev/i2c-1`,
+  SPI über `/dev/spidev0.0`, UART über `/dev/ttyO1`.
+  Kein direkter Registerzugriff (Memory-Mapped I/O).
+
+| *Cross-Compilation-Toolchain*
+| `arm-linux-gnueabihf-gcc` (C), `cross` (Rust),
+  `GOOS=linux GOARCH=arm GOARM=7 CGO_ENABLED=1` (Go).
+  Buildumgebung: `generic-builder` Container.
+
+| *Container Runtime: Podman (rootless)*
+| Kein Docker-Daemon. Alle Container-Operationen rootless via Podman.
+|===
+
+=== Organisatorische Randbedingungen
+
+[cols="2,4", options="header"]
+|===
+| Randbedingung | Erläuterung
+
+| *Commit-Format*
+| Conventional Commits: `type(scope): description`
+  (feat, fix, docs, test, refactor, ci)
+
+| *CI/CD: GitHub Actions*
+| Alle Merges auf `main` durchlaufen die vollständige CI-Pipeline.
+  Kein Merge ohne grünen CI-Run.
+
+| *Quality Gates*
+| ≥ 90% Test-Erfolgsrate, ≥ 75% Ø Coverage, ≥ 50% Coverage pro Datei,
+  ≥ 80% Requirements-Traceability-Abdeckung.
+
+| *Anforderungstracing*
+| Alle Softwareanforderungen müssen via StrictDoc auf Quelldateien
+  rückverfolgbar sein.
+|===

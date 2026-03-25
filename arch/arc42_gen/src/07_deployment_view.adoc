@@ -1,0 +1,85 @@
+[[section-deployment-view]]
+== Verteilungssicht
+
+=== Infrastruktur Ebene 1: Produktionsumgebung
+
+plantuml::{diagramsdir}/08_hardware_layer.puml[format=svg,align=center]
+
+[cols="2,4", options="header"]
+|===
+| Element | Beschreibung
+
+| *BeagleBone Black*
+| TI AM335x (ARMv7 Cortex-A8, 1 GHz), 512 MB DDR3L,
+  4 GB eMMC, Debian Linux Kernel 5.x
+
+| `/app/embedded`
+| Go REST API Binary (ARM), Prozessgröße ~5 MB,
+  gestartet via `systemctl restart embedded-sw`
+
+| `/app/libhardware.so`
+| C Shared Library (ARM), via CGO geladen
+
+| `/app/libhardware_rs.so`
+| Rust Shared Library (ARM, musl), via FFI geladen
+
+| *BME280 Sensor*
+| I2C, P9_19/P9_20 Header, Adresse 0x76
+
+| *GPIO Pins*
+| P8/P9 Header, sysfs-Zugriff via `/sys/class/gpio/`
+
+| *UART (/dev/ttyO1)*
+| P9_24/P9_26 Header, 115200 baud (default)
+
+| *SPI (/dev/spidev0.0)*
+| P9_22/P9_21/P9_18 Header
+|===
+
+*BME280 Verkabelung (I2C2 — P9 Header):*
+
+[source]
+----
+BeagleBone Black        BME280
+──────────────────────────────────
+P9_19 (I2C2_SCL)  ───►  SCL
+P9_20 (I2C2_SDA)  ───►  SDA
+P9_3  (3.3V)      ───►  VCC
+P9_1  (GND)       ───►  GND
+                  ───►  SDO → GND  (Adresse 0x76)
+----
+
+*Deployment-Befehl:*
+
+[source,bash]
+----
+make deploy
+# scp bin/embedded libhardware.so libhardware_rs.so debian@192.168.7.2:/app/
+# ssh debian@192.168.7.2 "systemctl restart embedded-sw"
+----
+
+=== Infrastruktur Ebene 2: Entwicklungsumgebung
+
+[cols="2,4", options="header"]
+|===
+| Element | Beschreibung
+
+| *Developer-Workstation (amd64)*
+| Cross-Compilation via `make build-arm` (Podman `generic-builder`-Container).
+  Go-Tools, Rust `cross`, `arm-linux-gnueabihf-gcc`.
+
+| *CI/CD (GitHub Actions)*
+| ARM-Cross-Build in Container, Unit-Tests mit Mock Driver,
+  Quality-Gate-Prüfung, Artefakt-Upload.
+
+| *Client-Rechner (amd64/arm64/darwin/windows)*
+| `bbcli`, `bbtui`, `bbgui` als native Binaries (GOOS/GOARCH je Plattform).
+  Kommunizieren mit API via Ethernet/USB-Gadget (192.168.7.2).
+|===
+
+[WARNING]
+====
+Der BeagleBone Black hat nur *512 MB RAM*.
+Niemals Python als Daemon, JVM oder Node.js-Server dauerhaft starten.
+Der Go-Server läuft mit ~5 MB RSS, die C/Rust Libraries mit < 2 MB.
+====

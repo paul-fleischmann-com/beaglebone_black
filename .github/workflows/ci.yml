@@ -1,0 +1,374 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+
+  # ════════════════════════════════════════════════
+  # Phase 1: DOC BUILD
+  # ════════════════════════════════════════════════
+
+  strictdoc:
+    name: StrictDoc Export & Validation
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: ./.github/actions/strictdoc
+
+  adoc-build:
+    name: AsciiDoc Build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: ./.github/actions/adoc-build
+        with:
+          output-dir:    build/docs
+          artifact-name: docs
+          retention-days: '7'
+
+  # ════════════════════════════════════════════════
+  # Phase 2: BUILD SW
+  # ════════════════════════════════════════════════
+
+  build-arm:
+    name: Build ARM Binaries
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+      packages: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Pull builder image
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | podman login ghcr.io -u ${{ github.actor }} --password-stdin
+          podman pull ghcr.io/${{ github.repository_owner }}/generic-builder:latest
+          podman tag ghcr.io/${{ github.repository_owner }}/generic-builder:latest generic-builder
+      - uses: ./actions/build-and-deploy-ontarget
+        with:
+          source_dir: .
+          test_dir:   ./project/python_tests
+          output_dir: ./bin
+          container_image: generic-builder
+          artifact-name:   arm-binaries
+          build_commands: bash /src/scripts/build-arm.sh
+
+  build-cli:
+    name: Build CLI
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - goos: linux
+            goarch: amd64
+            name: bbcli-linux-amd64
+          - goos: linux
+            goarch: arm
+            goarm: "7"
+            name: bbcli-linux-armv7
+          - goos: darwin
+            goarch: amd64
+            name: bbcli-darwin-amd64
+          - goos: darwin
+            goarch: arm64
+            name: bbcli-darwin-arm64
+          - goos: windows
+            goarch: amd64
+            name: bbcli-windows-amd64.exe
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: ./.github/actions/go-build
+        with:
+          working-directory: tools/cli
+          output-path:       bin/${{ matrix.name }}
+          goos:              ${{ matrix.goos }}
+          goarch:            ${{ matrix.goarch }}
+          goarm:             ${{ matrix.goarm }}
+          ldflags:           '-s -w -X main.Version=${{ github.ref_name }}'
+          artifact-name:     ${{ matrix.name }}
+
+  build-tui:
+    name: Build TUI
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - goos: linux
+            goarch: amd64
+            name: bbtui-linux-amd64
+          - goos: linux
+            goarch: arm
+            goarm: "7"
+            name: bbtui-linux-armv7
+          - goos: darwin
+            goarch: amd64
+            name: bbtui-darwin-amd64
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: ./.github/actions/go-build
+        with:
+          working-directory: tools/tui
+          output-path:       bin/${{ matrix.name }}
+          goos:              ${{ matrix.goos }}
+          goarch:            ${{ matrix.goarch }}
+          goarm:             ${{ matrix.goarm }}
+          artifact-name:     ${{ matrix.name }}
+
+  build-web:
+    name: Web GUI Validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: ./.github/actions/html-validate
+
+  # ════════════════════════════════════════════════
+  # Phase 3: UNIT TEST SW
+  # ════════════════════════════════════════════════
+
+  test-go:
+    name: Go Unit Tests
+    runs-on: ubuntu-latest
+    needs: [build-arm, build-cli, build-tui]
+    permissions:
+      contents: read
+      security-events: write
+      checks: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: ./.github/actions/go-test
+        with:
+          coverpkg: './pkg/hal/,./pkg/hal/mock/,./pkg/hal/config/'
+          test-packages: './pkg/hal/ ./pkg/hal/mock/ ./pkg/hal/config/'
+
+  test-c:
+    name: C Unit Tests
+    runs-on: ubuntu-latest
+    needs: [build-arm]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: ./.github/actions/c-test
+
+  test-python:
+    name: Python Tests
+    runs-on: ubuntu-latest
+    needs: [build-arm]
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: ./.github/actions/python-test
+
+  lint-go:
+    name: Go Lint
+    runs-on: ubuntu-latest
+    needs: [build-cli, build-tui]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: ./.github/actions/go-lint
+
+  test-scripts:
+    name: Script Syntax
+    runs-on: ubuntu-latest
+    needs: [build-arm]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: ./.github/actions/shellcheck
+        with:
+          include-tooling: 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  security-python:
+    name: Python Security Scan
+    runs-on: ubuntu-latest
+    needs: [build-arm]
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: ./.github/actions/python-security
+
+  # ════════════════════════════════════════════════
+  # Phase 4: RELEASE CANDIDATE
+  # ════════════════════════════════════════════════
+
+  sonarcloud:
+    name: SonarCloud Analysis
+    runs-on: ubuntu-latest
+    needs: [build-arm, test-go, test-c, test-python, strictdoc, security-python]
+    if: always()
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+      - uses: ./.github/actions/sonarcloud
+        with:
+          sonar-token: ${{ secrets.SONAR_TOKEN }}
+          qualitygate-wait: 'false'
+
+  sonar-report:
+    name: SonarQube Issues Report
+    runs-on: ubuntu-latest
+    needs: [sonarcloud]
+    if: always()
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: ./.github/actions/sonarqube-report
+        with:
+          sonar-token: ${{ secrets.SONAR_TOKEN }}
+          project-key: paulefl_beaglebone_black
+
+  report:
+    name: Test Report
+    runs-on: ubuntu-latest
+    needs: [test-go, test-c, test-python, lint-go, test-scripts, security-python, strictdoc, sonarcloud]
+    if: always()
+    permissions:
+      contents: write
+      pages: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: ./.github/actions/test-report
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  cleanup:
+    name: Cleanup CI Artifacts
+    runs-on: ubuntu-latest
+    needs: [sonarcloud, sonar-report, report]
+    if: always()
+    permissions:
+      actions: write
+    steps:
+      - name: Delete CI-internal artifacts
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          REPO="${{ github.repository }}"
+          RUN_ID="${{ github.run_id }}"
+          PATTERN="arm-binaries|bbb-sonar-coverage|go-reports|python-reports|c-reports|shell-sarif|go-sarif|python-sarif|rust-sarif|c-sarif|rust-coverage|requirements-sarif"
+          gh api "repos/$REPO/actions/runs/$RUN_ID/artifacts" --paginate \
+            --jq ".artifacts[] | select(.name | test(\"$PATTERN\")) | .id" | \
+            while read -r id; do
+              gh api "repos/$REPO/actions/artifacts/$id" -X DELETE
+            done
+          echo "✅ CI artifact cleanup done"
+
+  changelog:
+    name: Update Changelog
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+      - name: Generate Unreleased section with git-cliff
+        uses: orhun/git-cliff-action@v4
+        with:
+          config: cliff.toml
+          args: --unreleased --output unreleased.md
+        env:
+          OUTPUT: unreleased.md
+          GITHUB_REPO: ${{ github.repository }}
+      - name: Prepend unreleased section to CHANGELOG.md
+        run: make prepend-changelog
+      - name: Commit updated CHANGELOG.md via PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add CHANGELOG.md
+          if git diff --cached --quiet; then
+            echo "No changelog changes — nothing to commit."
+            exit 0
+          fi
+          BRANCH="ci/update-changelog-$(echo ${{ github.sha }} | cut -c1-7)"
+          git checkout -b "$BRANCH"
+          git commit -m "docs(changelog): update unreleased section [skip ci]"
+          git push origin "$BRANCH"
+          gh pr create \
+            --title "docs(changelog): update unreleased section [skip ci]" \
+            --body "Automated changelog update via git-cliff. Auto-merged by CI." \
+            --base main --head "$BRANCH"
+          gh pr merge "$BRANCH" --squash --delete-branch --admin
+
+  release-candidate:
+    name: Release Candidate (toTestOnTarget)
+    runs-on: ubuntu-latest
+    needs: [strictdoc, build-arm, build-cli, build-tui, build-web, test-go, test-c, lint-go, test-scripts, test-python, security-python]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v6
+        with:
+          path: bin/
+          merge-multiple: true
+
+      - name: Generate checksums
+        run: make checksums
+
+      - name: Read version
+        id: version
+        run: echo "version=$(make version)" >> $GITHUB_OUTPUT
+
+      - name: Create toTestOnTarget release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: make release-candidate

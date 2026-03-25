@@ -38,7 +38,6 @@ inputs:
     description: Report artifact retention in days.
     required: false
     default: '7'
-    default: '30'
 
 runs:
   using: composite
@@ -228,7 +227,7 @@ runs:
 
     # ── Artefakte hochladen ─────────────────────────────────────────────────
     - name: Upload Reports
-      uses: actions/upload-artifact@v6
+      uses: ./.github/actions/upload-artifact
       if: always()
       with:
         name: test-reports-${{ github.run_number }}

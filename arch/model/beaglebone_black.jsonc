@@ -61,20 +61,20 @@
     "bbcli": {
       "kind": "client_tool",
       "title": "bbcli",
-      "description": "Kommandozeilen-Tool für direkte API-Interaktion; Cross-compiled für Linux amd64/arm",
-      "technology": "Go / Cobra"
+      "description": "Kommandozeilen-Tool für direkte API-Interaktion; Cross-compiled für Linux amd64/arm. Quelle: tools/cli/",
+      "technology": "Go / Cobra + Viper"
     },
     "bbgui": {
       "kind": "client_tool",
       "title": "bbgui",
-      "description": "Desktop-GUI Anwendung mit grafischer Darstellung der Sensordaten",
-      "technology": "Go / Fyne"
+      "description": "Desktop-GUI Anwendung mit grafischer Darstellung der Sensordaten. Quelle: tools/desktop-gui/",
+      "technology": "Go / Fyne v2"
     },
     "bbtui": {
       "kind": "client_tool",
       "title": "bbtui",
-      "description": "Interaktives Terminal-UI für Echtzeit-Anzeige von Sensordaten",
-      "technology": "Go / BubbleTea"
+      "description": "Interaktives Terminal-UI für Echtzeit-Anzeige von Sensordaten. Quelle: tools/tui/",
+      "technology": "Go / BubbleTea + Lipgloss"
     },
     "beaglebone": {
       "kind": "system",
@@ -84,31 +84,31 @@
         "c-lib": {
           "kind": "library",
           "title": "C Hardware Library",
-          "description": "Cross-kompilierte Shared Library (libhardware.so) mit Low-Level Hardware-Treibern",
+          "description": "Cross-kompilierte Shared Library (libhardware.so). Quellen: c-lib/ (Makefile-Target: make c-lib). Kopiert nach project/go-api/libs/",
           "technology": "C / arm-linux-gnueabihf-gcc",
           "children": {
             "c-bme280": {
               "kind": "component",
               "title": "BME280 Treiber (C)",
-              "description": "Liest Temperatur, Luftfeuchtigkeit, Druck und Höhe via I2C-1 (Adresse 0x76)",
-              "technology": "C / I2C"
+              "description": "Liest Temperatur, Luftfeuchtigkeit, Druck und Höhe via I2C-1 (Adresse 0x76). Bosch-Kompensationsalgorithmus. Quelle: project/c/src/bme280.c",
+              "technology": "C / I2C ioctl"
             },
             "c-gpio": {
               "kind": "component",
               "title": "GPIO Treiber (C)",
-              "description": "Export, Richtungskonfiguration, Lesen und Schreiben von GPIO-Pins (60, 61, 66, 67)",
-              "technology": "C / sysfs"
+              "description": "Export, Richtungskonfiguration, Lesen und Schreiben von GPIO-Pins via sysfs. Quelle: project/c/src/gpio.c",
+              "technology": "C / sysfs /sys/class/gpio"
             },
             "c-spi": {
               "kind": "component",
               "title": "SPI Treiber (C)",
-              "description": "Bidirektionaler Datentransfer über SPI mit konfigurierbarer Geschwindigkeit",
-              "technology": "C / spidev"
+              "description": "Bidirektionaler Datentransfer über SPI mit konfigurierbarer Geschwindigkeit (Mode 0-3). Quelle: project/c/src/spi.c",
+              "technology": "C / spidev ioctl"
             },
             "c-uart": {
               "kind": "component",
               "title": "UART Treiber (C)",
-              "description": "Öffnen, Konfigurieren (Port, Baudrate), Senden und Empfangen via serieller Schnittstelle",
+              "description": "Öffnen, Konfigurieren (Port, Baudrate), Senden und Empfangen via serieller Schnittstelle. Quelle: project/c/src/uart.c",
               "technology": "C / termios"
             }
           }
@@ -116,44 +116,62 @@
         "go-api": {
           "kind": "container",
           "title": "REST API Server",
-          "description": "HTTP-Server auf Port 5000; verarbeitet Anfragen und delegiert an HAL",
-          "technology": "Go 1.22 / Gorilla Mux",
+          "description": "HTTP-Server auf Port 5000; verarbeitet Anfragen und delegiert an HAL. Binary: bin/embedded. Quelle: project/go-api/",
+          "technology": "Go 1.23 / gorilla/mux",
           "children": {
             "api-handlers": {
               "kind": "component",
               "title": "API Handler",
-              "description": "HTTP-Handler für alle Endpunkte: /health, /api/v1/bme280, /api/v1/gpio, /api/v1/uart, /api/v1/spi, /api/v1/backend",
-              "technology": "Go / Gorilla Mux"
+              "description": "HTTP-Handler-Methoden auf Server-Struct: HealthHandler, BME280Handler, BME280StreamHandler, GPIOAllHandler, GPIOReadHandler, GPIOWriteHandler, UARTConfigHandler, UARTSendHandler, UARTReceiveHandler, SPITransferHandler. Quelle: project/go-api/pkg/api/handlers.go",
+              "technology": "Go / gorilla/mux"
+            },
+            "api-server": {
+              "kind": "component",
+              "title": "HTTP Server",
+              "description": "Server-Struct (HW HardwareDriver, HWMu *sync.Mutex), CORSMiddleware (Access-Control-Allow-Origin: *), NewHTTPServer mit konfigurierten Timeouts (Read: 10s, Write: 30s, Idle: 60s). Quelle: project/go-api/pkg/api/server.go",
+              "technology": "Go / net/http"
             },
             "hal": {
               "kind": "component",
               "title": "Hardware Abstraction Layer (HAL)",
-              "description": "Definiert das HardwareDriver Interface; wählt Backend per HW_BACKEND Umgebungsvariable",
+              "description": "HardwareDriver Interface mit 13 Methoden (BME280Read, GPIOExport, GPIOSetDirection, GPIORead, GPIOWrite, UARTOpen, UARTWrite, UARTRead, UARTClose, SPITransfer, Init, Close, Name, Backend). Datentypen: BME280Data, GPIOData, UARTData, SPIData. Quelle: project/go-api/pkg/hal/interface.go",
               "technology": "Go Interface",
               "children": {
+                "hal-auto": {
+                  "kind": "component",
+                  "title": "Auto Driver",
+                  "description": "Decorator über C- und Rust-Driver. Versucht C zuerst; schlägt das fehl, transparenter Fallback auf Rust. Alle 10 HardwareDriver-Methoden delegiert. Quelle: project/go-api/pkg/hal/loader/factory.go (autoDriver struct)",
+                  "technology": "Go / Decorator Pattern"
+                },
                 "hal-c": {
                   "kind": "component",
                   "title": "C Driver",
-                  "description": "Implementiert HardwareDriver via CGO-Bindings zur C-Bibliothek; höchste Performance",
+                  "description": "Implementiert HardwareDriver via CGO-Bindings zur libhardware.so. Höchste Performance. Quelle: project/go-api/pkg/hal/c/driver.go",
                   "technology": "Go / CGO"
+                },
+                "hal-config": {
+                  "kind": "component",
+                  "title": "HAL Konfiguration",
+                  "description": "Config-Struct und Umgebungsvariablen-Loader. HW_BACKEND (default: auto), HW_I2C (default: /dev/i2c-1), HW_UART (default: /dev/ttyO1), BME280Addr (0x76), SPIDevice (/dev/spidev0.0). Quelle: project/go-api/pkg/hal/config/config.go",
+                  "technology": "Go / os.Getenv"
                 },
                 "hal-factory": {
                   "kind": "component",
                   "title": "Backend Factory",
-                  "description": "Wählt C-, Rust- oder Auto-Backend anhand von HW_BACKEND (default: auto)",
-                  "technology": "Go"
+                  "description": "NewDriver(cfg): erzeugt C-, Rust- oder Auto-Driver anhand von HW_BACKEND. Separates Package pkg/hal/loader/ zur Vermeidung von Import-Zyklen (pkg/hal/c importiert pkg/hal). Quelle: project/go-api/pkg/hal/loader/factory.go",
+                  "technology": "Go / Factory Pattern"
                 },
                 "hal-mock": {
                   "kind": "component",
                   "title": "Mock Driver",
-                  "description": "Stub-Implementierung für Unit-Tests ohne echte Hardware",
+                  "description": "Vollständige HardwareDriver-Implementierung für Unit-Tests ohne echte Hardware. Gibt statische Testwerte zurück. Quelle: project/go-api/pkg/hal/mock/driver.go",
                   "technology": "Go"
                 },
                 "hal-rust": {
                   "kind": "component",
                   "title": "Rust Driver",
-                  "description": "Implementiert HardwareDriver via FFI-Bindings zur Rust-Bibliothek; Memory-Safety",
-                  "technology": "Go / FFI"
+                  "description": "Implementiert HardwareDriver via FFI-Bindings zur libhardware_rs.so. Memory-Safe. Quelle: project/go-api/pkg/hal/rust/driver.go",
+                  "technology": "Go / FFI (extern C)"
                 }
               }
             }
@@ -162,72 +180,73 @@
         "hardware": {
           "kind": "component",
           "title": "Hardware Interfaces",
-          "description": "Physische Schnittstellen des TI AM335x Prozessors",
-          "technology": "BeagleBone Black GPIO / I2C / UART / SPI",
+          "description": "Physische Schnittstellen des TI AM335x Prozessors auf dem BeagleBone Black",
+          "technology": "BeagleBone Black / Linux Kernel Interfaces",
           "children": {
             "hw-bme280": {
               "kind": "hardware",
               "title": "BME280 Sensor",
-              "description": "Temperatur, Luftfeuchtigkeit, Luftdruck und Höhe. Pins: P9_19 (SCL), P9_20 (SDA)",
-              "technology": "I2C-1, Adresse 0x76"
+              "description": "Temperatur (-40..+85°C), Luftfeuchtigkeit (0-100% rH), Luftdruck (300-1100 hPa). P9_19 (I2C2_SCL), P9_20 (I2C2_SDA), P9_3 (3.3V), P9_1 (GND), SDO→GND",
+              "technology": "I2C-1 (/dev/i2c-1), Adresse 0x76"
             },
             "hw-gpio": {
               "kind": "hardware",
               "title": "GPIO Pins",
-              "description": "Digitale Ein-/Ausgänge: Pins 60, 61, 66, 67",
+              "description": "Digitale Ein-/Ausgänge über P8/P9 Header. Export via /sys/class/gpio/export, Richtung via direction, Wert via value",
               "technology": "Linux sysfs /sys/class/gpio"
             },
             "hw-spi": {
               "kind": "hardware",
               "title": "SPI Bus",
-              "description": "SPI-Bus mit konfigurierbarem Device und Taktgeschwindigkeit",
-              "technology": "/dev/spidev*"
+              "description": "SPI Full-Duplex Transfer, Mode 0-3, bis 48 MHz. P9_22 (SCLK), P9_21 (MISO), P9_18 (MOSI)",
+              "technology": "/dev/spidev0.0 / spidev ioctl"
             },
             "hw-uart": {
               "kind": "hardware",
               "title": "UART / Serial",
-              "description": "Serielle Schnittstelle mit konfigurierbarem Port und Baudrate",
-              "technology": "/dev/ttyO*"
+              "description": "Serielle Schnittstelle, 115200 baud (default). P9_24 (TX), P9_26 (RX)",
+              "technology": "/dev/ttyO1 / termios"
             }
           }
         },
         "rust-lib": {
           "kind": "library",
           "title": "Rust Hardware Library",
-          "description": "Cross-kompilierte Shared Library (libhardware_rs.so); Memory-Safe Alternative zur C-Lib",
-          "technology": "Rust / armv7-unknown-linux-musleabihf",
+          "description": "Cross-kompilierte Shared Library (libhardware_rs.so). Memory-Safe Alternative zur C-Lib. Target: armv7-unknown-linux-musleabihf. Quelle: project/rust-lib/",
+          "technology": "Rust / armv7-unknown-linux-musleabihf (musl)",
           "children": {
             "rs-bme280": {
               "kind": "component",
               "title": "BME280 Treiber (Rust)",
-              "description": "Memory-safe BME280 Implementierung via I2C; verwendet bme280 0.3 crate",
+              "description": "Memory-safe BME280 via I2C. FFI-Export: rs_bme280_read(i2c_path, addr) → RsBme280Data. Quelle: project/rust-lib/src/bme280.rs",
               "technology": "Rust / linux-embedded-hal, bme280 crate"
             },
             "rs-gpio": {
               "kind": "component",
               "title": "GPIO Treiber (Rust)",
-              "description": "GPIO-Steuerung mit Rust Memory-Safety Garantien",
-              "technology": "Rust / linux-embedded-hal"
+              "description": "GPIO-Steuerung mit Rust Memory-Safety. FFI-Exports: rs_gpio_export, rs_gpio_set_direction, rs_gpio_read, rs_gpio_write. Quelle: project/rust-lib/src/gpio.rs",
+              "technology": "Rust / std::fs (sysfs)"
             },
             "rs-spi": {
               "kind": "component",
               "title": "SPI Treiber (Rust)",
-              "description": "SPI-Transfer via spidev crate",
-              "technology": "Rust / spidev 0.5"
+              "description": "SPI Full-Duplex Transfer. FFI-Export: rs_spi_transfer(dev, speed, tx_ptr, len) → RsSpiData. Quelle: project/rust-lib/src/spi.rs",
+              "technology": "Rust / spidev crate"
             },
             "rs-uart": {
               "kind": "component",
               "title": "UART Treiber (Rust)",
-              "description": "Serielle Kommunikation über serialport crate",
-              "technology": "Rust / serialport 4"
+              "description": "Serielle Kommunikation. FFI-Exports: rs_uart_open, rs_uart_write, rs_uart_read, rs_uart_close. Quelle: project/rust-lib/src/uart.rs",
+              "technology": "Rust / serialport crate"
             }
           }
         }
       },
       "metadata": {
-        "hardware": "TI AM335x, ARM Cortex-A8",
+        "hardware": "TI AM335x, ARM Cortex-A8, 1 GHz",
         "ip": "192.168.7.2",
-        "os": "Debian Linux, Kernel 5.x",
+        "os": "Debian Linux, Kernel 5.x (ARMv7 HF)",
+        "ram": "512 MB DDR3L",
         "storage": "4 GB eMMC"
       }
     },
@@ -239,11 +258,12 @@
     "webdashboard": {
       "kind": "client_tool",
       "title": "Web Dashboard",
-      "description": "Browser-basiertes Dashboard für Sensor-Visualisierung und GPIO-Steuerung",
-      "technology": "HTML / JavaScript"
+      "description": "Browser-basiertes Dashboard für Sensor-Visualisierung und GPIO-Steuerung via SSE-Stream. Quelle: tools/web-gui/",
+      "technology": "HTML / Vanilla JavaScript / SSE"
     }
   },
   "relationships": [
+    // ── Akteur → Client Tools ──────────────────────────────────────────────
     {
       "from": "developer",
       "to": "bbcli",
@@ -269,6 +289,13 @@
       "kind": "uses"
     },
     {
+      "from": "developer",
+      "to": "beaglebone",
+      "label": "make deploy (SCP + systemctl)",
+      "kind": "deploys"
+    },
+    // ── Client Tools → API ─────────────────────────────────────────────────
+    {
       "from": "bbcli",
       "to": "beaglebone.go-api",
       "label": "HTTP REST :5000",
@@ -295,8 +322,15 @@
     {
       "from": "webdashboard",
       "to": "beaglebone.go-api",
-      "label": "SSE /bme280/stream",
+      "label": "SSE /api/v1/bme280/stream",
       "kind": "async"
+    },
+    // ── API intern ─────────────────────────────────────────────────────────
+    {
+      "from": "beaglebone.go-api.api-handlers",
+      "to": "beaglebone.go-api.api-server",
+      "label": "Server-Struct, CORSMiddleware",
+      "kind": "uses"
     },
     {
       "from": "beaglebone.go-api.api-handlers",
@@ -304,30 +338,44 @@
       "label": "delegiert Hardware-Zugriff",
       "kind": "uses"
     },
+    // ── HAL intern ─────────────────────────────────────────────────────────
     {
       "from": "beaglebone.go-api.hal.hal-factory",
-      "to": "beaglebone.go-api.hal.hal-c",
-      "label": "wählt (HW_BACKEND=c)",
-      "kind": "uses"
-    },
-    {
-      "from": "beaglebone.go-api.hal.hal-factory",
-      "to": "beaglebone.go-api.hal.hal-rust",
-      "label": "wählt (HW_BACKEND=rust)",
+      "to": "beaglebone.go-api.hal.hal-config",
+      "label": "liest Konfiguration",
       "kind": "uses"
     },
     {
       "from": "beaglebone.go-api.hal.hal-factory",
       "to": "beaglebone.go-api.hal.hal-c",
-      "label": "primär (HW_BACKEND=auto)",
+      "label": "erzeugt (HW_BACKEND=c)",
       "kind": "uses"
     },
     {
       "from": "beaglebone.go-api.hal.hal-factory",
       "to": "beaglebone.go-api.hal.hal-rust",
-      "label": "Fallback (HW_BACKEND=auto)",
+      "label": "erzeugt (HW_BACKEND=rust)",
       "kind": "uses"
     },
+    {
+      "from": "beaglebone.go-api.hal.hal-factory",
+      "to": "beaglebone.go-api.hal.hal-auto",
+      "label": "erzeugt (HW_BACKEND=auto)",
+      "kind": "uses"
+    },
+    {
+      "from": "beaglebone.go-api.hal.hal-auto",
+      "to": "beaglebone.go-api.hal.hal-c",
+      "label": "primär (Fallback-Kette)",
+      "kind": "uses"
+    },
+    {
+      "from": "beaglebone.go-api.hal.hal-auto",
+      "to": "beaglebone.go-api.hal.hal-rust",
+      "label": "Fallback bei C-Fehler",
+      "kind": "uses"
+    },
+    // ── C Driver → C Library ───────────────────────────────────────────────
     {
       "from": "beaglebone.go-api.hal.hal-c",
       "to": "beaglebone.c-lib",
@@ -337,27 +385,28 @@
     {
       "from": "beaglebone.go-api.hal.hal-c",
       "to": "beaglebone.c-lib.c-bme280",
-      "label": "CGO",
+      "label": "CGO bme280_read()",
       "kind": "calls"
     },
     {
       "from": "beaglebone.go-api.hal.hal-c",
       "to": "beaglebone.c-lib.c-gpio",
-      "label": "CGO",
+      "label": "CGO gpio_export/read/write()",
       "kind": "calls"
     },
     {
       "from": "beaglebone.go-api.hal.hal-c",
       "to": "beaglebone.c-lib.c-uart",
-      "label": "CGO",
+      "label": "CGO uart_open/write/read()",
       "kind": "calls"
     },
     {
       "from": "beaglebone.go-api.hal.hal-c",
       "to": "beaglebone.c-lib.c-spi",
-      "label": "CGO",
+      "label": "CGO spi_transfer()",
       "kind": "calls"
     },
+    // ── Rust Driver → Rust Library ─────────────────────────────────────────
     {
       "from": "beaglebone.go-api.hal.hal-rust",
       "to": "beaglebone.rust-lib",
@@ -367,235 +416,76 @@
     {
       "from": "beaglebone.go-api.hal.hal-rust",
       "to": "beaglebone.rust-lib.rs-bme280",
-      "label": "FFI",
+      "label": "FFI rs_bme280_read()",
       "kind": "calls"
     },
     {
       "from": "beaglebone.go-api.hal.hal-rust",
       "to": "beaglebone.rust-lib.rs-gpio",
-      "label": "FFI",
+      "label": "FFI rs_gpio_export/read/write()",
       "kind": "calls"
     },
     {
       "from": "beaglebone.go-api.hal.hal-rust",
       "to": "beaglebone.rust-lib.rs-uart",
-      "label": "FFI",
+      "label": "FFI rs_uart_open/write/read()",
       "kind": "calls"
     },
     {
       "from": "beaglebone.go-api.hal.hal-rust",
       "to": "beaglebone.rust-lib.rs-spi",
-      "label": "FFI",
+      "label": "FFI rs_spi_transfer()",
       "kind": "calls"
     },
+    // ── C Library → Hardware ───────────────────────────────────────────────
     {
       "from": "beaglebone.c-lib.c-bme280",
       "to": "beaglebone.hardware.hw-bme280",
-      "label": "I2C read",
+      "label": "I2C ioctl read",
       "kind": "uses"
     },
     {
       "from": "beaglebone.c-lib.c-gpio",
       "to": "beaglebone.hardware.hw-gpio",
-      "label": "sysfs",
+      "label": "sysfs read/write",
       "kind": "uses"
     },
     {
       "from": "beaglebone.c-lib.c-uart",
       "to": "beaglebone.hardware.hw-uart",
-      "label": "termios",
+      "label": "termios open/read/write",
       "kind": "uses"
     },
     {
       "from": "beaglebone.c-lib.c-spi",
       "to": "beaglebone.hardware.hw-spi",
-      "label": "spidev",
+      "label": "spidev ioctl transfer",
       "kind": "uses"
     },
+    // ── Rust Library → Hardware ────────────────────────────────────────────
     {
       "from": "beaglebone.rust-lib.rs-bme280",
       "to": "beaglebone.hardware.hw-bme280",
-      "label": "I2C read",
+      "label": "I2C read (linux-embedded-hal)",
       "kind": "uses"
     },
     {
       "from": "beaglebone.rust-lib.rs-gpio",
       "to": "beaglebone.hardware.hw-gpio",
-      "label": "sysfs",
+      "label": "sysfs std::fs read/write",
       "kind": "uses"
     },
     {
       "from": "beaglebone.rust-lib.rs-uart",
       "to": "beaglebone.hardware.hw-uart",
-      "label": "serialport",
+      "label": "serialport open/read/write",
       "kind": "uses"
     },
     {
       "from": "beaglebone.rust-lib.rs-spi",
       "to": "beaglebone.hardware.hw-spi",
-      "label": "spidev",
+      "label": "spidev transfer",
       "kind": "uses"
-    },
-    {
-      "from": "developer",
-      "to": "beaglebone",
-      "label": "make deploy (SCP + systemctl)",
-      "kind": "deploys"
-    },
-    {
-      "from": "beaglebone.go-api.hal.hal-factory",
-      "to": "beaglebone.go-api.hal.hal-c",
-      "label": "primär (HW_BACKEND=auto)"
-    },
-    {
-      "from": "beaglebone.go-api.api-handlers",
-      "to": "beaglebone.go-api.hal",
-      "label": "delegiert Hardware-Zugriff"
-    },
-    {
-      "from": "beaglebone.go-api.hal.hal-c",
-      "to": "beaglebone.c-lib.c-bme280",
-      "label": "CGO"
-    },
-    {
-      "from": "bbcli",
-      "to": "beaglebone.go-api",
-      "label": "HTTP REST :5000"
-    },
-    {
-      "from": "webdashboard",
-      "to": "beaglebone.go-api",
-      "label": "HTTP REST :5000"
-    },
-    {
-      "from": "beaglebone.rust-lib.rs-bme280",
-      "to": "beaglebone.hardware.hw-bme280",
-      "label": "I2C read"
-    },
-    {
-      "from": "beaglebone.c-lib.c-bme280",
-      "to": "beaglebone.hardware.hw-bme280",
-      "label": "I2C read"
-    },
-    {
-      "from": "beaglebone.rust-lib.rs-uart",
-      "to": "beaglebone.hardware.hw-uart",
-      "label": "serialport"
-    },
-    {
-      "from": "developer",
-      "to": "webdashboard",
-      "label": "öffnet"
-    },
-    {
-      "from": "beaglebone.go-api.hal.hal-c",
-      "to": "beaglebone.c-lib.c-spi",
-      "label": "CGO"
-    },
-    {
-      "from": "developer",
-      "to": "bbgui",
-      "label": "bedient"
-    },
-    {
-      "from": "beaglebone.go-api.hal.hal-c",
-      "to": "beaglebone.c-lib.c-gpio",
-      "label": "CGO"
-    },
-    {
-      "from": "bbgui",
-      "to": "beaglebone.go-api",
-      "label": "HTTP REST :5000"
-    },
-    {
-      "from": "developer",
-      "to": "beaglebone",
-      "label": "make deploy (SCP + systemctl)"
-    },
-    {
-      "from": "beaglebone.c-lib.c-uart",
-      "to": "beaglebone.hardware.hw-uart",
-      "label": "termios"
-    },
-    {
-      "from": "beaglebone.go-api.hal.hal-factory",
-      "to": "beaglebone.go-api.hal.hal-rust",
-      "label": "Fallback (HW_BACKEND=auto)"
-    },
-    {
-      "from": "developer",
-      "to": "bbtui",
-      "label": "bedient"
-    },
-    {
-      "from": "beaglebone.go-api.hal.hal-rust",
-      "to": "beaglebone.rust-lib.rs-spi",
-      "label": "FFI"
-    },
-    {
-      "from": "beaglebone.go-api.hal.hal-factory",
-      "to": "beaglebone.go-api.hal.hal-rust",
-      "label": "wählt (HW_BACKEND=rust)"
-    },
-    {
-      "from": "beaglebone.go-api.hal.hal-rust",
-      "to": "beaglebone.rust-lib.rs-bme280",
-      "label": "FFI"
-    },
-    {
-      "from": "beaglebone.go-api.hal.hal-factory",
-      "to": "beaglebone.go-api.hal.hal-c",
-      "label": "wählt (HW_BACKEND=c)"
-    },
-    {
-      "from": "beaglebone.go-api.hal.hal-rust",
-      "to": "beaglebone.rust-lib.rs-uart",
-      "label": "FFI"
-    },
-    {
-      "from": "beaglebone.go-api.hal.hal-rust",
-      "to": "beaglebone.rust-lib.rs-gpio",
-      "label": "FFI"
-    },
-    {
-      "from": "beaglebone.go-api.hal.hal-c",
-      "to": "beaglebone.c-lib.c-uart",
-      "label": "CGO"
-    },
-    {
-      "from": "webdashboard",
-      "to": "beaglebone.go-api",
-      "label": "SSE /bme280/stream"
-    },
-    {
-      "from": "beaglebone.c-lib.c-gpio",
-      "to": "beaglebone.hardware.hw-gpio",
-      "label": "sysfs"
-    },
-    {
-      "from": "developer",
-      "to": "bbcli",
-      "label": "bedient"
-    },
-    {
-      "from": "beaglebone.rust-lib.rs-spi",
-      "to": "beaglebone.hardware.hw-spi",
-      "label": "spidev"
-    },
-    {
-      "from": "bbtui",
-      "to": "beaglebone.go-api",
-      "label": "HTTP REST :5000"
-    },
-    {
-      "from": "beaglebone.c-lib.c-spi",
-      "to": "beaglebone.hardware.hw-spi",
-      "label": "spidev"
-    },
-    {
-      "from": "beaglebone.rust-lib.rs-gpio",
-      "to": "beaglebone.hardware.hw-gpio",
-      "label": "sysfs"
     }
   ],
   "views": {
@@ -643,7 +533,7 @@
         "beaglebone.c-lib",
         "beaglebone.rust-lib"
       ],
-      "description": "HAL-Schicht mit C Driver (CGO), Rust Driver (FFI), Mock Driver und Backend Factory",
+      "description": "HAL-Schicht mit C Driver (CGO), Rust Driver (FFI), Auto Driver (Fallback), Mock Driver und Backend Factory",
       "layout": "layered"
     },
     "hardware": {

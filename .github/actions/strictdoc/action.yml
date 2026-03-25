@@ -2,9 +2,10 @@ name: StrictDoc Export & Validation
 description: >
   Full StrictDoc pipeline: setup Python, install StrictDoc + test deps,
   run pytest for test-traceability, install Chromium if needed,
-  run make req-tracing, write traceability summary via req_tracing_summary.py,
+  run make req-tracing (exports all formats + zips to output/out_strictdoc.zip),
+  write traceability summary via req_tracing_summary.py,
   convert requirements coverage gaps to SARIF via strictdoc_to_sarif.py,
-  upload SARIF to GitHub Code Scanning, and upload HTML/PDF/Excel/ReqIF artifacts.
+  upload SARIF to GitHub Code Scanning, and upload out_strictdoc.zip as single artifact.
   Requires actions/checkout to have run in the calling job.
   Scripts are resolved via GITHUB_ACTION_PATH — no download-tooling needed.
   Job must declare security-events: write when upload-sarif is true.
@@ -39,12 +40,11 @@ inputs:
     description: Artifact retention in days.
     required: false
     default: '7'
-    default: '30'
 
-  upload-artifacts:
-    description: Whether to upload HTML/PDF/Excel/ReqIF artifacts ('true'/'false').
+  zip-artifact:
+    description: Artifact name for the zipped StrictDoc export (empty = no upload).
     required: false
-    default: 'true'
+    default: strictdoc-export
 
   sdoc-glob:
     description: Glob pattern to find .sdoc requirement files.
@@ -106,11 +106,6 @@ runs:
       shell: bash
       run: make ${{ inputs.make-target }}
 
-    - name: Traceability Report in Workflow Summary schreiben
-      if: always()
-      shell: bash
-      run: python3 "$GITHUB_ACTION_PATH/../../../scripts/req_tracing_summary.py"
-
     - name: Requirements Coverage → SARIF
       if: always()
       shell: bash
@@ -129,40 +124,16 @@ runs:
 
     - name: Upload Requirements SARIF Artifact
       if: inputs.sarif-artifact != ''
-      uses: actions/upload-artifact@v6
+      uses: ./.github/actions/upload-artifact
       with:
         name: ${{ inputs.sarif-artifact }}
         path: reports/requirements-coverage.sarif
         retention-days: ${{ inputs.retention-days }}
 
-    - name: Upload StrictDoc HTML
-      if: inputs.upload-artifacts == 'true'
-      uses: actions/upload-artifact@v6
+    - name: Upload StrictDoc Export ZIP
+      if: inputs.zip-artifact != ''
+      uses: ./.github/actions/upload-artifact
       with:
-        name: strictdoc-html
-        path: ${{ inputs.output-base }}/html/
-        retention-days: ${{ inputs.retention-days }}
-
-    - name: Upload StrictDoc PDF
-      if: inputs.upload-artifacts == 'true'
-      uses: actions/upload-artifact@v6
-      with:
-        name: strictdoc-pdf
-        path: ${{ inputs.output-base }}/html2pdf/
-        retention-days: ${{ inputs.retention-days }}
-
-    - name: Upload StrictDoc Excel
-      if: inputs.upload-artifacts == 'true'
-      uses: actions/upload-artifact@v6
-      with:
-        name: strictdoc-excel
-        path: ${{ inputs.output-base }}/excel/
-        retention-days: ${{ inputs.retention-days }}
-
-    - name: Upload StrictDoc ReqIF
-      if: inputs.upload-artifacts == 'true'
-      uses: actions/upload-artifact@v6
-      with:
-        name: strictdoc-reqif
-        path: ${{ inputs.output-base }}/reqif-sdoc/
+        name: ${{ inputs.zip-artifact }}
+        path: output/out_strictdoc.zip
         retention-days: ${{ inputs.retention-days }}

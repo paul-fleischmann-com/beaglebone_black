@@ -1,0 +1,122 @@
+[[section-design-decisions]]
+== Architekturentscheidungen
+
+=== ADR-001: Go als Sprache für den REST API Server
+
+[cols="2,4", options="header"]
+|===
+| Feld | Inhalt
+
+| Datum | 2026-01-15
+| Status | Akzeptiert
+| Entscheider | Embedded SW Team
+|===
+
+*Kontext:*
+Auf dem BeagleBone Black (512 MB RAM) wird eine Sprache für den REST-Server
+benötigt, die sparsam mit Ressourcen umgeht, native HTTP-Unterstützung hat
+und gut mit C-Bibliotheken zusammenarbeitet.
+
+*Entscheidung:* Go
+
+*Begründung:*
+
+* Statische Binaries — kein Runtime-Overhead auf dem Zielsystem
+* ~5 MB Prozessgröße (Python-Äquivalent: ~30-50 MB)
+* Hervorragende CGO-Integration für C-Bibliotheken
+* Eingebaute HTTP/SSE-Unterstützung via `net/http`
+* Cross-Compilation für ARM mit einem Befehl
+
+*Abgelehnte Alternativen:*
+
+* *Python*: Zu hoher RAM-Verbrauch als Daemon, Interpreter-Overhead
+* *Node.js*: Bundle-Größe, npm-Abhängigkeiten, kein natives CGO
+* *Rust (für API)*: Kompilierzeiten für Iteration zu hoch;
+  Axum/Actix sind schwergewichtiger als Go's stdlib HTTP
+
+=== ADR-002: C und Rust parallel als Hardware-Libraries
+
+[cols="2,4", options="header"]
+|===
+| Feld | Inhalt
+
+| Datum | 2026-01-20
+| Status | Akzeptiert
+|===
+
+*Kontext:*
+Hardware-Zugriff auf BME280, GPIO, UART, SPI erfordert eine Sprache mit
+direktem OS-Interface und effizienter I/O.
+
+*Entscheidung:*
+Beide Sprachen parallel implementieren, automatischer Fallback im `auto`-Modus.
+
+*Begründung:*
+
+* *C*: Maximale Performance, bewährt, direkter sysfs/ioctl-Zugriff,
+  Bosch-Referenzimplementierung für BME280
+* *Rust*: Memory Safety, kein undefined behavior,
+  moderne Crates (`linux-embedded-hal`, `serialport`, `spidev`)
+* *HAL-Interface*: Abstrahiert die Wahl — API-Code ist identisch für beide
+
+*Trade-off:*
+Doppelter Wartungsaufwand, aber maximale Resilienz.
+
+=== ADR-003: Podman (rootless) statt Docker
+
+[cols="2,4", options="header"]
+|===
+| Feld | Inhalt
+
+| Datum | 2026-02-01
+| Status | Akzeptiert
+|===
+
+*Entscheidung:* Podman rootless für alle Container-Operationen (CI + Build).
+
+*Begründung:*
+
+* Kein Daemon — kein Single Point of Failure
+* Rootless-Betrieb erhöht Sicherheit der CI-Umgebung
+* Docker-kompatibel (gleiche Images, gleiche Syntax)
+* Native systemd Quadlet-Integration für den BeagleBone Black
+
+=== ADR-004: Konfiguration ausschließlich via Umgebungsvariablen
+
+[cols="2,4", options="header"]
+|===
+| Feld | Inhalt
+
+| Datum | 2026-02-10
+| Status | Akzeptiert
+|===
+
+*Entscheidung:*
+Keine Konfigurationsdateien. Alle Parameter via Env-Vars (`HW_BACKEND`,
+`HW_I2C`, `HW_UART`).
+
+*Begründung:*
+
+* 12-Factor-App-Prinzip für Embedded-Kontext
+* Einfaches Überschreiben in CI (`HW_BACKEND=mock go test`)
+* Kein Datei-Parsing-Overhead beim Start
+* systemd-Units können Env-Dateien einlesen
+
+=== ADR-005: Separates `loader`-Package für Factory
+
+[cols="2,4", options="header"]
+|===
+| Feld | Inhalt
+
+| Datum | 2026-02-15
+| Status | Akzeptiert
+|===
+
+*Kontext:*
+`pkg/hal/c` importiert `pkg/hal` (für Typen).
+`pkg/hal` darf nicht `pkg/hal/c` importieren (Zirkel).
+Die Factory-Funktion muss aber beide kennen.
+
+*Entscheidung:*
+`pkg/hal/loader` als separates Package — importiert `pkg/hal`, `pkg/hal/c`
+und `pkg/hal/rust`, hat aber selbst keine Abhängigen außer `cmd/main.go`.

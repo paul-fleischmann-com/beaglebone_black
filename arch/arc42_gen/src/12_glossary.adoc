@@ -1,0 +1,85 @@
+[[section-glossary]]
+== Glossar
+
+[cols="2,4", options="header"]
+|===
+| Begriff | Definition
+
+| *ARMv7*
+| 32-bit ARM-Architektur (v7-A), verwendet im TI AM335x (Cortex-A8).
+  Unterstützt Hard-Float-ABI (`armv7-unknown-linux-gnueabihf`).
+
+| *CGO*
+| Go-Mechanismus zur Einbindung von C-Code.
+  Ermöglicht Aufrufe von `libhardware.so` aus Go-Funktionen.
+
+| *FFI (Foreign Function Interface)*
+| Mechanismus zum Aufruf von Rust-Funktionen aus Go.
+  Rust-Funktionen mit `#[no_mangle] extern "C"` sind via CGO erreichbar.
+
+| *cbindgen*
+| Rust-Tool, das C-kompatible Header-Dateien aus Rust-Code generiert.
+  Erzeugt `hardware_rs.h` für Go-CGO.
+
+| *HAL (Hardware Abstraction Layer)*
+| Schicht zwischen API und Hardware-Libraries.
+  Definiert das `HardwareDriver`-Go-Interface.
+  Kapselt Backend-Auswahl (C/Rust/Auto/Mock).
+
+| *HardwareDriver*
+| Zentrales Go-Interface in `pkg/hal/interface.go`.
+  Implementierungen: C Driver, Rust Driver, Auto Driver, Mock Driver.
+
+| *Backend*
+| Konkrete Implementierung des `HardwareDriver`-Interface.
+  Wert von `HW_BACKEND`: `c`, `rust`, `auto`.
+
+| *Auto Driver*
+| Decorator um C und Rust Driver.
+  Versucht C zuerst; bei Fehler transparenter Fallback auf Rust.
+
+| *Mock Driver*
+| Test-Implementierung ohne Hardware-Abhängigkeit.
+  Gibt statische Testwerte zurück. Wird in Unit-Tests verwendet.
+
+| *BME280*
+| Bosch Umweltsensor: Temperatur (-40..+85°C), Luftfeuchtigkeit (0-100% rH),
+  Luftdruck (300-1100 hPa). I2C-Adresse 0x76 (SDO=GND) oder 0x77.
+
+| *sysfs*
+| Linux Virtual Filesystem unter `/sys/`.
+  GPIO-Zugriff via `/sys/class/gpio/gpio{n}/value`, `direction`, `export`.
+
+| *ioctl*
+| Linux-Systemaufruf für gerätespezifische Operationen.
+  I2C: `I2C_RDWR`. SPI: `SPI_IOC_MESSAGE`.
+
+| *SSE (Server-Sent Events)*
+| HTTP-basiertes Push-Protokoll (`text/event-stream`).
+  Server sendet Events an den Browser — unidirektional.
+  Verwendet für den BME280-Echtzeit-Stream.
+
+| *gorilla/mux*
+| Go-HTTP-Router für Request-Multiplexing und URL-Parameter-Extraktion.
+  Einzige externe Abhängigkeit im `go.mod`.
+
+| *cross (Rust)*
+| Rust-Tool für Cross-Compilation via Docker/Podman-Container.
+  Befehl: `cross build --release --target armv7-unknown-linux-musleabihf`.
+
+| *Podman*
+| Docker-kompatibler Container Manager ohne Root-Daemon (rootless).
+  Verwendet für Build-Container (`generic-builder`) und CI.
+
+| *Quality Gate*
+| Mindestanforderung an Qualitätsmetriken, die im CI erzwungen wird.
+  Schlägt das Gate fehl, wird der Build als fehlgeschlagen markiert.
+
+| *StrictDoc*
+| Tool für Requirements Engineering und Traceability.
+  Verarbeitet `.sdoc`-Dateien, generiert HTML/PDF/Excel/ReqIF.
+
+| *Conventional Commits*
+| Commit-Nachrichtenformat: `type(scope): description`.
+  Types: feat, fix, docs, test, refactor, ci, chore.
+|===

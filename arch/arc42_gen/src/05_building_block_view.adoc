@@ -1,0 +1,190 @@
+[[section-building-block-view]]
+== Bausteinsicht
+
+=== Whitebox Gesamtsystem (Ebene 1)
+
+plantuml::{diagramsdir}/02_schichten.puml[format=svg,align=center]
+
+*Begründung der Zerlegung:*
+Das System ist in fünf klar getrennte Schichten aufgeteilt.
+Die Trennung erzwingt saubere Schnittstellen und ermöglicht
+unabhängiges Testen jeder Schicht.
+
+[cols="2,4", options="header"]
+|===
+| Baustein | Verantwortung
+
+| *Client Layer*
+| Benutzer-Interfaces: Web GUI, Desktop GUI (Fyne), Terminal TUI (BubbleTea),
+  CLI (bbcli/Cobra). Kommunizieren ausschließlich via REST mit dem API Layer.
+
+| *API Layer* (`bin/embedded`)
+| Go HTTP-Server auf Port 5000. Routing (gorilla/mux), CORS-Middleware,
+  SSE-Streams, JSON-Serialisierung, Backend-Umschaltung zur Laufzeit.
+
+| *HAL Layer*
+| `HardwareDriver`-Interface + drei Implementierungen (C, Rust, Auto).
+  Factory-Pattern in `pkg/hal/loader`. Konfiguration via Umgebungsvariablen.
+
+| *Library Layer*
+| `libhardware.so` (C) und `libhardware_rs.so` (Rust).
+  Kompilierte ARM-Shared-Libraries. Go bindet via CGO (C) und FFI (Rust) ein.
+
+| *Hardware Layer*
+| BeagleBone Black (AM335x), BME280-Sensor, GPIO-Pins, UART, SPI.
+  Zugriff ausschließlich über Linux-Kernel-Interfaces.
+|===
+
+=== Ebene 2 — API Layer (Whitebox)
+
+plantuml::{diagramsdir}/04_api_layer.puml[format=svg,align=center]
+
+[cols="2,4", options="header"]
+|===
+| Komponente | Verantwortung
+
+| `cmd/main.go`
+| Einstiegspunkt: Config laden, HAL initialisieren, Router registrieren,
+  HTTP-Server starten. Backend-Handler (ersetzt HW-Instanz zur Laufzeit).
+
+| `pkg/api/server.go`
+| `Server`-Struct mit `HW hal.HardwareDriver` und `HWMu sync.Mutex`.
+  `NewHTTPServer()` konfiguriert Timeouts. `CORSMiddleware()`.
+
+| `pkg/api/handlers.go`
+| Handler für alle Endpunkte: `HealthHandler`, `BME280Handler`,
+  `BME280StreamHandler`, `GPIOAllHandler`, `GPIOReadHandler`,
+  `GPIOWriteHandler`, `UARTConfigHandler`, `UARTSendHandler`,
+  `UARTReceiveHandler`, `SPITransferHandler`.
+
+| `pkg/hal/config/config.go`
+| Konfiguration aus Umgebungsvariablen: `HW_BACKEND` (default: `auto`),
+  `HW_I2C` (default: `/dev/i2c-1`), `HW_UART` (default: `/dev/ttyO1`).
+|===
+
+=== Ebene 2 — HAL Layer (Whitebox)
+
+plantuml::{diagramsdir}/05_hal_layer.puml[format=svg,align=center]
+
+[cols="2,4", options="header"]
+|===
+| Komponente | Verantwortung
+
+| `pkg/hal/interface.go`
+| `HardwareDriver`-Interface: 13 Methoden (Name, Backend, BME280Read,
+  GPIOExport, GPIOSetDirection, GPIORead, GPIOWrite, UARTOpen, UARTWrite,
+  UARTRead, UARTClose, SPITransfer, Init, Close). Datentypen: `BME280Data`,
+  `GPIOData`, `UARTData`, `SPIData`.
+
+| `pkg/hal/loader/factory.go`
+| `NewDriver(cfg)` — Factory: erzeugt C-, Rust- oder Auto-Driver.
+  `autoDriver` — Wrapper: ruft C zuerst, bei Fehler Rust (Fallback).
+  Löst Import-Zyklen durch separates Package.
+
+| `pkg/hal/c/driver.go`
+| CGO-Bindings: ruft `libhardware.so`-Funktionen auf.
+  Konvertiert C-Structs in Go-Typen.
+
+| `pkg/hal/rust/driver.go`
+| FFI-Bindings: ruft `libhardware_rs.so`-Funktionen auf via `extern "C"`.
+  Konvertiert C-kompatible Rust-Structs in Go-Typen.
+
+| `pkg/hal/mock/driver.go`
+| Mock-Implementierung für Unit-Tests. Gibt statische Testwerte zurück.
+  Benötigt keine Hardware oder Libraries.
+
+| `pkg/hal/config/config.go`
+| Konfigurationsmodell und Umgebungsvariablen-Loader.
+|===
+
+=== Ebene 2 — Library Layer (Whitebox)
+
+plantuml::{diagramsdir}/07_library_layer.puml[format=svg,align=center]
+
+==== C Library (`libhardware.so`)
+
+[cols="2,2,3", options="header"]
+|===
+| Modul | Kernel-Interface | Schlüsselfunktionen
+
+| `project/c/src/bme280.c`
+| I2C ioctl (`/dev/i2c-1`)
+| `bme280_init()`, `bme280_read()` — Bosch-Kompensationsalgorithmus,
+  Adresse 0x76
+
+| `project/c/src/gpio.c`
+| sysfs (`/sys/class/gpio/`)
+| `gpio_export()`, `gpio_set_direction()`, `gpio_read()`, `gpio_write()`
+
+| `project/c/src/uart.c`
+| termios (`/dev/ttyO1`)
+| `uart_open()`, `uart_write()`, `uart_read()`, `uart_close()` —
+  Baudrate, Parität, Timeout
+
+| `project/c/src/spi.c`
+| spidev ioctl (`/dev/spidev0.0`)
+| `spi_transfer()` — Mode 0-3, bis 48 MHz, Full-Duplex
+|===
+
+==== Rust Library (`libhardware_rs.so`)
+
+[cols="2,2,3", options="header"]
+|===
+| Modul | Crate | Schlüsselfunktionen (FFI-Exports)
+
+| `project/rust-lib/src/bme280.rs`
+| `linux-embedded-hal`, `bme280`
+| `rs_bme280_read(i2c_path, addr)` → `RsBme280Data`
+
+| `project/rust-lib/src/gpio.rs`
+| `std::fs` (sysfs)
+| `rs_gpio_export(pin)`, `rs_gpio_set_direction(pin, output)`,
+  `rs_gpio_read(pin)`, `rs_gpio_write(pin, value)`
+
+| `project/rust-lib/src/uart.rs`
+| `serialport`
+| `rs_uart_open()`, `rs_uart_write()`, `rs_uart_read()`, `rs_uart_close()`
+
+| `project/rust-lib/src/spi.rs`
+| `spidev`
+| `rs_spi_transfer(dev, speed, tx_ptr, len)` → `RsSpiData`
+|===
+
+Alle Rust-Funktionen tragen `#[no_mangle]` und `extern "C"`, damit sie
+via CGO/FFI aus Go aufrufbar sind. Der C-Header wird automatisch per
+`cbindgen` erzeugt (`project/go-api/libs/include/hardware_rs.h`).
+
+=== Ebene 2 — Client Layer (Whitebox)
+
+plantuml::{diagramsdir}/03_client_layer.puml[format=svg,align=center]
+
+[cols="2,2,3", options="header"]
+|===
+| Client | Technologie | Schlüsseleigenschaften
+
+| *Web GUI*
+| HTML/CSS/JavaScript (Vanilla)
+| SSE-basiertes Live-Dashboard (:8090), BME280-Charts,
+  GPIO-Steuerung, Backend-Auswahl
+
+| *Desktop GUI (bbgui)*
+| Go + Fyne v2
+| Tab-basierte Desktop-Anwendung, Linux amd64,
+  alle API-Operationen grafisch
+
+| *Terminal TUI (bbtui)*
+| Go + BubbleTea + Lipgloss
+| Keyboard-Navigation, Echtzeit-Updates, Dark Theme,
+  cross-platform (Linux/macOS/Windows)
+
+| *CLI (bbcli)*
+| Go + Cobra + Viper
+| Shell Completion, Konfigurationsdatei `~/.bbcli.yaml`,
+  alle API-Operationen, Profile,
+  cross-platform Binaries
+
+| *Python Tests*
+| pytest + requests
+| API-Integrationstests, Hardware-Tests (require BeagleBone),
+  Quality-Gate-Validierung
+|===

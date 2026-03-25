@@ -18,7 +18,8 @@
 :experimental:
 :stem: latexmath
 :imagesdir: images
-:plantumldir: diagrams
+:plantumldir: arc42_gen/diagrams
+:diagramsdir: arc42_gen/diagrams
 :xrefstyle: full
 :lang: de
 
@@ -83,11 +84,11 @@ Das System verfolgt folgende primäre Ziele:
 
 == Architekturübersicht
 
-plantuml::diagrams/01_systemkontext.puml[format=svg,align=center]
+plantuml::{diagramsdir}/01_systemkontext.puml[format=svg,align=center]
 
 === Schichtenarchitektur
 
-plantuml::diagrams/02_schichten.puml[format=svg,align=center]
+plantuml::{diagramsdir}/02_schichten.puml[format=svg,align=center]
 
 Die Architektur ist in fünf klar getrennte Schichten aufgeteilt:
 
@@ -116,7 +117,7 @@ Die Architektur ist in fünf klar getrennte Schichten aufgeteilt:
 [[client-layer]]
 === Client Layer (Schicht 01)
 
-plantuml::diagrams/03_client_layer.puml[format=svg,align=center]
+plantuml::{diagramsdir}/03_client_layer.puml[format=svg,align=center]
 
 ==== Web GUI
 
@@ -192,7 +193,7 @@ bbcli completion bash >> ~/.bashrc
 [[api-layer]]
 === API Layer (Schicht 02)
 
-plantuml::diagrams/04_api_layer.puml[format=svg,align=center]
+plantuml::{diagramsdir}/04_api_layer.puml[format=svg,align=center]
 
 ==== REST API Endpoints
 
@@ -234,7 +235,7 @@ plantuml::diagrams/04_api_layer.puml[format=svg,align=center]
 [[hal-layer]]
 === HAL Layer (Schicht 03)
 
-plantuml::diagrams/05_hal_layer.puml[format=svg,align=center]
+plantuml::{diagramsdir}/05_hal_layer.puml[format=svg,align=center]
 
 ==== HAL Interface
 
@@ -281,12 +282,12 @@ func NewDriver(cfg *Config) (HardwareDriver, error) {
 }
 ----
 
-plantuml::diagrams/06_hal_fallback.puml[format=svg,align=center]
+plantuml::{diagramsdir}/06_hal_fallback.puml[format=svg,align=center]
 
 [[library-layer]]
 === Library Layer (Schicht 04)
 
-plantuml::diagrams/07_library_layer.puml[format=svg,align=center]
+plantuml::{diagramsdir}/07_library_layer.puml[format=svg,align=center]
 
 ==== C Library (libhardware.so)
 
@@ -355,7 +356,7 @@ pub unsafe extern "C" fn rs_bme280_read(
 [[hardware-layer]]
 === Hardware Layer (Schicht 05)
 
-plantuml::diagrams/08_hardware_layer.puml[format=svg,align=center]
+plantuml::{diagramsdir}/08_hardware_layer.puml[format=svg,align=center]
 
 ==== BeagleBone Black Spezifikation
 
@@ -399,19 +400,19 @@ Speicherbedarf.
 
 == Kommunikationsflüsse
 
-plantuml::diagrams/09_kommunikation.puml[format=svg,align=center]
+plantuml::{diagramsdir}/09_kommunikation.puml[format=svg,align=center]
 
 === Datenfluss BME280
 
-plantuml::diagrams/10_sequenz_bme280.puml[format=svg,align=center]
+plantuml::{diagramsdir}/10_sequenz_bme280.puml[format=svg,align=center]
 
 === HAL Fallback Sequenz
 
-plantuml::diagrams/11_sequenz_fallback.puml[format=svg,align=center]
+plantuml::{diagramsdir}/11_sequenz_fallback.puml[format=svg,align=center]
 
 == CI/CD Pipeline
 
-plantuml::diagrams/12_cicd_pipeline.puml[format=svg,align=center]
+plantuml::{diagramsdir}/12_cicd_pipeline.puml[format=svg,align=center]
 
 === Pipeline Übersicht
 

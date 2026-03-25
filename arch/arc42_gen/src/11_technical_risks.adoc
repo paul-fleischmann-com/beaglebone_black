@@ -1,0 +1,69 @@
+[[section-technical-risks]]
+== Risiken und technische Schulden
+
+[cols="1,2,3,2,2", options="header"]
+|===
+| Prio | Risiko | Beschreibung | Wahrscheinlichkeit | Maßnahme
+
+| 1
+| *CORS nicht implementiert (API-008)*
+| `GET /api/v1/bme280` hat kein CORS-Header-Set für alle Origins.
+  Web GUI von anderem Host nicht nutzbar.
+| Mittel
+| `CORSMiddleware` ist bereits vorhanden —
+  Anforderung API-008 offen implementieren
+
+| 2
+| *Responsives Layout fehlt (GUI-007)*
+| Web GUI nicht für Mobile optimiert. Auf kleinen Screens
+  unbrauchbar.
+| Niedrig
+| CSS-Media-Queries nachziehen
+
+| 3
+| *Keine Authentifizierung / Autorisierung*
+| REST API auf Port 5000 ohne Auth. Jeder im Netzwerk kann
+  GPIO steuern, Backend wechseln.
+| Mittel (lokales Netzwerk)
+| API-Key oder mTLS für Produktionseinsatz evaluieren
+
+| 4
+| *CGO-Build-Komplexität*
+| CGO erfordert exakte Toolchain-Versionen.
+  Mismatch zwischen Cross-Compiler und Library führt zu
+  schwer debuggbaren Linker-Fehlern.
+| Niedrig (durch Container fixiert)
+| `generic-builder` Container pinnt alle Versionen
+
+| 5
+| *Rust musl-Target: keine dynamische Verlinkung*
+| `armv7-unknown-linux-musleabihf` produziert statisch gelinkte
+  Library. Kompatibilitätsprobleme mit glibc-Systemen möglich.
+| Niedrig
+| Auf Zielsystem testen; Fallback auf gnu-Target evaluieren
+
+| 6
+| *Kein Health-Check für Library-Load*
+| Wenn `libhardware.so` oder `libhardware_rs.so` beim Start nicht
+  gefunden wird, crasht der Server — kein graceful degradation.
+| Niedrig
+| Startup-Check mit erklärendem Fehler; systemd-Restart-Policy
+|===
+
+=== Technische Schulden
+
+[cols="2,4", options="header"]
+|===
+| Schuld | Beschreibung
+
+| `project/go/main.go` (veraltet)
+| Altdatei aus früher Iteration, nicht mehr Teil des Build-Systems.
+  Kann entfernt werden.
+
+| `project/rust/` (veraltet)
+| Separate Rust-Binary außerhalb von `rust-lib/`. Nicht mehr
+  im Makefile. Kann bereinigt werden.
+
+| Fehlende `UARTConfig`-Persistenz
+| UART-Konfiguration wird nicht gespeichert — nach Neustart auf Default zurück.
+|===

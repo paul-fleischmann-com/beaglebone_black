@@ -1,0 +1,52 @@
+[[section-solution-strategy]]
+== Lösungsstrategie
+
+Die Architektur folgt drei zentralen Strategien:
+
+[cols="2,4", options="header"]
+|===
+| Strategie | Umsetzung
+
+| *Schichtenarchitektur*
+| Strikte 5-Schichten-Trennung: Client → API → HAL → Libraries → Hardware.
+  Jede Schicht kommuniziert nur mit der direkt benachbarten.
+  Go kennt keine Hardware-Details; C/Rust kennen kein HTTP.
+
+| *Dual-Backend + automatischer Fallback*
+| C-Library (Performance) und Rust-Library (Safety) laufen parallel.
+  Im `auto`-Modus versucht der HAL zuerst C; schlägt das fehl,
+  wird transparent auf Rust umgeschaltet.
+  Laufzeitumschaltung via `POST /api/v1/backend`.
+
+| *Interface-basierte Testbarkeit*
+| Das `HardwareDriver`-Go-Interface wird im CI durch den Mock Driver
+  implementiert. Alle Unit-Tests laufen ohne physische Hardware.
+  Integration- und Hardware-Tests sind separat getriggert.
+|===
+
+*Technologieentscheidungen im Überblick:*
+
+[cols="2,2,3", options="header"]
+|===
+| Qualitätsziel | Technologie | Begründung
+
+| Memory Safety
+| Rust (`libhardware_rs.so`)
+| Compiler-garantierte Speichersicherheit, kein undefined behavior
+
+| Performance
+| C (`libhardware.so`)
+| Maximale Kontrolle, direkter ioctl-Zugriff, etablierter Bosch-Algorithmus
+
+| Minimaler Speicherbedarf
+| Go (statische Binaries)
+| ~5 MB Prozessgröße, kein Runtime-Overhead, statische Verlinkung
+
+| Hardware-Unabhängigkeit
+| `HardwareDriver`-Interface
+| Backends austauschbar ohne API-Änderungen; Mock für Tests
+
+| Portabilität der Tools
+| Go (CLI, TUI, GUI)
+| Cross-Compilation für Linux/macOS/Windows in einer Codebasis
+|===
