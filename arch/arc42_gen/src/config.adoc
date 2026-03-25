@@ -1,0 +1,43 @@
+// asciidoc settings for DE (German)
+// ==================================
+// toc-title definition MUST follow document title without blank line!
+:toc-title: Inhaltsverzeichnis
+
+// enable table-of-contents
+:toc:
+
+:caution-caption: Achtung
+:important-caption: Wichtig
+:note-caption: Hinweis
+:tip-caption: Tip
+:warning-caption: Warnung
+
+:appendix-caption: Anhang
+:example-caption: Beispiel
+:figure-caption: Abbildung
+:table-caption: Tabelle
+
+
+:author: Embedded SW Team
+:email: embedded@example.com
+:revnumber: 1.1.0
+:revdate: 2026-03-25
+:revremark: Generiert aus Projektquellen
+:doctype: book
+:toc: left
+:toc-title: Inhaltsverzeichnis
+:toclevels: 3
+:sectnums:
+:sectnumlevels: 4
+:icons: font
+:source-highlighter: rouge
+:rouge-style: monokai
+:imagesdir: ../model/export/png
+:diagramsdir: ./diagrams
+:plantumldir: ./diagrams
+:xrefstyle: full
+:lang: de
+:numbered:
+
+
+:arc42help:
