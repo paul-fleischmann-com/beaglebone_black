@@ -12,7 +12,25 @@ permissions:
 
 jobs:
 
-  # ── Phase 1: Build ────────────────────────────
+  # ════════════════════════════════════════════════
+  # Phase 1: DOC BUILD
+  # ════════════════════════════════════════════════
+
+  strictdoc:
+    name: StrictDoc Export & Validation
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: ./.github/actions/strictdoc
+
+  # ════════════════════════════════════════════════
+  # Phase 2: BUILD SW
+  # ════════════════════════════════════════════════
 
   build-arm:
     name: Build ARM Binaries
@@ -33,10 +51,10 @@ jobs:
       - uses: ./actions/build-and-deploy-ontarget
         with:
           source_dir: ./project
-          test_dir: ./project/python_tests
+          test_dir:   ./project/python_tests
           output_dir: ./bin
           container_image: generic-builder
-          artifact-name: arm-binaries
+          artifact-name:   arm-binaries
           build_commands: |
             set -e
             mkdir -p /output
@@ -136,11 +154,23 @@ jobs:
           goarm:             ${{ matrix.goarm }}
           artifact-name:     ${{ matrix.name }}
 
-  # ── Phase 2: Unit Tests ───────────────────────
+  build-web:
+    name: Web GUI Validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: ./.github/actions/html-validate
+
+  # ════════════════════════════════════════════════
+  # Phase 3: UNIT TEST SW
+  # ════════════════════════════════════════════════
 
   test-go:
     name: Go Unit Tests
     runs-on: ubuntu-latest
+    needs: [build-arm, build-cli, build-tui]
     permissions:
       contents: read
       security-events: write
@@ -157,33 +187,40 @@ jobs:
   test-c:
     name: C Unit Tests
     runs-on: ubuntu-latest
+    needs: [build-arm]
     steps:
       - uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
       - uses: ./.github/actions/c-test
 
+  test-python:
+    name: Python Tests
+    runs-on: ubuntu-latest
+    needs: [build-arm]
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: ./.github/actions/python-test
+
   lint-go:
     name: Go Lint
     runs-on: ubuntu-latest
+    needs: [build-cli, build-tui]
     steps:
       - uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
       - uses: ./.github/actions/go-lint
 
-  test-web:
-    name: Web GUI Tests
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-      - uses: ./.github/actions/html-validate
-
   test-scripts:
     name: Script Syntax
     runs-on: ubuntu-latest
+    needs: [build-arm]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -194,33 +231,10 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  test-python:
-    name: Python Tests
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      security-events: write
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-      - uses: ./.github/actions/python-test
-
-  strictdoc:
-    name: StrictDoc Export & Validation
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      security-events: write
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-      - uses: ./.github/actions/strictdoc
-
   security-python:
     name: Python Security Scan
     runs-on: ubuntu-latest
+    needs: [build-arm]
     permissions:
       contents: read
       security-events: write
@@ -230,7 +244,9 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
       - uses: ./.github/actions/python-security
 
-  # ── SonarCloud ────────────────────────────────
+  # ════════════════════════════════════════════════
+  # Phase 4: RELEASE CANDIDATE
+  # ════════════════════════════════════════════════
 
   sonarcloud:
     name: SonarCloud Analysis
@@ -261,12 +277,10 @@ jobs:
           sonar-token: ${{ secrets.SONAR_TOKEN }}
           project-key: paulefl_beaglebone_black
 
-  # ── Test Report ───────────────────────────────
-
   report:
     name: Test Report
     runs-on: ubuntu-latest
-    needs: [build-arm, build-cli, build-tui, test-go, lint-go, test-web, test-scripts, test-python, strictdoc, sonarcloud]
+    needs: [test-go, test-c, test-python, lint-go, test-scripts, security-python, strictdoc, sonarcloud]
     if: always()
     permissions:
       contents: write
@@ -279,8 +293,6 @@ jobs:
       - uses: ./.github/actions/test-report
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  # ── Artifact Cleanup ──────────────────────────
 
   cleanup:
     name: Cleanup CI Artifacts
@@ -303,8 +315,6 @@ jobs:
               gh api "repos/$REPO/actions/artifacts/$id" -X DELETE
             done
           echo "✅ CI artifact cleanup done"
-
-  # ── Changelog Update ──────────────────────────
 
   changelog:
     name: Update Changelog
@@ -354,12 +364,10 @@ jobs:
             --base main --head "$BRANCH"
           gh pr merge "$BRANCH" --squash --delete-branch --admin
 
-  # ── Phase 3: Release Candidate ────────────────
-
   release-candidate:
     name: Release Candidate (toTestOnTarget)
     runs-on: ubuntu-latest
-    needs: [build-arm, build-cli, build-tui, test-go, test-c, lint-go, test-web, test-scripts, test-python, strictdoc, security-python]
+    needs: [strictdoc, build-arm, build-cli, build-tui, build-web, test-go, test-c, lint-go, test-scripts, test-python, security-python]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     permissions:
       contents: write
@@ -391,11 +399,9 @@ jobs:
           VERSION="${{ steps.version.outputs.version }}"
           TAG="v${VERSION}-toTestOnTarget"
 
-          # Bestehenden Release löschen falls vorhanden
           gh release delete "$TAG" --yes 2>/dev/null || true
           git push origin --delete "$TAG" 2>/dev/null || true
 
-          # Changelog-Section für diese Version
           awk "/^## \[${VERSION}\]/{found=1; next} found && /^## \[/{exit} found{print}" \
             CHANGELOG.md > release_notes.md || echo "Release candidate for v${VERSION}" > release_notes.md
 
