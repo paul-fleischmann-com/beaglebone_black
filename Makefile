@@ -84,13 +84,13 @@ build-arm:
 	mkdir -p bin
 	mkdir -p $${HOME}/.cargo/registry $${HOME}/.cargo/git $${HOME}/go/pkg/mod
 	podman run --rm \
-	  -v "$(CURDIR)/project:/src" \
+	  -v "$(CURDIR):/src" \
 	  -v "$(CURDIR)/bin:/output" \
 	  -v "$${HOME}/.cargo/registry:/root/.cargo/registry" \
 	  -v "$${HOME}/.cargo/git:/root/.cargo/git" \
 	  -v "$${HOME}/go/pkg/mod:/root/go/pkg/mod" \
 	  generic-builder \
-	  -c "bash /src/../scripts/build-arm.sh"
+	  -c "bash /src/scripts/build-arm.sh"
 
 checksums:
 	./scripts/ci-checksums.sh

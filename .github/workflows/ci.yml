@@ -65,12 +65,12 @@ jobs:
           podman tag ghcr.io/${{ github.repository_owner }}/generic-builder:latest generic-builder
       - uses: ./actions/build-and-deploy-ontarget
         with:
-          source_dir: ./project
+          source_dir: .
           test_dir:   ./project/python_tests
           output_dir: ./bin
           container_image: generic-builder
           artifact-name:   arm-binaries
-          build_commands: bash /src/../scripts/build-arm.sh
+          build_commands: bash /src/scripts/build-arm.sh
 
   build-cli:
     name: Build CLI
