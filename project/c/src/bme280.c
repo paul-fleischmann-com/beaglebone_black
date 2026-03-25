@@ -680,6 +680,7 @@ int8_t bme280_soft_reset(struct bme280_dev *dev)
     uint8_t reg_addr = BME280_REG_RESET;
     uint8_t status_reg = 0;
     uint8_t try_run = 5;
+    uint8_t remaining;
 
     /* 0xB6 is the soft reset command */
     uint8_t soft_rst_cmd = BME280_SOFT_RESET_COMMAND;
@@ -696,7 +697,9 @@ int8_t bme280_soft_reset(struct bme280_dev *dev)
             dev->delay_us(BME280_STARTUP_DELAY, dev->intf_ptr);
             rslt = bme280_get_regs(BME280_REG_STATUS, &status_reg, 1, dev);
 
-        } while ((rslt == BME280_OK) && (try_run--) && (status_reg & BME280_STATUS_IM_UPDATE));
+            remaining = try_run;
+            try_run--;
+        } while ((rslt == BME280_OK) && (remaining > 0U) && (status_reg & BME280_STATUS_IM_UPDATE));
 
         if (status_reg & BME280_STATUS_IM_UPDATE)
         {
