@@ -1,0 +1,105 @@
+[[section-introduction-and-goals]]
+== Einführung und Ziele
+
+=== Aufgabenstellung
+
+Das *BeagleBone Black Embedded SW*-Projekt realisiert eine mehrschichtige
+Embedded-Software-Plattform für den *TI Sitara AM335x* (ARMv7 Cortex-A8,
+1 GHz, 512 MB RAM). Ziel ist eine hardware-unabhängige REST API, die
+Sensordaten (BME280: Temperatur, Luftfeuchtigkeit, Druck) sowie
+GPIO-, UART- und SPI-Operationen über ein einheitliches Interface
+für verschiedene Client-Tools bereitstellt.
+
+Die Software besteht aus drei Hauptartefakten:
+
+[cols="2,4", options="header"]
+|===
+| Artefakt | Beschreibung
+
+| `libhardware.so`
+| C Shared Library für direkten Hardware-Zugriff (BME280, GPIO, UART, SPI)
+  via Linux sysfs / ioctl / termios
+
+| `libhardware_rs.so`
+| Rust Shared Library — speichersichere Alternative zur C Library,
+  via FFI (cbindgen) in Go eingebunden
+
+| `bin/embedded`
+| Go REST API Server (:5000) mit HAL-Abstraktionsschicht,
+  eingebunden via CGO (C) und FFI (Rust)
+|===
+
+Anforderungsdokumente:
+
+* `docs/requirements/system_requirements.sdoc` — Systemanforderungen (SYS-*)
+* `docs/requirements/software_requirements.sdoc` — Softwareanforderungen (SWR-*)
+* `docs/requirements/hardware_driver_requirements.sdoc` — HW-Driver-Anforderungen (HWR-*)
+
+=== Qualitätsziele
+
+[cols="1,2,3,2", options="header"]
+|===
+| Prio | Qualitätsziel | Beschreibung | Messbar durch
+
+| 1
+| *Sicherheit / Memory Safety*
+| Hardware-kritischer Code in Rust vermeidet undefined behavior und
+  Speicherfehler. C-Implementierung als leistungsoptimiertes Pendant.
+| Sanitizer-Builds, Rust-Compiler-Garantien
+
+| 2
+| *Testbarkeit*
+| Vollständige Testbarkeit ohne physische Hardware durch Mock Driver.
+  CI-Tests laufen ohne BeagleBone.
+| ≥ 90% Test-Erfolgsrate, ≥ 75% Coverage
+
+| 3
+| *Verfügbarkeit / Resilienz*
+| Automatischer Fallback von C-Backend auf Rust-Backend bei Laufzeitfehlern.
+  Kein Single Point of Failure im Hardware-Zugriff.
+| `HW_BACKEND=auto`, Fallback-Tests
+
+| 4
+| *Wartbarkeit*
+| Klare Schichtentrennung: Hardware-Zugriff nur in C/Rust, nie direkt in Go.
+  Neues Backend = neue Implementierung des `HardwareDriver`-Interface.
+| Lint-Checks, Interface-Konformität
+
+| 5
+| *Beobachtbarkeit*
+| REST API + SSE Streams für Echtzeit-Monitoring ohne separates
+  Monitoring-System.
+| `/health`-Endpoint, SSE-Stream auf `/api/v1/bme280/stream`
+|===
+
+=== Stakeholder
+
+[cols="2,2,3", options="header"]
+|===
+| Rolle | Kontakt | Erwartungshaltung
+
+| Embedded SW Engineer
+| Embedded SW Team
+| Saubere Schnittstellen, einfache Erweiterbarkeit um neue Sensoren/Protokolle,
+  Hardware-Unabhängigkeit durch HAL
+
+| Hardware Engineer
+| HW Team
+| Stabiler GPIO/I2C/SPI/UART-Zugriff, korrekte Pin-Belegung,
+  Dokumentation der Verkabelung
+
+| API-Konsument / Frontend-Entwickler
+| Tools Team
+| Stabile REST API, SSE-Streams, CORS-Support,
+  klares JSON-Response-Format
+
+| QA / Tester
+| QA Team
+| Mock Driver für Hardware-unabhängige Tests,
+  automatisierte Testpipeline, Quality Gates im CI
+
+| Systemadministrator
+| Ops Team
+| Deployment via `make deploy`, systemd-Service `embedded-sw`,
+  konfigurierbar via Umgebungsvariablen
+|===

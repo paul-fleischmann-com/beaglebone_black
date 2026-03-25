@@ -1,0 +1,88 @@
+[[section-context-and-scope]]
+== Kontextabgrenzung
+
+=== Fachlicher Kontext
+
+plantuml::../../diagrams/01_systemkontext.puml[format=svg,align=center]
+
+[cols="2,2,3", options="header"]
+|===
+| Kommunikationspartner | Eingabe | Ausgabe
+
+| *Operator / Benutzer*
+| REST-Anfragen, GPIO-Befehle, UART-Daten, SPI-Transfers
+| Sensordaten (BME280), GPIO-Status, UART-Empfangsdaten, SPI-RX-Buffer
+
+| *Web GUI*
+| SSE-Events vom Server (`/api/v1/bme280/stream`)
+| Live-Dashboard-Updates (Temperatur, Luftfeuchtigkeit, Druck)
+
+| *CLI (bbcli)*
+| Kommandozeilenargumente (bbcli bme280 read, gpio write ...)
+| JSON-formatierte Sensor- und Statusdaten
+
+| *Terminal TUI (bbtui)*
+| Tastatureingaben, Konfigurationsbefehle
+| Echtzeit-Systemübersicht (BubbleTea)
+
+| *Desktop GUI (bbgui)*
+| Klick-Events, Formularfelder
+| Tab-basierte Oberfläche für alle API-Operationen
+
+| *BME280 Sensor*
+| I2C-Befehle (Bosch-Protokoll, Adresse 0x76)
+| Rohmesswerte (Temperatur, Luftfeuchtigkeit, Druck)
+
+| *GPIO-Pins (P8/P9)*
+| Export/Direction/Write-Operationen via sysfs
+| Pin-Werte (0/1), Richtungskonfiguration
+
+| *UART (/dev/ttyO1)*
+| Daten senden/empfangen, Baudrate-Konfiguration
+| Empfangene Bytes
+
+| *SPI (/dev/spidev0.0)*
+| TX-Buffer, Geschwindigkeit, Mode
+| RX-Buffer nach Transfer
+|===
+
+=== Technischer Kontext
+
+plantuml::../../diagrams/02_schichten.puml[format=svg,align=center]
+
+[cols="2,2,3", options="header"]
+|===
+| Kanal | Protokoll / Schnittstelle | Fachliche Ein-/Ausgaben
+
+| HTTP :5000
+| REST (gorilla/mux), JSON
+| Alle API-Operationen (GET/POST)
+
+| HTTP :5000 (SSE)
+| `text/event-stream`, JSON-Events alle 2 s
+| BME280-Messwerte im Push-Modus
+
+| CGO
+| C ABI, `libhardware.so`
+| Hardware-Operationen via C Library
+
+| FFI (extern "C")
+| C ABI, `libhardware_rs.so`, cbindgen
+| Hardware-Operationen via Rust Library
+
+| Linux I2C
+| `/dev/i2c-1`, ioctl `I2C_RDWR`
+| BME280-Register lesen/schreiben
+
+| Linux sysfs GPIO
+| `/sys/class/gpio/gpio{n}/value`
+| GPIO-Pin lesen/schreiben
+
+| Linux termios (UART)
+| `/dev/ttyO1`, 115200 baud
+| Serielle Daten senden/empfangen
+
+| Linux spidev
+| `/dev/spidev0.0`, ioctl `SPI_IOC_MESSAGE`
+| SPI Full-Duplex Transfer
+|===

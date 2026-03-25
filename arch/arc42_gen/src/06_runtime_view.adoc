@@ -1,0 +1,80 @@
+[[section-runtime-view]]
+== Laufzeitsicht
+
+=== Szenario 1: BME280-Messung (Normalfall, C-Backend)
+
+plantuml::../../diagrams/10_sequenz_bme280.puml[format=svg,align=center]
+
+[cols="1,3", options="header"]
+|===
+| Schritt | Beschreibung
+
+| 1 | Client sendet `GET /api/v1/bme280`
+| 2 | `BME280Handler` sperrt `hwMu` (Mutex), ruft `driver.BME280Read()` auf
+| 3 | C Driver ruft `bme280_read()` in `libhardware.so` via CGO
+| 4 | C-Funktion liest 8 Bytes Rohdaten via `ioctl(fd, I2C_RDWR, ...)` von `/dev/i2c-1`
+| 5 | Bosch-Kompensationsalgorithmus berechnet Temperatur/Druck/Luftfeuchtigkeit
+| 6 | `BME280Data`-Struct wird als JSON serialisiert und zurückgegeben
+| 7 | Handler schreibt JSON-Response mit HTTP 200
+|===
+
+=== Szenario 2: Auto-Fallback (C fehlgeschlagen → Rust)
+
+plantuml::../../diagrams/11_sequenz_fallback.puml[format=svg,align=center]
+
+[cols="1,3", options="header"]
+|===
+| Schritt | Beschreibung
+
+| 1 | `autoDriver.BME280Read()` ruft `primary.BME280Read()` (C Driver) auf
+| 2 | C Driver schlägt fehl (z.B. I2C-Bus nicht verfügbar) → gibt `error` zurück
+| 3 | `autoDriver` loggt Warnung: `"C BME280 fehlgeschlagen → Rust"`
+| 4 | `autoDriver.BME280Read()` ruft `secondary.BME280Read()` (Rust Driver) auf
+| 5 | Rust Driver ruft `rs_bme280_read()` in `libhardware_rs.so` via FFI
+| 6 | Erfolgreiche Messung, `BME280Data` mit `Backend: "rust"` zurückgegeben
+| 7 | Client erhält transparentes Ergebnis — kein Fehler sichtbar
+|===
+
+=== Szenario 3: Backend-Umschaltung zur Laufzeit
+
+[source,bash]
+----
+# Client wechselt auf Rust-Backend
+curl -X POST http://192.168.7.2:5000/api/v1/backend \
+  -H "Content-Type: application/json" \
+  -d '{"backend": "rust"}'
+
+# Response:
+{"backend":"rust","status":"ok"}
+----
+
+. `backendHandler` in `main.go` dekodiert den JSON-Body
+. Neuer `Config`-Struct mit `Backend: "rust"` wird erzeugt
+. `loader.NewDriver(cfg)` erstellt neuen Rust Driver und initialisiert ihn
+. `hwMu.Lock()` — alter Driver wird mit `Close()` freigegeben
+. `srv.HW` wird atomar auf den neuen Driver gesetzt
+. Alle folgenden Requests verwenden das neue Backend
+
+=== Szenario 4: SSE-Stream (Echtzeit-Monitoring)
+
+[source,javascript]
+----
+const es = new EventSource('http://192.168.7.2:5000/api/v1/bme280/stream');
+es.onmessage = e => {
+  const data = JSON.parse(e.data);
+  updateDashboard(data.temperature, data.humidity, data.pressure);
+};
+----
+
+`BME280StreamHandler` sendet alle 2 Sekunden ein JSON-Event.
+Der Connection-Header ist `text/event-stream`.
+Der Stream läuft bis der Client die Verbindung trennt.
+
+=== Szenario 5: System-Start
+
+. `LoadConfig()` liest Umgebungsvariablen (HW_BACKEND, HW_I2C, HW_UART)
+. `loader.NewDriver(cfg)` initialisiert das Backend (C/Rust/Auto)
+. Im `auto`-Modus: C-Driver initialisieren → bei Fehler Rust-Fallback
+. gorilla/mux-Router mit allen Handler-Funktionen registrieren
+. `CORSMiddleware` wrappen
+. HTTP-Server auf `:5000` starten: `log.Printf("API läuft auf :5000")`

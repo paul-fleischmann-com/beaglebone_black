@@ -1,0 +1,87 @@
+[[section-quality-scenarios]]
+== Qualitätsanforderungen
+
+=== Übersicht der Qualitätsanforderungen
+
+[cols="2,2,2,3", options="header"]
+|===
+| Kategorie (ISO 25010) | Anforderung | Schwellenwert / Metrik | Quelle
+
+| *Zuverlässigkeit*
+| Test-Erfolgsrate
+| ≥ 90% aller Tests
+| CI Quality Gate
+
+| *Wartbarkeit*
+| Code Coverage (Ø)
+| ≥ 75% Ø aller Go-Dateien
+| CI Quality Gate
+
+| *Wartbarkeit*
+| Code Coverage (Min)
+| ≥ 50% pro Datei
+| CI Quality Gate
+
+| *Sicherheit*
+| Requirements-Traceability
+| ≥ 80% der Requirements mit File-Relation
+| StrictDoc-Report
+
+| *Performance*
+| API-Antwortzeit
+| < 100 ms für `/api/v1/bme280` (I2C vorhanden)
+| pytest-Timeout 10 s (konservativ)
+
+| *Portabilität*
+| ARM Cross-Build
+| `bin/embedded` lauffähig auf ARMv7 Cortex-A8
+| Build-CI-Pipeline
+
+| *Verfügbarkeit*
+| Auto-Fallback
+| System bleibt verfügbar, wenn C-Backend versagt
+| HAL-Fallback-Test
+|===
+
+=== Qualitätsszenarien
+
+==== Szenario Q-01: Sensor-Lesefehler im Produktionsbetrieb
+
+[cols="2,4", options="header"]
+|===
+| Feld | Inhalt
+
+| Stimulus | I2C-Bus-Fehler — `libhardware.so` gibt `-1` zurück
+| Umgebung | Produktionsbetrieb, `HW_BACKEND=auto`
+| Artefakt | `autoDriver`, `libhardware_rs.so`
+| Reaktion | Transparenter Wechsel auf Rust-Backend, Messung erfolgreich
+| Antwortmaß | Kein HTTP-Fehler, `"backend":"rust"` im Response
+|===
+
+==== Szenario Q-02: Unit-Tests ohne Hardware
+
+[cols="2,4", options="header"]
+|===
+| Feld | Inhalt
+
+| Stimulus | `go test ./pkg/hal/...` in CI ohne BeagleBone
+| Umgebung | CI-Runner (amd64, kein I2C/GPIO/UART/SPI)
+| Artefakt | Mock Driver, `hal_test.go`
+| Reaktion | Alle Tests laufen durch, keine Hardware-Abhängigkeit
+| Antwortmaß | 100% Test-Erfolgsrate für Mock-Tests
+|===
+
+==== Szenario Q-03: Backend-Umschaltung ohne Neustart
+
+[cols="2,4", options="header"]
+|===
+| Feld | Inhalt
+
+| Stimulus | `POST /api/v1/backend` mit `{"backend":"rust"}`
+| Umgebung | Produktionsbetrieb, laufender Server
+| Artefakt | `backendHandler`, `hwMu sync.Mutex`
+| Reaktion | Neuer Rust Driver initialisiert, alter C Driver geschlossen,
+  Mutex-gesicherter atomarer Tausch
+| Antwortmaß | Nächster Request verwendet Rust-Backend; kein Absturz,
+  kein Race-Condition-Fehler
+|===
