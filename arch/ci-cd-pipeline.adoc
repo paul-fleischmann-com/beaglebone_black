@@ -102,6 +102,22 @@ Cache-Mounts für schnellere Builds:
 * `~/.cargo/git` → Cargo Git Sources
 * `~/go/pkg/mod` → Go Module Cache
 
+==== ARM Build Script
+
+Der eigentliche Build-Befehl ist in `scripts/build-arm.sh` ausgelagert.
+`ci.yml` ruft ihn über den Container auf:
+
+----
+build_commands: bash /src/../scripts/build-arm.sh
+----
+
+Damit ist der ARM-Build auch lokal reproduzierbar:
+
+[source,bash]
+----
+make build-arm   # Startet den generic-builder Container + führt build-arm.sh aus
+----
+
 === Phase 2: Unit Tests
 
 Laufen parallel nach Abschluss der jeweiligen Build-Phase.
@@ -161,6 +177,32 @@ Die Version wird aus dem `Makefile` gelesen:
 ----
 make version
 ----
+
+==== CI-Schritte als Make-Targets
+
+Alle CI-relevanten Bash-Schritte sind in `scripts/` ausgelagert und über `make` aufrufbar,
+sodass dieselben Schritte lokal reproduziert werden können:
+
+[cols="1,2,2", options="header"]
+|===
+| Make-Target | Script | Beschreibung
+
+| `make build-arm`
+| `scripts/build-arm.sh`
+| ARM Cross-Build (C + Rust + Go) im generic-builder Container
+
+| `make checksums`
+| `scripts/ci-checksums.sh`
+| SHA256-Checksums für alle Dateien in `bin/`
+
+| `make release-candidate`
+| `scripts/ci-release-candidate.sh`
+| GitHub Pre-Release `vX.Y.Z-toTestOnTarget` erstellen (benötigt `GH_TOKEN`)
+
+| `make prepend-changelog`
+| `scripts/ci-prepend-changelog.sh`
+| `unreleased.md` in `CHANGELOG.md` einfügen (nach git-cliff)
+|===
 
 ==== Release Assets
 

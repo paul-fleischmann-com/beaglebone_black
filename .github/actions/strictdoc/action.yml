@@ -39,7 +39,6 @@ inputs:
     description: Artifact retention in days.
     required: false
     default: '7'
-    default: '30'
 
   upload-artifacts:
     description: Whether to upload HTML/PDF/Excel/ReqIF artifacts ('true'/'false').

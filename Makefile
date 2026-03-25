@@ -76,6 +76,28 @@ req-tracing: tooling-download
 	strictdoc --debug export . --formats reqif-sdoc --output-dir output/strictdoc
 	python3 tooling/req_tracing_summary.py
 
+build-arm:
+	@echo "=== ARM cross-build (requires generic-builder container) ==="
+	mkdir -p bin
+	mkdir -p $${HOME}/.cargo/registry $${HOME}/.cargo/git $${HOME}/go/pkg/mod
+	podman run --rm \
+	  -v "$(CURDIR)/project:/src" \
+	  -v "$(CURDIR)/bin:/output" \
+	  -v "$${HOME}/.cargo/registry:/root/.cargo/registry" \
+	  -v "$${HOME}/.cargo/git:/root/.cargo/git" \
+	  -v "$${HOME}/go/pkg/mod:/root/go/pkg/mod" \
+	  generic-builder \
+	  -c "bash /src/../scripts/build-arm.sh"
+
+checksums:
+	./scripts/ci-checksums.sh
+
+release-candidate:
+	VERSION=$(VERSION) ./scripts/ci-release-candidate.sh
+
+prepend-changelog:
+	./scripts/ci-prepend-changelog.sh
+
 clean:
 	$(MAKE) -C c-lib clean
 	cd project/rust-lib && cargo clean
@@ -84,4 +106,4 @@ clean:
 version:
 	@echo "$(VERSION)"
 
-.PHONY: all c-lib rust-lib go-api cli test test-ci test-cover lint test-python tooling-download test-report test-report-open deploy clean req-tracing version
+.PHONY: all c-lib rust-lib go-api cli test test-ci test-cover lint test-python tooling-download test-report test-report-open deploy clean req-tracing version build-arm checksums release-candidate prepend-changelog

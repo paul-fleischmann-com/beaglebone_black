@@ -46,7 +46,6 @@ inputs:
     description: Artifact retention in days.
     required: false
     default: '1'
-    default: '30'
 
   upload-sarif:
     description: Convert JUnit XML → SARIF and upload to GitHub Code Scanning ('true'/'false'). Requires security-events:write in the calling job.

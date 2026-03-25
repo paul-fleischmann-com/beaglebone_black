@@ -55,39 +55,7 @@ jobs:
           output_dir: ./bin
           container_image: generic-builder
           artifact-name:   arm-binaries
-          build_commands: |
-            set -e
-            mkdir -p /output
-            echo "=== Build C ==="
-            arm-linux-gnueabihf-gcc -shared -fPIC \
-              --coverage \
-              -o /output/libhardware.so \
-              $(ls /src/c/src/*.c) \
-              -I /src/c/include -lm
-            find /src/c -name "*.gcno" -exec cp {} /output/ \; || true
-
-            echo "=== Build executable ==="
-            arm-linux-gnueabihf-gcc \
-              --coverage \
-              -o /output/bme280_main \
-              /src/c/test/bbb_smoke.c \
-              -I /src/c/include \
-              -L /output -lhardware -lm
-            find /src/c -name "*.gcno" -exec cp {} /output/ \; || true
-
-            echo "=== Build Rust ==="
-            PKG_CONFIG_ALLOW_CROSS=1 \
-            PKG_CONFIG_PATH=/usr/lib/arm-linux-gnueabihf/pkgconfig \
-            cargo build \
-              --target armv7-unknown-linux-gnueabihf \
-              --release \
-              --manifest-path /src/rust-lib/Cargo.toml
-
-            cp /src/rust-lib/target/armv7-unknown-linux-gnueabihf/release/libhardware_rs.so /output/
-            cp /src/rust-lib/target/armv7-unknown-linux-gnueabihf/release/rust_app /output/
-
-            echo "=== Build Go ==="
-            GOOS=linux GOARCH=arm GOARM=7 go build -o /output/go_app /src/go/main.go
+          build_commands: bash /src/../scripts/build-arm.sh
 
   build-cli:
     name: Build CLI
@@ -337,12 +305,7 @@ jobs:
           OUTPUT: unreleased.md
           GITHUB_REPO: ${{ github.repository }}
       - name: Prepend unreleased section to CHANGELOG.md
-        run: |
-          if [ -s unreleased.md ]; then
-            cat unreleased.md CHANGELOG.md > CHANGELOG.md.tmp
-            mv CHANGELOG.md.tmp CHANGELOG.md
-            rm unreleased.md
-          fi
+        run: make prepend-changelog
       - name: Commit updated CHANGELOG.md via PR
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -383,10 +346,7 @@ jobs:
           merge-multiple: true
 
       - name: Generate checksums
-        run: |
-          cd bin
-          find . -maxdepth 1 -type f | sort | xargs sha256sum > checksums.sha256
-          cat checksums.sha256
+        run: make checksums
 
       - name: Read version
         id: version
@@ -395,22 +355,5 @@ jobs:
       - name: Create toTestOnTarget release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          VERSION="${{ steps.version.outputs.version }}"
-          TAG="v${VERSION}-toTestOnTarget"
-
-          gh release delete "$TAG" --yes 2>/dev/null || true
-          git push origin --delete "$TAG" 2>/dev/null || true
-
-          awk "/^## \[${VERSION}\]/{found=1; next} found && /^## \[/{exit} found{print}" \
-            CHANGELOG.md > release_notes.md || echo "Release candidate for v${VERSION}" > release_notes.md
-
-          gh release create "$TAG" \
-            --title "v${VERSION} — Release Candidate" \
-            --notes-file release_notes.md \
-            --prerelease \
-            bin/bbcli-* \
-            bin/bbtui-* \
-            bin/checksums.sha256
-
-          echo "✅ Release candidate created: $TAG"
+          VERSION: ${{ steps.version.outputs.version }}
+        run: make release-candidate
