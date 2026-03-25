@@ -68,6 +68,7 @@ runs:
           --step-summary
       env:
         GITHUB_STEP_SUMMARY: ${{ env.GITHUB_STEP_SUMMARY }}
+
     - name: Generate SonarQube Report -- 2
       if: inputs.sonar-token != ''
       shell: bash
@@ -79,7 +80,7 @@ runs:
           --project-key "${{ inputs.project-key }}" \
           --severities "${{ inputs.severities }}" \
           --types "${{ inputs.types }}" \
-          --output-file "${{ inputs.output-file }}" \
+          --output-file "reports/sonarqube-report_2.md" \
           --step-summary
       env:
         GITHUB_STEP_SUMMARY: ${{ env.GITHUB_STEP_SUMMARY }}
