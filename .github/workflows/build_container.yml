@@ -11,6 +11,10 @@ on:
         description: "Registry URL (e.g. ghcr.io, docker.io)"
         required: false
         default: "ghcr.io"
+      remote-tag:
+        description: "Full remote image tag (e.g. ghcr.io/user/generic-builder:latest). Defaults to ghcr.io/<owner>/generic-builder:latest."
+        required: false
+        default: ""
 
 permissions:
   contents: read
@@ -25,6 +29,7 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
+      # Punkt 1: remote-tag via dispatch überschreibbar; Punkt 4: :latest push
       - uses: ./actions/build_container
         with:
           image_name:        generic-builder
@@ -33,5 +38,14 @@ jobs:
           registry-url:      ${{ inputs.registry-url || 'ghcr.io' }}
           registry-username: ${{ github.actor }}
           registry-token:    ${{ secrets.GITHUB_TOKEN }}
-          remote-tag:        ghcr.io/${{ github.repository_owner }}/generic-builder:latest
+          remote-tag:        ${{ inputs.remote-tag || format('ghcr.io/{0}/generic-builder:latest', github.repository_owner) }}
           push:              'true'
+
+      # Punkt 4: zusätzlich mit Commit-SHA taggen für Traceability & Rollback
+      - name: Tag image with commit SHA
+        run: |
+          SHA_TAG="ghcr.io/${{ github.repository_owner }}/generic-builder:${{ github.sha }}"
+          podman tag generic-builder "$SHA_TAG"
+          podman push "$SHA_TAG"
+          echo "Tagged and pushed: $SHA_TAG"
+

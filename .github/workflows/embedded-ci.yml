@@ -20,20 +20,17 @@ jobs:
     permissions:
       contents: read
       actions: read
+      packages: read        # Punkt 2: GHCR pull
     steps:
       - uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-      - uses: ./actions/build_container
-        with:
-          image_name:        generic-builder
-          dockerfile:        docker/builder/Dockerfile
-          context:           docker/builder
-          remote-tag:        ghcr.io/${{ github.repository_owner }}/generic-builder:latest
-          registry-username: ${{ github.actor }}
-          registry-token:    ${{ secrets.GITHUB_TOKEN }}
-          pull:              'true'
-      - uses: ./actions/generic-container-build
+      - name: Pull builder image
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | podman login ghcr.io -u ${{ github.actor }} --password-stdin
+          podman pull ghcr.io/${{ github.repository_owner }}/generic-builder:latest
+          podman tag ghcr.io/${{ github.repository_owner }}/generic-builder:latest generic-builder
+      - uses: ./actions/build-and-deploy-ontarget
         with:
           source_dir: ./project
           test_dir: ./project/python_tests
@@ -86,6 +83,7 @@ jobs:
       statuses: read
       security-events: write
       actions: read
+      packages: read
     steps:
       - uses: actions/checkout@v4
         with:
@@ -94,16 +92,12 @@ jobs:
         with:
           name: arm-binaries
           path: bin/
-      - uses: ./actions/build_container
-        with:
-          image_name:        generic-builder
-          dockerfile:        docker/builder/Dockerfile
-          context:           docker/builder
-          remote-tag:        ghcr.io/${{ github.repository_owner }}/generic-builder:latest
-          registry-username: ${{ github.actor }}
-          registry-token:    ${{ secrets.GITHUB_TOKEN }}
-          pull:              'true'
-      - uses: ./actions/generic-container-build
+      - name: Pull builder image
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | podman login ghcr.io -u ${{ github.actor }} --password-stdin
+          podman pull ghcr.io/${{ github.repository_owner }}/generic-builder:latest
+          podman tag ghcr.io/${{ github.repository_owner }}/generic-builder:latest generic-builder
+      - uses: ./actions/build-and-deploy-ontarget
         with:
           source_dir: ./project
           test_dir: ./project/python_tests

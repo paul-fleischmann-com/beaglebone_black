@@ -7,12 +7,14 @@ inputs:
     required: true
 
   dockerfile:
-    description: "Path to Dockerfile"
-    required: true
+    description: "Path to Dockerfile. Required when pull is false."
+    required: false
+    default: ""
 
   context:
-    description: "Build context directory"
-    required: true
+    description: "Build context directory. Required when pull is false."
+    required: false
+    default: ""
 
   additional_args:
     description: "Optional extra podman build args"

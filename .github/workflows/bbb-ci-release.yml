@@ -13,7 +13,7 @@ jobs:
       - uses: actions/checkout@v4
         with:                                                                                                                 
          token: ${{ secrets.GITHUB_TOKEN }}  
-      - uses: ./actions/generic-container-build
+      - uses: ./actions/build-and-deploy-ontarget
         with:
           source_dir: ./project
           output_dir: ./bin
