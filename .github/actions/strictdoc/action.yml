@@ -128,7 +128,7 @@ runs:
 
     - name: Upload Requirements SARIF Artifact
       if: inputs.sarif-artifact != ''
-      uses: actions/upload-artifact@v6
+      uses: ./.github/actions/upload-artifact
       with:
         name: ${{ inputs.sarif-artifact }}
         path: reports/requirements-coverage.sarif
@@ -136,7 +136,7 @@ runs:
 
     - name: Upload StrictDoc HTML
       if: inputs.upload-artifacts == 'true'
-      uses: actions/upload-artifact@v6
+      uses: ./.github/actions/upload-artifact
       with:
         name: strictdoc-html
         path: ${{ inputs.output-base }}/html/
@@ -144,7 +144,7 @@ runs:
 
     - name: Upload StrictDoc PDF
       if: inputs.upload-artifacts == 'true'
-      uses: actions/upload-artifact@v6
+      uses: ./.github/actions/upload-artifact
       with:
         name: strictdoc-pdf
         path: ${{ inputs.output-base }}/html2pdf/
@@ -152,7 +152,7 @@ runs:
 
     - name: Upload StrictDoc Excel
       if: inputs.upload-artifacts == 'true'
-      uses: actions/upload-artifact@v6
+      uses: ./.github/actions/upload-artifact
       with:
         name: strictdoc-excel
         path: ${{ inputs.output-base }}/excel/
@@ -160,7 +160,7 @@ runs:
 
     - name: Upload StrictDoc ReqIF
       if: inputs.upload-artifacts == 'true'
-      uses: actions/upload-artifact@v6
+      uses: ./.github/actions/upload-artifact
       with:
         name: strictdoc-reqif
         path: ${{ inputs.output-base }}/reqif-sdoc/

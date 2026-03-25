@@ -88,7 +88,7 @@ runs:
 
     - name: Upload Go Lint SARIF Artifact
       if: inputs.sarif-output != '' && inputs.artifact-name != ''
-      uses: actions/upload-artifact@v6
+      uses: ./.github/actions/upload-artifact
       with:
         name: ${{ inputs.artifact-name }}
         path: ${{ inputs.sarif-output }}

@@ -288,7 +288,7 @@ runs:
 
     - name: Upload BBB SonarQube Coverage
       if: ${{ env.ARCH == 'ARM' && inputs.bbb_host != '' }}
-      uses: actions/upload-artifact@v6
+      uses: ./.github/actions/upload-artifact
       with:
         name: bbb-sonar-coverage
         path: ${{ inputs.output_dir }}/sonar-coverage.xml
@@ -297,7 +297,7 @@ runs:
 
     - name: Upload C Coverage
       if: ${{ env.ARCH == 'ARM' && inputs.bbb_host != '' }}
-      uses: actions/upload-artifact@v6
+      uses: ./.github/actions/upload-artifact
       with:
         name: c-coverage-html
         path: bin/html/
@@ -309,7 +309,7 @@ runs:
     # =========================
     - name: Upload BBB Logs
       if: ${{ env.ARCH == 'ARM' && inputs.bbb_host != '' }}
-      uses: actions/upload-artifact@v6
+      uses: ./.github/actions/upload-artifact
       with:
         name: bbb-test-logs
         path: logs/
@@ -348,7 +348,7 @@ runs:
       env:
         OUTPUT_DIR: ${{ inputs.output_dir }}
     - name: Upload output files
-      uses: actions/upload-artifact@v6
+      uses: ./.github/actions/upload-artifact
       with:
         name: ${{ inputs.artifact-name }}
         path: ${{ inputs.output_dir }}/

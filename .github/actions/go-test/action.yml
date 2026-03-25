@@ -144,7 +144,7 @@ runs:
 
     - name: Upload Go reports
       if: inputs.upload-artifact == 'true'
-      uses: actions/upload-artifact@v6
+      uses: ./.github/actions/upload-artifact
       with:
         name: ${{ inputs.artifact-name }}
         retention-days: 1
