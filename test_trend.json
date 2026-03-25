@@ -130,16 +130,5 @@
     "fehlgeschlagen": 0,
     "erfolgsrate": 0.0,
     "avg_coverage": 0.0
-  },
-  {
-    "timestamp": "2026-03-25T07:20:55.994893+00:00",
-    "build": "4",
-    "branch": "main",
-    "commit": "76c2636b",
-    "total_tests": 0,
-    "bestanden": 0,
-    "fehlgeschlagen": 0,
-    "erfolgsrate": 0.0,
-    "avg_coverage": 0.0
   }
 ]
