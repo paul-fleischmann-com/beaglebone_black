@@ -1,0 +1,160 @@
+= BME280 Seengreat an BeagleBone Black anschließen
+:toc:
+:toc-title: Inhalt
+:icons: font
+:source-highlighter: rouge
+
+== Voraussetzungen
+
+Der Seengreat BME280 hat 4 Pins (*VCC, GND, SCL, SDA*) und kommuniziert über I2C.
+Die Standard-Adresse ist `0x76` (SDO-Pin auf GND, Seengreat-Default).
+
+.Benötigtes Material
+* BeagleBone Black (Debian-Image)
+* Seengreat BME280 Breakout-Board
+* 4× Jumper Wire (Female-zu-Female)
+
+WARNING: Der BME280 arbeitet mit *3,3 V*. Niemals Pin P9_5 oder P9_6 (5 V) verwenden —
+das zerstört den Sensor dauerhaft.
+
+== Pinbelegung
+
+[cols="1,1,1,2", options="header"]
+|===
+| BME280 Pin | BBB Pin | Connector | Beschreibung
+
+| VCC
+| P9_3
+| P9
+| 3,3 V Versorgungsspannung
+
+| GND
+| P9_1
+| P9
+| Masse
+
+| SCL
+| P9_19
+| P9
+| I2C1 Clock
+
+| SDA
+| P9_20
+| P9
+| I2C1 Data
+|===
+
+[source]
+----
+Seengreat BME280          BeagleBone Black P9-Header
+─────────────────         ──────────────────────────
+VCC  ──────────────────►  P9_3   (3,3 V)
+GND  ──────────────────►  P9_1   (GND)
+SCL  ──────────────────►  P9_19  (I2C1_SCL)
+SDA  ──────────────────►  P9_20  (I2C1_SDA)
+----
+
+== Schritt-für-Schritt
+
+=== 1. BeagleBone ausschalten
+
+[source,bash]
+----
+sudo shutdown -h now
+# Stromversorgung trennen bevor Kabel angeschlossen werden
+----
+
+=== 2. Kabel verbinden
+
+Jumper Wires gemäß der Pinbelegung oben verbinden.
+Reihenfolge empfohlen: GND zuerst, dann VCC, dann SCL/SDA.
+
+=== 3. BeagleBone starten und I2C-Bus prüfen
+
+[source,bash]
+----
+ssh debian@192.168.7.2
+
+# I2C Tools installieren falls nicht vorhanden
+sudo apt install i2c-tools
+
+# I2C Bus 1 scannen — muss 0x76 anzeigen
+i2cdetect -y -r 1
+----
+
+Erwartete Ausgabe:
+
+[source]
+----
+     0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f
+00:
+...
+70: -- -- -- -- -- -- 76 --
+----
+
+=== 4. I2C-Berechtigungen setzen
+
+Einmalig ausführen, danach neu einloggen:
+
+[source,bash]
+----
+sudo usermod -aG i2c debian
+----
+
+=== 5. Device Tree Pins aktivieren (falls nötig)
+
+[source,bash]
+----
+# Einmalig manuell
+config-pin P9_19 i2c
+config-pin P9_20 i2c
+
+# Beim Boot automatisch (in /etc/rc.local vor dem exit 0)
+echo "config-pin P9_19 i2c" | sudo tee -a /etc/rc.local
+echo "config-pin P9_20 i2c" | sudo tee -a /etc/rc.local
+----
+
+=== 6. Sensor über die Software lesen
+
+[source,bash]
+----
+# REST API
+curl http://192.168.7.2:5000/api/v1/bme280
+
+# CLI
+bbcli bme280 read
+----
+
+== Fehlerdiagnose
+
+[cols="2,2,3", options="header"]
+|===
+| Problem | Ursache | Lösung
+
+| `i2cdetect` zeigt nichts
+| Falsche Pins oder VCC/GND vertauscht
+| Verkabelung anhand der Tabelle prüfen
+
+| Adresse `0x77` statt `0x76`
+| SDO-Pin am Sensor auf 3,3 V gezogen
+| SDO auf GND legen oder im Code `BME280_I2C_ADDR_SEC` (`0x77`) verwenden
+
+| `permission denied` auf `/dev/i2c-1`
+| Fehlende i2c-Gruppe
+| `sudo usermod -aG i2c debian`, neu einloggen
+
+| Sensorfehler im API-Response
+| I2C-Pins nicht als I2C-Modus konfiguriert
+| `config-pin P9_19 i2c` und `config-pin P9_20 i2c` ausführen
+
+| Kein I2C Bus 1 unter `/dev/i2c-1`
+| I2C1 im Device Tree deaktiviert
+| `sudo modprobe i2c-dev` und Eintrag in `/etc/modules` prüfen
+|===
+
+== Referenz
+
+* I2C-Adresse primär: `0x76` (SDO = GND) — definiert in `project/c/include/bme280_defs.h`
+* I2C-Adresse sekundär: `0x77` (SDO = VCC) — Konstante `BME280_I2C_ADDR_SEC`
+* I2C Bus auf dem BBB: `/dev/i2c-1` (I2C1, Pins P9_19/P9_20)
+* Bosch BME280 Datenblatt: Betriebsspannung 1,71 V – 3,6 V, empfohlen 3,3 V

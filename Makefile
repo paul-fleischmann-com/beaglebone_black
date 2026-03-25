@@ -65,6 +65,20 @@ req-tracing:
 	cd output && zip -r out_strictdoc.zip strictdoc/
 	@echo "✅ output/out_strictdoc.zip erstellt"
 
+install-java:
+	sudo apt-get update -qq
+	sudo apt-get install -y openjdk-17-jre-headless
+	@echo "✅ Java installiert: $$(java -version 2>&1 | head -1)"
+
+install-asciidoctor:
+	sudo apt-get update -qq
+	sudo apt-get install -y ruby ruby-dev build-essential
+	sudo gem install asciidoctor asciidoctor-pdf asciidoctor-diagram asciidoctor-diagram-plantuml rouge
+	@echo "✅ Asciidoctor installiert: $$(asciidoctor --version)"
+
+setup-env: install-java install-asciidoctor
+	@echo "✅ Entwicklungsumgebung bereit"
+
 adoc-build:
 	ROOT_DIR=. OUTPUT_DIR=build/docs bash scripts/build_adoc.sh
 
@@ -101,4 +115,4 @@ clean:
 version:
 	@echo "$(VERSION)"
 
-.PHONY: all c-lib rust-lib go-api cli test test-ci test-cover lint test-python test-report test-report-open deploy clean req-tracing version adoc-build adoc-summary build-arm checksums release-candidate prepend-changelog
+.PHONY: all c-lib rust-lib go-api cli test test-ci test-cover lint test-python test-report test-report-open deploy clean req-tracing version adoc-build adoc-summary build-arm checksums release-candidate prepend-changelog install-java install-asciidoctor setup-env
