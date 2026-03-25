@@ -52,6 +52,24 @@ parse_buildadoc() {
     fi
 }
 
+# ── asciidoctor aufrufen und ERROR-Zeilen im Output erkennen ─────────────────
+# asciidoctor gibt exit 0 zurück auch wenn Diagramme/PlantUML scheitern.
+# Diese Funktion gibt exit 1 zurück falls Output "asciidoctor: ERROR:" enthält.
+run_adoc() {
+    local output exit_code
+    output=$("$@" 2>&1) || exit_code=$?
+    exit_code=${exit_code:-0}
+    echo "$output"
+    if echo "$output" | grep -q "asciidoctor.*: ERROR:"; then
+        error "  ⚠  asciidoctor meldete Fehler (trotz exit ${exit_code}):"
+        echo "$output" | grep "asciidoctor.*: ERROR:" | while IFS= read -r line; do
+            error "     ${line}"
+        done
+        return 1
+    fi
+    return $exit_code
+}
+
 # ── AsciiDoc Datei bauen ──────────────────────────────────────────────────────
 build_adoc() {
     local adoc_file="$1"
@@ -77,10 +95,17 @@ build_adoc() {
     local author
     author=$(parse_buildadoc  "$marker" "author"  "")
 
-    # Ausgabe-Verzeichnis spiegelt Quell-Struktur
+    # Ausgabe-Verzeichnis spiegelt Quell-Struktur (absoluter Pfad, damit
+    # --base-dir die -o Auflösung nicht beeinflusst)
     local rel_dir
     rel_dir=$(realpath --relative-to="$ROOT_DIR" "$dir" 2>/dev/null || echo "$dir")
-    local out_dir="${OUTPUT_DIR}/${rel_dir}"
+    local abs_output_dir
+    if [[ "${OUTPUT_DIR}" == /* ]]; then
+        abs_output_dir="${OUTPUT_DIR}"
+    else
+        abs_output_dir="$(pwd)/${OUTPUT_DIR}"
+    fi
+    local out_dir="${abs_output_dir}/${rel_dir}"
     mkdir -p "$out_dir"
 
     log "Baue: ${adoc_file}"
@@ -124,7 +149,7 @@ build_adoc() {
             "-o" "${out_dir}/${base}.html"
         )
 
-        if asciidoctor "${html_args[@]}" "$adoc_file" 2>&1; then
+        if run_adoc asciidoctor "${html_args[@]}" "$adoc_file"; then
             success "  ✅ HTML: ${out_dir}/${base}.html ($(
                 du -sh "${out_dir}/${base}.html" 2>/dev/null \
                 | cut -f1 || echo "?"))"
@@ -149,7 +174,7 @@ build_adoc() {
             pdf_args+=("-a" "pdf-theme=default-with-fallback-font")
         fi
 
-        if asciidoctor-pdf "${pdf_args[@]}" "$adoc_file" 2>&1; then
+        if run_adoc asciidoctor-pdf "${pdf_args[@]}" "$adoc_file"; then
             success "  ✅ PDF:  ${out_dir}/${base}.pdf ($(
                 du -sh "${out_dir}/${base}.pdf" 2>/dev/null \
                 | cut -f1 || echo "?"))"
