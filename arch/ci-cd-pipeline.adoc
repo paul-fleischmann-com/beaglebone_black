@@ -18,7 +18,11 @@ Die CI/CD-Pipeline ist in zwei Workflows aufgeteilt:
 ┌─────────────────────────────────────────────────────┐
 │  ci.yml (ubuntu-latest)                             │
 │                                                     │
-│  Phase 1: Build ─────────────────────────────────  │
+│  Phase 1: DOC BUILD ─────────────────────────────  │
+│    StrictDoc (Requirements Traceability)            │
+│    AsciiDoc Build (PDF + HTML aus .buildadoc)       │
+│                                                     │
+│  Phase 2: BUILD SW ──────────────────────────────  │
 │    ARM Binaries (C + Rust + Go)                     │
 │    CLI (linux/darwin/windows, multi-arch)           │
 │    TUI (linux/darwin, multi-arch)                   │
@@ -61,7 +65,56 @@ on:
   workflow_dispatch:
 ----
 
-=== Phase 1: Build
+=== Phase 1: DOC BUILD
+
+Laufen parallel auf `ubuntu-latest`.
+
+[cols="1,2,2", options="header"]
+|===
+| Job | Beschreibung | Artifact
+
+| `strictdoc`
+| Requirements-Traceability Export (HTML, PDF, Excel, ReqIF) + SARIF
+| `req-tracing` (retention: 7d)
+
+| `adoc-build`
+| AsciiDoc → PDF + HTML für alle Verzeichnisse mit `.buildadoc` Marker
+| `docs` (retention: 7d)
+|===
+
+==== AsciiDoc Build Mechanismus
+
+Das Skript `scripts/build_adoc.sh` durchsucht das gesamte Repository rekursiv nach `*.adoc` Dateien.
+Gebaut wird nur, wenn im selben Verzeichnis eine `.buildadoc` Marker-Datei liegt.
+
+----
+arch/
+  .buildadoc          ← Trigger: baut alle .adoc in arch/
+  ci-cd-pipeline.adoc
+  architektur.adoc
+----
+
+Die `.buildadoc` Datei konfiguriert das Build-Verhalten:
+
+[source]
+----
+formats: html,pdf    # html, pdf oder beides
+theme:   dark
+plantuml: true       # asciidoctor-diagram aktivieren
+toc:     left
+lang:    de
+author:  Embedded SW Team
+----
+
+Ausgabe landet in `build/docs/` (spiegelt die Quellverzeichnisstruktur).
+Lokal reproduzierbar:
+
+[source,bash]
+----
+make adoc-build   # ROOT_DIR=. OUTPUT_DIR=build/docs
+----
+
+=== Phase 2: BUILD SW
 
 Alle Build-Jobs laufen parallel auf `ubuntu-latest`.
 

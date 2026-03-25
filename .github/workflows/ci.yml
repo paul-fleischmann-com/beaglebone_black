@@ -28,6 +28,21 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
       - uses: ./.github/actions/strictdoc
 
+  adoc-build:
+    name: AsciiDoc Build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: ./.github/actions/adoc-build
+        with:
+          output-dir:    build/docs
+          artifact-name: docs
+          retention-days: '7'
+
   # ════════════════════════════════════════════════
   # Phase 2: BUILD SW
   # ════════════════════════════════════════════════

@@ -1,0 +1,6 @@
+formats: html,pdf    # html, pdf oder beides                                                                        
+theme:   dark                                                                                                       
+plantuml: true       # asciidoctor-diagram aktivieren                                                               
+toc:     left                                                                                                       
+lang:    de                                                                                                         
+author:  Embedded SW Team 

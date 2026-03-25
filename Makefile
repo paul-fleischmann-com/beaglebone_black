@@ -76,6 +76,9 @@ req-tracing: tooling-download
 	strictdoc --debug export . --formats reqif-sdoc --output-dir output/strictdoc
 	python3 tooling/req_tracing_summary.py
 
+adoc-build:
+	ROOT_DIR=. OUTPUT_DIR=build/docs bash scripts/build_adoc.sh
+
 build-arm:
 	@echo "=== ARM cross-build (requires generic-builder container) ==="
 	mkdir -p bin
@@ -106,4 +109,4 @@ clean:
 version:
 	@echo "$(VERSION)"
 
-.PHONY: all c-lib rust-lib go-api cli test test-ci test-cover lint test-python tooling-download test-report test-report-open deploy clean req-tracing version build-arm checksums release-candidate prepend-changelog
+.PHONY: all c-lib rust-lib go-api cli test test-ci test-cover lint test-python tooling-download test-report test-report-open deploy clean req-tracing version adoc-build build-arm checksums release-candidate prepend-changelog

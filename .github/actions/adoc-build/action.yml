@@ -1,0 +1,59 @@
+name: AsciiDoc Build
+description: >
+  Sucht im gesamten Repository nach .adoc Dateien mit einem .buildadoc Marker
+  und baut PDF und/oder HTML. Ausgabe landet in build/docs/, spiegelt die
+  Quellverzeichnisstruktur. Ergebnis wird als Artifact hochgeladen.
+  Requires actions/checkout to have run in the calling job.
+
+inputs:
+  root-dir:
+    description: Wurzelverzeichnis für die .adoc Suche.
+    required: false
+    default: '.'
+
+  output-dir:
+    description: Ausgabeverzeichnis für die generierten Dokumente.
+    required: false
+    default: build/docs
+
+  artifact-name:
+    description: Name des Upload-Artifacts (leer = kein Upload).
+    required: false
+    default: docs
+
+  retention-days:
+    description: Artifact retention in days.
+    required: false
+    default: '7'
+
+  fail-on-error:
+    description: CI fehlschlagen wenn ein .adoc Build scheitert ('true'/'false').
+    required: false
+    default: 'true'
+
+runs:
+  using: composite
+  steps:
+
+    - name: Install asciidoctor
+      shell: bash
+      run: |
+        gem install asciidoctor asciidoctor-pdf asciidoctor-diagram --no-document --quiet
+        asciidoctor --version
+        asciidoctor-pdf --version
+
+    - name: Build AsciiDoc documents
+      shell: bash
+      env:
+        ROOT_DIR:   ${{ inputs.root-dir }}
+        OUTPUT_DIR: ${{ inputs.output-dir }}
+      run: bash scripts/build_adoc.sh
+
+    - name: Upload docs artifact
+      if: inputs.artifact-name != ''
+      uses: actions/upload-artifact@v4
+      with:
+        name:              ${{ inputs.artifact-name }}
+        path:              ${{ inputs.output-dir }}/
+        if-no-files-found: warn
+        retention-days:    ${{ inputs.retention-days }}
