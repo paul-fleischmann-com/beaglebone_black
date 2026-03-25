@@ -31,6 +31,11 @@ inputs:
     required: false
     default: ""
 
+  artifact-name:
+    description: Name of the uploaded output artifact.
+    required: false
+    default: output_dir
+
   # OPTIONAL: BBB Deployment
   bbb_host:
     required: false
@@ -318,6 +323,6 @@ runs:
     - name: Upload output files
       uses: actions/upload-artifact@v6
       with:
-        name: output_dir
+        name: ${{ inputs.artifact-name }}
         path: ${{ inputs.output_dir }}/
         if-no-files-found: ignore

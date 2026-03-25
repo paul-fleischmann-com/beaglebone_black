@@ -126,6 +126,7 @@ runs:
         cp "${{ inputs.c-coverage-source }}" "${{ inputs.c-coverage-dest }}" 2>/dev/null || true
         cp "${{ inputs.compile-commands-source }}" "${{ inputs.compile-commands-dest }}" 2>/dev/null || true
 
+
     # ── SARIF Reports herunterladen ─────────────────────────────────────────
     - name: Download Go Lint SARIF
       if: inputs.go-sarif-artifact != ''
