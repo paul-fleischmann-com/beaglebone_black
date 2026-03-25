@@ -1,0 +1,378 @@
+name: Integration Tests on Target
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+
+  # Nur toTestOnTarget Releases verarbeiten
+  check:
+    name: Check Tag
+    runs-on: ubuntu-latest
+    outputs:
+      run: ${{ steps.check.outputs.run }}
+      version: ${{ steps.check.outputs.version }}
+      tag: ${{ steps.check.outputs.tag }}
+    steps:
+      - id: check
+        run: |
+          TAG="${{ github.event.release.tag_name }}"
+          if [[ "$TAG" == *"-toTestOnTarget" ]]; then
+            VERSION="${TAG%-toTestOnTarget}"
+            echo "run=true"    >> $GITHUB_OUTPUT
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+            echo "tag=$TAG"    >> $GITHUB_OUTPUT
+            echo "✅ Integration run for $TAG"
+          else
+            echo "run=false" >> $GITHUB_OUTPUT
+            echo "⏭️  Skipping — tag '$TAG' is not a toTestOnTarget release"
+          fi
+
+  # ── Deploy ARM SW auf BBB ─────────────────────
+
+  deploy:
+    name: Deploy ARM SW to BBB
+    runs-on: self-hosted
+    needs: [check]
+    if: needs.check.outputs.run == 'true'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download release assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p bin
+          gh release download "${{ needs.check.outputs.tag }}" \
+            --dir bin \
+            --pattern "bbcli-linux-armv7" \
+            --pattern "bbtui-linux-armv7" \
+            --pattern "bbcli-linux-amd64"
+          # ARM Binaries (bme280_main, rust_app, go_app, libhardware.so) aus arm-binaries Artifact
+          # Diese wurden als arm-binaries hochgeladen — hole sie direkt aus dem release
+          gh release download "${{ needs.check.outputs.tag }}" \
+            --dir bin \
+            --pattern "arm-binaries*" 2>/dev/null || true
+          ls -la bin/
+
+      - name: Deploy ARM SW to BBB
+        env:
+          BBB_HOST: ${{ secrets.BBB_HOST }}
+          BBB_USER: ${{ secrets.BBB_USER }}
+          BBB_SSH_KEY: ${{ secrets.BBB_SSH_KEY }}
+        run: |
+          set -e
+          KEY=$(mktemp)
+          trap "rm -f $KEY" EXIT
+          printf '%s' "$BBB_SSH_KEY" | base64 -d > "$KEY"
+          chmod 600 "$KEY"
+          SSH="ssh -i $KEY -o StrictHostKeyChecking=no $BBB_USER@$BBB_HOST"
+          SCP="scp -i $KEY -o StrictHostKeyChecking=no"
+
+          $SSH "mkdir -p ~/bin && rm -f ~/bin/*.so ~/bin/bme280_main ~/bin/rust_app ~/bin/go_app"
+          $SCP bin/libhardware.so bin/bme280_main bin/rust_app bin/go_app \
+            $BBB_USER@$BBB_HOST:~/bin/ 2>/dev/null || true
+          $SSH "chmod +x ~/bin/*"
+          echo "✅ ARM SW deployed to BBB"
+
+  # ── Hardware Integration Tests ────────────────
+
+  test-hardware:
+    name: Hardware Integration Tests
+    runs-on: self-hosted
+    needs: [check, deploy]
+    if: needs.check.outputs.run == 'true'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install test dependencies
+        run: pip install pytest requests pytest-junit --quiet
+
+      - name: Run hardware tests
+        env:
+          BEAGLE_HOST: ${{ secrets.BBB_HOST }}
+        run: |
+          pytest tests/hardware/test_hardware.py \
+            -v \
+            --junit-xml=reports/hardware-tests.xml \
+            --tb=short
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: hardware-test-results
+          path: reports/hardware-tests.xml
+          retention-days: 7
+
+  # ── API Integration Tests ─────────────────────
+
+  test-api:
+    name: API Integration Tests
+    runs-on: self-hosted
+    needs: [check, deploy]
+    if: needs.check.outputs.run == 'true'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install test dependencies
+        run: pip install pytest requests --quiet
+
+      - name: Run API tests
+        env:
+          BEAGLE_HOST: ${{ secrets.BBB_HOST }}
+        run: |
+          pytest tests/api/test_api.py \
+            -v \
+            --junit-xml=reports/api-tests.xml \
+            --tb=short
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: api-test-results
+          path: reports/api-tests.xml
+          retention-days: 7
+
+  # ── Binary Tests auf BBB ──────────────────────
+
+  test-binaries:
+    name: Binary Tests on BBB
+    runs-on: self-hosted
+    needs: [check, deploy]
+    if: needs.check.outputs.run == 'true'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run binary tests on BBB
+        env:
+          BBB_HOST: ${{ secrets.BBB_HOST }}
+          BBB_USER: ${{ secrets.BBB_USER }}
+          BBB_SSH_KEY: ${{ secrets.BBB_SSH_KEY }}
+        run: |
+          set -e
+          KEY=$(mktemp)
+          trap "rm -f $KEY" EXIT
+          printf '%s' "$BBB_SSH_KEY" | base64 -d > "$KEY"
+          chmod 600 "$KEY"
+          SSH="ssh -i $KEY -o StrictHostKeyChecking=no $BBB_USER@$BBB_HOST"
+          SCP="scp -i $KEY -o StrictHostKeyChecking=no"
+
+          # Test-Script auf BBB kopieren
+          $SCP project/python_tests/run_tests.py $BBB_USER@$BBB_HOST:~/run_tests.py
+
+          # Tests auf BBB ausführen
+          $SSH "python3 ~/run_tests.py \
+            --bin-dir ~/bin \
+            --log-dir ~/logs \
+            --cov-dir ~/coverage"
+
+          # Ergebnisse holen
+          mkdir -p reports
+          $SCP $BBB_USER@$BBB_HOST:~/logs/test-results.xml reports/binary-tests.xml || true
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: binary-test-results
+          path: reports/binary-tests.xml
+          retention-days: 7
+
+  # ── CLI Tests ─────────────────────────────────
+
+  test-cli:
+    name: CLI Integration Tests
+    runs-on: self-hosted
+    needs: [check, deploy]
+    if: needs.check.outputs.run == 'true'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download CLI binaries from release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p bin
+          gh release download "${{ needs.check.outputs.tag }}" \
+            --dir bin \
+            --pattern "bbcli-linux-armv7" \
+            --pattern "bbcli-linux-amd64"
+          chmod +x bin/bbcli-linux-armv7 bin/bbcli-linux-amd64
+
+      - name: Deploy CLI to BBB
+        env:
+          BBB_HOST: ${{ secrets.BBB_HOST }}
+          BBB_USER: ${{ secrets.BBB_USER }}
+          BBB_SSH_KEY: ${{ secrets.BBB_SSH_KEY }}
+        run: |
+          set -e
+          KEY=$(mktemp)
+          trap "rm -f $KEY" EXIT
+          printf '%s' "$BBB_SSH_KEY" | base64 -d > "$KEY"
+          chmod 600 "$KEY"
+          scp -i "$KEY" -o StrictHostKeyChecking=no \
+            bin/bbcli-linux-armv7 $BBB_USER@$BBB_HOST:~/bbcli
+          echo "✅ CLI deployed to BBB"
+
+      - name: Run CLI tests on BBB (on-device)
+        env:
+          BBB_HOST: ${{ secrets.BBB_HOST }}
+          BBB_USER: ${{ secrets.BBB_USER }}
+          BBB_SSH_KEY: ${{ secrets.BBB_SSH_KEY }}
+        run: |
+          set -e
+          KEY=$(mktemp)
+          trap "rm -f $KEY" EXIT
+          printf '%s' "$BBB_SSH_KEY" | base64 -d > "$KEY"
+          chmod 600 "$KEY"
+          SSH="ssh -i $KEY -o StrictHostKeyChecking=no $BBB_USER@$BBB_HOST"
+
+          echo "=== CLI on-device ==="
+          $SSH "~/bbcli --version"
+          $SSH "~/bbcli --help"
+          $SSH "~/bbcli sensor read || true"
+          echo "✅ CLI on-device tests passed"
+
+      - name: Install test dependencies
+        run: pip install pytest --quiet
+
+      - name: Run CLI external client tests (amd64 → BBB API)
+        env:
+          BEAGLE_HOST: ${{ secrets.BBB_HOST }}
+          BBCLI: ./bin/bbcli-linux-amd64
+        run: |
+          pytest tests/cli/test_cli.py \
+            -v \
+            --junit-xml=reports/cli-tests.xml \
+            --tb=short
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: cli-test-results
+          path: reports/cli-tests.xml
+          retention-days: 7
+
+  # ── TUI Tests ─────────────────────────────────
+
+  test-tui:
+    name: TUI Integration Tests
+    runs-on: self-hosted
+    needs: [check, deploy]
+    if: needs.check.outputs.run == 'true'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download TUI binary from release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p bin
+          gh release download "${{ needs.check.outputs.tag }}" \
+            --dir bin \
+            --pattern "bbtui-linux-armv7" \
+            --pattern "bbtui-linux-amd64"
+          chmod +x bin/bbtui-linux-armv7 bin/bbtui-linux-amd64
+
+      - name: Deploy TUI to BBB
+        env:
+          BBB_HOST: ${{ secrets.BBB_HOST }}
+          BBB_USER: ${{ secrets.BBB_USER }}
+          BBB_SSH_KEY: ${{ secrets.BBB_SSH_KEY }}
+        run: |
+          set -e
+          KEY=$(mktemp)
+          trap "rm -f $KEY" EXIT
+          printf '%s' "$BBB_SSH_KEY" | base64 -d > "$KEY"
+          chmod 600 "$KEY"
+          scp -i "$KEY" -o StrictHostKeyChecking=no \
+            bin/bbtui-linux-armv7 $BBB_USER@$BBB_HOST:~/bbtui
+          echo "✅ TUI deployed to BBB"
+
+      - name: Run TUI tests on BBB (on-device)
+        env:
+          BBB_HOST: ${{ secrets.BBB_HOST }}
+          BBB_USER: ${{ secrets.BBB_USER }}
+          BBB_SSH_KEY: ${{ secrets.BBB_SSH_KEY }}
+        run: |
+          set -e
+          KEY=$(mktemp)
+          trap "rm -f $KEY" EXIT
+          printf '%s' "$BBB_SSH_KEY" | base64 -d > "$KEY"
+          chmod 600 "$KEY"
+          SSH="ssh -i $KEY -o StrictHostKeyChecking=no $BBB_USER@$BBB_HOST"
+
+          echo "=== TUI on-device ==="
+          $SSH "~/bbtui --version"
+          $SSH "~/bbtui --help"
+          echo "✅ TUI on-device tests passed"
+
+      - name: Run TUI external client tests (amd64 → BBB API)
+        env:
+          BBB_HOST: ${{ secrets.BBB_HOST }}
+        run: |
+          echo "=== TUI external client ==="
+          bin/bbtui-linux-amd64 --version
+          bin/bbtui-linux-amd64 --help
+          bin/bbtui-linux-amd64 --host "$BBB_HOST" || true
+          echo "✅ TUI external client tests passed"
+
+  # ── Promote zu stable ─────────────────────────
+
+  promote:
+    name: Promote to Stable
+    runs-on: ubuntu-latest
+    needs: [check, test-hardware, test-api, test-binaries, test-cli, test-tui]
+    if: needs.check.outputs.run == 'true'
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Promote release to stable
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          OLD_TAG="${{ needs.check.outputs.tag }}"
+          NEW_TAG="${{ needs.check.outputs.version }}-stable"
+
+          echo "Promoting $OLD_TAG → $NEW_TAG"
+
+          # Neuen Tag auf denselben Commit setzen
+          git tag "$NEW_TAG" "$OLD_TAG^{}"
+          git push origin "$NEW_TAG"
+
+          # Release umbenennen
+          gh release edit "$OLD_TAG" \
+            --tag "$NEW_TAG" \
+            --title "${{ needs.check.outputs.version }}" \
+            --prerelease=false \
+            --latest
+
+          # Alten Tag löschen
+          git push origin --delete "$OLD_TAG"
+          gh release delete "$OLD_TAG" --yes 2>/dev/null || true
+
+          echo "✅ Promoted to $NEW_TAG"

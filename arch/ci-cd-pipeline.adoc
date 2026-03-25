@@ -1,0 +1,380 @@
+= CI/CD Pipeline — BeagleBone Black
+:toc: left
+:toclevels: 3
+:icons: font
+:source-highlighter: rouge
+
+== Übersicht
+
+Die CI/CD-Pipeline ist in zwei Workflows aufgeteilt:
+
+* *ci.yml* — läuft auf `ubuntu-latest`, baut alle Komponenten und führt Unit Tests aus
+* *integration.yml* — läuft auf `self-hosted` Runner, testet gegen echte Hardware
+
+----
+ push / PR
+     │
+     ▼
+┌─────────────────────────────────────────────────────┐
+│  ci.yml (ubuntu-latest)                             │
+│                                                     │
+│  Phase 1: Build ─────────────────────────────────  │
+│    ARM Binaries (C + Rust + Go)                     │
+│    CLI (linux/darwin/windows, multi-arch)           │
+│    TUI (linux/darwin, multi-arch)                   │
+│    Web GUI Validierung                              │
+│                                                     │
+│  Phase 2: Unit Tests ────────────────────────────  │
+│    Go Tests · C Tests · Python Tests · Lint         │
+│                                                     │
+│  Phase 3: Release (nur wenn alle Tests grün) ────  │
+│    Tag: v1.0.0-toTestOnTarget                       │
+└─────────────────────────────────────────────────────┘
+     │ Release published
+     ▼
+┌─────────────────────────────────────────────────────┐
+│  integration.yml (self-hosted)                      │
+│                                                     │
+│  1. Deploy ARM SW auf BBB                           │
+│  2. Hardware Tests (BME280, GPIO, Backend)          │
+│  3. API Integration Tests                           │
+│  4. Binary Tests (bme280_main, rust_app, go_app)   │
+│  5. CLI on-device Tests                             │
+│  6. CLI External Client Tests (amd64 → BBB API)    │
+│                                                     │
+│  Bei Erfolg: Promote v1.0.0-toTestOnTarget          │
+│           → v1.0.0-stable                           │
+└─────────────────────────────────────────────────────┘
+----
+
+== Workflow 1: ci.yml
+
+=== Trigger
+
+[source,yaml]
+----
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+----
+
+=== Phase 1: Build
+
+Alle Build-Jobs laufen parallel auf `ubuntu-latest`.
+
+[cols="1,2,2", options="header"]
+|===
+| Job | Beschreibung | Artifact
+
+| `build-arm`
+| ARM Binaries (C + Rust + Go) via Podman-Container
+| `arm-binaries` (retention: 1d)
+
+| `build-cli`
+| CLI für linux-amd64, linux-armv7, darwin-amd64, darwin-arm64, windows-amd64
+| `bbcli-<platform>` (retention: 30d)
+
+| `build-tui`
+| TUI für linux-amd64, linux-armv7, darwin-amd64
+| `bbtui-<platform>` (retention: 30d)
+
+| `build-web`
+| Web GUI Validierung (HTML/CSS Lint)
+| —
+|===
+
+==== ARM Container Build
+
+Der ARM Build läuft im `generic-builder` Container, der von GHCR gepullt wird:
+
+----
+ghcr.io/<owner>/generic-builder:latest
+----
+
+Der Container wird nur neu gebaut wenn sich `docker/builder/**` ändert (Workflow: `build_container.yml`).
+
+Cache-Mounts für schnellere Builds:
+
+* `~/.cargo/registry` → Cargo Dependencies
+* `~/.cargo/git` → Cargo Git Sources
+* `~/go/pkg/mod` → Go Module Cache
+
+=== Phase 2: Unit Tests
+
+Laufen parallel nach Abschluss der jeweiligen Build-Phase.
+
+[cols="1,2,2", options="header"]
+|===
+| Job | Test-Framework | Dateien
+
+| `test-go`
+| `go test` + gotestsum
+| `project/go-api/pkg/**/*_test.go`
+
+| `test-c`
+| Custom Test Runner (gcov)
+| `project/c/test/test_c_lib.c`
+
+| `test-python`
+| pytest
+| `tests/test_*.py` (keine Hardware)
+
+| `lint-go`
+| golangci-lint
+| `project/go-api/...`, `tools/...`
+
+| `test-web`
+| html-validate
+| `project/web/**`
+
+| `test-scripts`
+| ShellCheck
+| `scripts/**/*.sh`
+
+| `security-python`
+| bandit
+| `project/**/*.py`, `scripts/**/*.py`
+
+| `strictdoc`
+| StrictDoc
+| `docs/**/*.sdoc`
+|===
+
+=== Phase 3: Release
+
+Wird nur ausgeführt wenn *alle* Unit Tests grün sind (`needs` auf alle Test-Jobs).
+
+==== Tag-Format
+
+----
+v<major>.<minor>.<patch>-toTestOnTarget
+----
+
+Beispiel: `v1.0.0-toTestOnTarget`
+
+Die Version wird aus dem `Makefile` gelesen:
+
+[source,bash]
+----
+make version
+----
+
+==== Release Assets
+
+[cols="1,2", options="header"]
+|===
+| Asset | Beschreibung
+
+| `arm-binaries.tar.gz`
+| C + Rust + Go Binaries für ARMv7
+
+| `bbcli-linux-amd64`
+| CLI für Linux x86-64
+
+| `bbcli-linux-armv7`
+| CLI für BeagleBone Black
+
+| `bbcli-darwin-amd64`
+| CLI für macOS Intel
+
+| `bbcli-darwin-arm64`
+| CLI für macOS Apple Silicon
+
+| `bbcli-windows-amd64.exe`
+| CLI für Windows x86-64
+
+| `bbtui-linux-amd64`
+| TUI für Linux x86-64
+
+| `bbtui-linux-armv7`
+| TUI für BeagleBone Black
+
+| `bbtui-darwin-amd64`
+| TUI für macOS Intel
+
+| `checksums.sha256`
+| SHA256-Checksums aller Assets
+|===
+
+== Workflow 2: integration.yml
+
+=== Trigger
+
+[source,yaml]
+----
+on:
+  release:
+    types: [published]
+----
+
+Filtert auf Tags mit Suffix `-toTestOnTarget`.
+
+=== Runner
+
+`self-hosted` — hat Netzwerkzugang zum BeagleBone Black (`BBB_HOST`).
+
+=== Integrationstests
+
+==== 1. Deploy ARM SW auf BBB
+
+ARM Binaries aus dem Release auf den BeagleBone deployen:
+
+[source,bash]
+----
+scp arm-binaries/* $BBB_USER@$BBB_HOST:/home/$BBB_USER/bin/
+----
+
+==== 2. Hardware Tests
+
+[source,bash]
+----
+pytest tests/hardware/test_hardware.py \
+  --host $BBB_HOST \
+  -v --junit-xml=reports/hardware-tests.xml
+----
+
+Tests:
+
+* BME280: Erreichbarkeit, Temperatur (-40..85°C), Luftfeuchte (0..100%), Luftdruck (300..1100 hPa), Höhe (-500..9000m)
+* GPIO: Schreiben High/Low, Lesen
+* Backend-Fallback: C → Rust → Auto
+
+==== 3. API Integration Tests
+
+[source,bash]
+----
+pytest tests/api/test_api.py \
+  --host $BBB_HOST \
+  -v --junit-xml=reports/api-tests.xml
+----
+
+Tests: Health-Check, BME280, GPIO Read/Write, Backend-Wechsel
+
+==== 4. Binary Tests auf BBB
+
+[source,bash]
+----
+ssh $BBB_HOST python3 run_tests.py \
+  --bin-dir ~/bin \
+  --log-dir ~/logs \
+  --cov-dir ~/coverage
+----
+
+Tests: `bme280_main`, `rust_app`, `go_app`
+
+==== 5. CLI on-device Tests
+
+CLI ARMv7-Binary auf BBB deployen und lokal ausführen:
+
+[source,bash]
+----
+ssh $BBB_HOST "~/bbcli --version && ~/bbcli sensor read"
+----
+
+==== 6. CLI External Client Tests
+
+CLI amd64-Binary auf dem Runner gegen die BBB-API ausführen:
+
+[source,bash]
+----
+BBCLI=./bin/bbcli-linux-amd64 \
+BEAGLE_HOST=$BBB_HOST \
+pytest tests/cli/test_cli.py -v --junit-xml=reports/cli-tests.xml
+----
+
+Tests: `--help`, `--version`, `system status`, `bme280 read`, `backend get/set`
+
+=== Release Promotion
+
+Bei Erfolg aller Integrationstests wird der Release promoted:
+
+[source,bash]
+----
+# v1.0.0-toTestOnTarget → v1.0.0-stable
+OLD_TAG="v1.0.0-toTestOnTarget"
+NEW_TAG="v1.0.0-stable"
+
+git tag "$NEW_TAG" "$OLD_TAG"^{}
+git push origin "$NEW_TAG"
+gh release edit "$OLD_TAG" --tag "$NEW_TAG" --title "v1.0.0"
+git push origin --delete "$OLD_TAG"
+----
+
+== Secrets
+
+[cols="1,2", options="header"]
+|===
+| Secret | Beschreibung
+
+| `GITHUB_TOKEN`
+| Automatisch von GitHub bereitgestellt
+
+| `BBB_HOST`
+| IP/Hostname des BeagleBone Black
+
+| `BBB_USER`
+| SSH-Benutzername auf dem BBB
+
+| `BBB_SSH_KEY`
+| Base64-kodierter SSH Private Key
+
+| `SONAR_TOKEN`
+| SonarCloud API Token
+
+| `DOCKERHUB_USERNAME`
+| Docker Hub Benutzername (optional, falls nicht GHCR)
+
+| `DOCKERHUB_TOKEN`
+| Docker Hub Token (optional)
+|===
+
+== Cache-Strategie
+
+[cols="1,1,2", options="header"]
+|===
+| Cache | Key | Inhalt
+
+| Go Modules
+| `go-mod-<os>-<hash(go.sum)>`
+| `~/go/pkg/mod`
+
+| Cargo Registry
+| `cargo-<os>-<hash(Cargo.lock)>`
+| `~/.cargo/registry`, `~/.cargo/git`
+
+| pip
+| automatisch via `setup-python cache: pip`
+| `~/.cache/pip`
+|===
+
+== Artifact-Retention
+
+[cols="1,1,2", options="header"]
+|===
+| Artifact | Retention | Begründung
+
+| `arm-binaries`, `bbb-output`
+| 1 Tag
+| Nur im gleichen Workflow-Run benötigt
+
+| SARIF/Coverage Reports (Sonar)
+| 1 Tag
+| Nur von sonarcloud-Job konsumiert
+
+| `bbb-test-logs`
+| 3 Tage
+| Kurzfristig für Debugging
+
+| `c-coverage-html`, Reports
+| 7 Tage
+| Review nach CI-Run
+
+| `bbcli-*`, `bbtui-*`
+| 30 Tage
+| Release-Binaries zum Download
+|===
+
+Nicht mehr benötigte CI-interne Artifacts werden am Ende jedes Runs automatisch gelöscht (Job: `cleanup`).
