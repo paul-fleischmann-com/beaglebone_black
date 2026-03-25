@@ -38,7 +38,7 @@ runs:
     - name: Install asciidoctor
       shell: bash
       run: |
-        gem install asciidoctor asciidoctor-pdf asciidoctor-diagram --no-document --quiet
+        sudo gem install asciidoctor asciidoctor-pdf asciidoctor-diagram --no-document --quiet
         asciidoctor --version
         asciidoctor-pdf --version
 
