@@ -64,9 +64,9 @@ def parse_sdoc_file(sdoc_path: str) -> list[dict]:
         block = content[m.end(): next_block.start() if next_block else len(content)]
         line_no = char_to_line(start)
 
-        uid_m = re.search(r"^UID:\s*(.+)$", block, re.MULTILINE)
-        title_m = re.search(r"^TITLE:\s*(.+)$", block, re.MULTILINE)
-        status_m = re.search(r"^STATUS:\s*(.+)$", block, re.MULTILINE)
+        uid_m = re.search(r"^UID:\s*([^\r\n]+)", block, re.MULTILINE)
+        title_m = re.search(r"^TITLE:\s*([^\r\n]+)", block, re.MULTILINE)
+        status_m = re.search(r"^STATUS:\s*([^\r\n]+)", block, re.MULTILINE)
 
         if not uid_m:
             continue
