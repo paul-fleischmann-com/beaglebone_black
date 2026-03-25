@@ -293,7 +293,7 @@ runs:
     # TEST REPORT
     # =========================
     - name: Publish Test Reports
-      if: always()
+      if: always() && inputs.bbb_host != ''
       uses: dorny/test-reporter@v1
       with:
         name: Test Results
