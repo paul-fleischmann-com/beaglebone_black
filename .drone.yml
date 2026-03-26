@@ -13,56 +13,30 @@ trigger:
     - project/rust-lib/**
     - .drone.yml
 
+image_pull_secrets:
+  - dockerconfigjson
+
 steps:
-  - name: build-c-lib
-    image: debian:bookworm
-    volumes:
-      - name: libs-cache
-        path: /build/libs
+  - name: build-libraries
+    image: ghcr.io/paulefl/generic-builder:latest
+    environment:
+      SRC: /drone/src
+      OUTPUT: /drone/src/bin
     commands:
-      - apt-get update -q
-      - apt-get install -y -q gcc-arm-linux-gnueabihf make
-      - make c-lib
-      - cp c-lib/libhardware.so /build/libs/
+      - bash /drone/src/scripts/build-arm.sh
 
   - name: test-c-lib
     image: debian:bookworm
-    depends_on: [build-c-lib]
-    volumes:
-      - name: libs-cache
-        path: /build/libs
+    depends_on: [build-libraries]
     commands:
       - apt-get update -q && apt-get install -y -q gcc make lcov
       - make -C c-lib CFLAGS="-fprofile-arcs -ftest-coverage -g" CC=gcc test
       - bash scripts/c_coverage.sh c-lib/ reports/c-coverage.info '/usr/*' '*/test/*'
       - lcov --summary reports/c-coverage.info
 
-  - name: build-rust-lib
-    image: rust:1.77
-    depends_on: []
-    volumes:
-      - name: cargo-cache
-        path: /usr/local/cargo/registry
-      - name: libs-cache
-        path: /build/libs
-    commands:
-      - cargo install cross cbindgen
-      - make rust-lib
-      - cp project/rust-lib/target/armv7-unknown-linux-musleabihf/release/libhardware_rs.so /build/libs/
-      - cbindgen --config project/rust-lib/cbindgen.toml --output /build/libs/include/hardware_rs.h
-
   - name: test-rust-lib
     image: rust:1.77-alpine
-    depends_on: [build-rust-lib]
-    volumes:
-      - name: cargo-cache
-        path: /usr/local/cargo/registry
+    depends_on: [build-libraries]
     commands:
       - apk add --no-cache musl-dev
       - cargo test --manifest-path project/rust-lib/Cargo.toml
-
-volumes:
-  - name: libs-cache
-    temp: {}
-  - name: cargo-cache
-    temp: {}
