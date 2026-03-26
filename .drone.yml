@@ -563,10 +563,10 @@ steps:
       - find reports/docs -name "*.html" -o -name "*.pdf" | sort || true
 
   - name: strictdoc-export
-    image: python:3.12-slim
+    image: ghcr.io/paulefl/strictdoc:latest
     depends_on: [go-tests-with-coverage]
+    entrypoint: [""]
     commands:
-      - pip install strictdoc --quiet
       - mkdir -p reports/strictdoc
       - strictdoc export . --formats html --output-dir reports/strictdoc || true
       - find reports/strictdoc -name "*.html" | head -10 || true
@@ -738,6 +738,7 @@ trigger:
   paths:
     - docker/builder/**
     - docker/bausteinsicht/**
+    - docker/strictdoc/**
     - .drone.yml
 
 steps:
@@ -787,6 +788,25 @@ steps:
         podman push bausteinsicht:latest ghcr.io/$REGISTRY_OWNER/bausteinsicht:latest
         podman push bausteinsicht:$SHA8 ghcr.io/$REGISTRY_OWNER/bausteinsicht:$SHA8
         echo "bausteinsicht gepushed mit SHA $SHA8"
+
+  - name: build-strictdoc
+    image: quay.io/podman/stable
+    privileged: true
+    depends_on: []
+    environment:
+      REGISTRY_USER:  {from_secret: registry_user}
+      REGISTRY_TOKEN: {from_secret: registry_token}
+      REGISTRY_OWNER: {from_secret: registry_owner}
+    commands:
+      - |
+        echo "$REGISTRY_TOKEN" | podman login -u $REGISTRY_USER --password-stdin ghcr.io
+        SHA8=$(echo "$DRONE_COMMIT_SHA" | head -c8)
+        podman build -t strictdoc:latest -t strictdoc:$SHA8 \
+          -f docker/strictdoc/Dockerfile \
+          docker/strictdoc
+        podman push strictdoc:latest ghcr.io/$REGISTRY_OWNER/strictdoc:latest
+        podman push strictdoc:$SHA8 ghcr.io/$REGISTRY_OWNER/strictdoc:$SHA8
+        echo "strictdoc gepushed mit SHA $SHA8"
 
 ---
 # ════════════════════════════════════════
