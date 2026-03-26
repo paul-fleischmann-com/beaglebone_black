@@ -63,7 +63,7 @@ steps:
         echo "Coverage: ${total}%"
         awk "BEGIN{exit !($total >= 75)}" || (echo "❌ Coverage gate: ${total}% < 75%" && exit 1)
         echo "✅ Coverage gate: ${total}% >= 75%"
-  - name: junit-reports
+  - name: junit-reports-pipe1-go_tests
     image: ghcr.io/rohit-gohri/drone-junit:v0
     depends_on: [test-go]
     settings:
@@ -526,7 +526,7 @@ steps:
           ./pkg/hal/ ./pkg/hal/mock/ ./pkg/hal/config/ || true
       - go tool cover -func=../../reports/go_coverage.out || true
 
-  - name: junit-reports
+  - name: junit-reports-pipe-7
     image: ghcr.io/rohit-gohri/drone-junit:v0
     depends_on: [go-tests-with-coverage]
     settings:
@@ -622,7 +622,7 @@ steps:
           --junit-xml reports/go-tests-junit.xml \
           --output-junit reports/req-coverage-junit.xml \
           --min-coverage 70 || true
-  - name: junit-reports
+  - name: junit-reports-req-coverage
     image: ghcr.io/rohit-gohri/drone-junit:v0
     depends_on: [strictdoc-coverage-gate]
     settings:
