@@ -348,10 +348,17 @@ trigger:
     exclude: [refs/tags/*-toTestOnTarget, refs/tags/*-stable]
 
 steps:
-  - name: smoke
-    image: alpine
+  - name: build-docker-image
+    image: quay.io/podman/stable
+    privileged: true
+    environment:
+      REGISTRY_USER:  {from_secret: registry_user}
+      REGISTRY_TOKEN: {from_secret: registry_token}
     commands:
-      - echo "pipeline 5 ok"
+      - podman login -u $REGISTRY_USER -p $REGISTRY_TOKEN docker.io
+      - podman build --platform linux/arm/v7 -f project/go-api/Dockerfile.embedded -t myuser/embedded-sw:${DRONE_TAG} -t myuser/embedded-sw:latest .
+      - podman push myuser/embedded-sw:${DRONE_TAG}
+      - podman push myuser/embedded-sw:latest
 
 ---
 # ════════════════════════════════════════
