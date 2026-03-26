@@ -63,6 +63,15 @@ steps:
         echo "Coverage: ${total}%"
         awk "BEGIN{exit !($total >= 75)}" || (echo "❌ Coverage gate: ${total}% < 75%" && exit 1)
         echo "✅ Coverage gate: ${total}% >= 75%"
+  - name: junit-reports
+    image: ghcr.io/rohit-gohri/drone-junit:v0
+    settings:
+      paths: ../../reports/go-tests-junit.xml
+    when:
+      status: [
+        'success',
+        'failure',
+      ]
 
 ---
 # ════════════════════════════════════════
@@ -602,10 +611,17 @@ trigger:
     - .drone.yml
 
 steps:
+  - name: build-bausteinsicht
+    image: debian:bookworm
+    commands:
+      - chmod +x scripts/bausteinsicht-container.sh
+      - echo "Build bausteinschicht container"
+      - scripts/bausteinsicht-container.sh build
   - name: validate-model
     image: debian:bookworm
     commands:
       - chmod +x scripts/bausteinsicht-container.sh
+      - echo "Build bausteinschicht container"
       - scripts/bausteinsicht-container.sh validate --model arch/model/beaglebone_black.jsonc
 
   - name: export-plantuml
