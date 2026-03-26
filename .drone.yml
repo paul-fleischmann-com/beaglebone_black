@@ -65,6 +65,7 @@ steps:
         echo "✅ Coverage gate: ${total}% >= 75%"
   - name: junit-reports
     image: ghcr.io/rohit-gohri/drone-junit:v0
+    depends_on: [test-go]
     settings:
       paths: ../../reports/go-tests-junit.xml
     when:
