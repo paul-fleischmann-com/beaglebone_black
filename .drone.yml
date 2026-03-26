@@ -584,8 +584,8 @@ steps:
       - strictdoc export . --formats html --output-dir reports/strictdoc || true
       - find reports/strictdoc -name "*.html" | head -10 || true
       - zip -r strictdoc-output.zip build/
-      
- - name: prepare
+
+  - name: prepare
     image: alpine
     commands:
       - SHA8=$(echo "$DRONE_COMMIT_SHA" | head -c8)
