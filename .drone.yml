@@ -10,7 +10,7 @@ trigger:
   event: [push, pull_request]
   branch: [main]
   paths:
-    - c-lib/**
+    - project/c-lib/**
     - project/rust-lib/**
     - .drone.yml
 
