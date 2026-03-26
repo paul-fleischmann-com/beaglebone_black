@@ -512,10 +512,7 @@ trigger:
     - tests/**
     - project/go-api/**
     - tools/**
-      - scripts/**
-      - docs/**
-      - "**/*.adoc"
-      - .drone.yml
+    - .drone.yml
 
 depends_on: [2-embedded-sw, 3-tools]
 
