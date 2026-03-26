@@ -512,14 +512,26 @@ steps:
     commands:
       - mkdir -p reports
       - cd project/go-api
+      - go install gotest.tools/gotestsum@v1.12.0
       - |
-        go test ./pkg/hal/ ./pkg/hal/mock/ ./pkg/hal/config/ \
-            -v -count=1 -json \
-            -coverprofile=../../reports/go_coverage.out \
-            -covermode=atomic \
-            -coverpkg=./pkg/hal/,./pkg/hal/mock/,./pkg/hal/config/ \
-            > ../../reports/go_tests.json || true
-      - go tool cover -func=../../reports/go_coverage.out
+        gotestsum \
+          --junitfile ../../reports/go-tests-junit.xml \
+          --jsonfile  ../../reports/go_tests.json \
+          -- \
+          -count=1 \
+          -coverprofile=../../reports/go_coverage.out \
+          -covermode=atomic \
+          -coverpkg=./pkg/hal/,./pkg/hal/mock/,./pkg/hal/config/ \
+          ./pkg/hal/ ./pkg/hal/mock/ ./pkg/hal/config/ || true
+      - go tool cover -func=../../reports/go_coverage.out || true
+
+  - name: junit-reports
+    image: ghcr.io/rohit-gohri/drone-junit:v0
+    depends_on: [go-tests-with-coverage]
+    settings:
+      paths: reports/go-tests-junit.xml
+    when:
+      status: [success, failure]
 
   - name: python-tests
     image: python:3.12-alpine
