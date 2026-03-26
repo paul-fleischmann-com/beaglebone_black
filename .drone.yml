@@ -1,5 +1,6 @@
 # ════════════════════════════════════════════════════════════════
 # BeagleBone Black — Vollständige Drone CI Pipeline
+# Ready to use
 # Pipelines: 1-Libraries, 2-EmbeddedSW, 3-Tools, 4-WebApp,
 #            5-Release, 6-Nightly, 7-Reports,
 #            8-Bausteinsicht, 9-BuildContainer,
