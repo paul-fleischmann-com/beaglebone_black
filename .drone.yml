@@ -7,7 +7,8 @@ type: docker
 name: 1-libraries
 
 trigger:
-  event: [push, pull_request, tag]
+  event: [push, pull_request]
+  branch: [main]
   paths:
     - c-lib/**
     - project/rust-lib/**
@@ -70,7 +71,8 @@ type: docker
 name: 2-embedded-sw
 
 trigger:
-  event: [push, pull_request, tag]
+  event: [push, pull_request]
+  branch: [main]
   paths:
     - project/go-api/**
     - c-lib/**
@@ -168,7 +170,8 @@ type: docker
 name: 3-tools
 
 trigger:
-  event: [push, pull_request, tag]
+  event: [push, pull_request]
+  branch: [main]
   paths:
     - tools/**
     - .drone.yml
@@ -310,7 +313,8 @@ type: docker
 name: 4-webapp
 
 trigger:
-  event: [push, pull_request, tag]
+  event: [push, pull_request]
+  branch: [main]
   paths:
     - tools/web-gui/**
     - .drone.yml
@@ -442,7 +446,8 @@ type: docker
 name: 7-reports
 
 trigger:
-  event: [push]
+  event: [push, pull_request]
+  branch: [main]
 
 steps:
   - name: go-tests-with-coverage
@@ -587,6 +592,7 @@ name: 8-bausteinsicht
 
 trigger:
   event: [push, pull_request]
+  branch: [main]
   paths:
     - arch/model/**
     - .drone.yml
@@ -663,7 +669,7 @@ type: docker
 name: 9-build-container
 
 trigger:
-  event: [push]
+  event: [push, pull_request]
   branch: [main]
   paths:
     - docker/builder/**
@@ -864,7 +870,7 @@ type: docker
 name: 12-changelog
 
 trigger:
-  event: [push]
+  event: [push, pull_request]
   branch: [main]
 
 steps:
