@@ -605,29 +605,29 @@ steps:
   - name: validate-model
     image: debian:bookworm
     commands:
-      - chmod +x scripts/bausteinsicht.sh
-      - scripts/bausteinsicht.sh validate --model arch/model/beaglebone_black.jsonc
+      - chmod +x scripts/bausteinsicht-container.sh
+      - scripts/bausteinsicht-container.sh validate --model arch/model/beaglebone_black.jsonc
 
   - name: export-plantuml
     image: debian:bookworm
     depends_on: [validate-model]
     commands:
       - mkdir -p arch/model/export/plantuml
-      - scripts/bausteinsicht.sh export-diagram --model arch/model/beaglebone_black.jsonc --diagram-format plantuml --output arch/model/export/plantuml
+      - scripts/bausteinsicht-container.sh export-diagram --model arch/model/beaglebone_black.jsonc --diagram-format plantuml --output arch/model/export/plantuml
 
   - name: export-mermaid
     image: debian:bookworm
     depends_on: [validate-model]
     commands:
       - mkdir -p arch/model/export/mermaid
-      - scripts/bausteinsicht.sh export-diagram --model arch/model/beaglebone_black.jsonc --diagram-format mermaid --output arch/model/export/mermaid
+      - scripts/bausteinsicht-container.sh export-diagram --model arch/model/beaglebone_black.jsonc --diagram-format mermaid --output arch/model/export/mermaid
 
   - name: export-table
     image: debian:bookworm
     depends_on: [validate-model]
     commands:
       - mkdir -p arch/model/export/table
-      - scripts/bausteinsicht.sh export-table --model arch/model/beaglebone_black.jsonc --table-format md --combined --output arch/model/export/table
+      - scripts/bausteinsicht-container.sh export-table --model arch/model/beaglebone_black.jsonc --table-format md --combined --output arch/model/export/table
 
   - name: export-png
     image: debian:bookworm
@@ -641,7 +641,7 @@ steps:
       - apt-get install -y "./drawio-amd64-$DRAWIO_VERSION.deb"
       - mkdir -p arch/model/export/png
       - dbus-daemon --system --fork 2>/dev/null || true
-      - xvfb-run -a scripts/bausteinsicht.sh export --model arch/model/beaglebone_black.jsonc --output arch/model/export/png
+      - xvfb-run -a scripts/bausteinsicht-container.sh export --model arch/model/beaglebone_black.jsonc --output arch/model/export/png
 
   - name: commit-exports
     image: alpine/git
