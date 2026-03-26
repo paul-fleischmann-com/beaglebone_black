@@ -140,16 +140,13 @@ steps:
       - mkdir -p ~/.ssh
       - echo "$BEAGLE_KEY" | base64 -d > ~/.ssh/id_rsa && chmod 600 ~/.ssh/id_rsa
       - ssh-keyscan -H $BEAGLE_HOST >> ~/.ssh/known_hosts
-      - scp bin/embedded
-          project/go-api/libs/libhardware.so
-          project/go-api/libs/libhardware_rs.so
-          bin/bbcli-linux-arm
-          $BEAGLE_USER@$BEAGLE_HOST:/app/
-      - ssh $BEAGLE_USER@$BEAGLE_HOST
-          "cp /app/bbcli-linux-arm /app/bbcli &&
-           systemctl restart embedded-sw &&
-           sleep 3 &&
-           systemctl is-active embedded-sw"
+      - scp bin/embedded project/go-api/libs/libhardware.so project/go-api/libs/libhardware_rs.so bin/bbcli-linux-arm $BEAGLE_USER@$BEAGLE_HOST:/app/
+      - |
+        ssh $BEAGLE_USER@$BEAGLE_HOST \
+            "cp /app/bbcli-linux-arm /app/bbcli && \
+             systemctl restart embedded-sw && \
+             sleep 3 && \
+             systemctl is-active embedded-sw"
     when:
       branch: [main]
       event:  [push]
@@ -411,10 +408,7 @@ steps:
       REGISTRY_TOKEN: {from_secret: registry_token}
     commands:
       - podman login -u $REGISTRY_USER -p $REGISTRY_TOKEN docker.io
-      - podman build --platform linux/arm/v7
-          -f project/go-api/Dockerfile.embedded
-          -t myuser/embedded-sw:${DRONE_TAG}
-          -t myuser/embedded-sw:latest .
+      - podman build --platform linux/arm/v7 -f project/go-api/Dockerfile.embedded -t myuser/embedded-sw:${DRONE_TAG} -t myuser/embedded-sw:latest .
       - podman push myuser/embedded-sw:${DRONE_TAG}
       - podman push myuser/embedded-sw:latest
 
@@ -480,10 +474,7 @@ steps:
       BEAGLE_HOST: {from_secret: beagle_host}
     commands:
       - pip install pytest requests --break-system-packages -q
-      - for backend in c rust auto; do
-          echo "=== Backend $backend ===";
-          HW_BACKEND=$backend pytest tests/hardware/ -v --timeout=60 || exit 1;
-        done
+      - for backend in c rust auto; do echo "=== Backend $backend ==="; HW_BACKEND=$backend pytest tests/hardware/ -v --timeout=60 || exit 1; done
 
   - name: notify-slack
     image: plugins/slack
@@ -521,12 +512,13 @@ steps:
         path: /go/pkg/mod
     commands:
       - cd project/go-api
-      - go test ./pkg/hal/... ./pkg/api/...
-          -v -count=1 -json
-          -coverprofile=/workspace/go_coverage.out
-          -covermode=atomic
-          -coverpkg=./pkg/hal/,./pkg/hal/mock/,./pkg/hal/config/,./pkg/api/
-        > /workspace/go_tests.json || true
+      - |
+        go test ./pkg/hal/... ./pkg/api/... \
+            -v -count=1 -json \
+            -coverprofile=/workspace/go_coverage.out \
+            -covermode=atomic \
+            -coverpkg=./pkg/hal/,./pkg/hal/mock/,./pkg/hal/config/,./pkg/api/ \
+            > /workspace/go_tests.json || true
       - go tool cover -func=/workspace/go_coverage.out
 
   - name: python-tests
@@ -537,13 +529,7 @@ steps:
         path: /workspace
     commands:
       - pip install -r tests/requirements-dev.txt pytest-json-report --break-system-packages -q
-      - pytest tests/
-          --ignore=tests/hardware/
-          -v
-          --json-report
-          --json-report-file=/workspace/python_tests.json
-          --timeout=30
-        || true
+      - pytest tests/ --ignore=tests/hardware/ -v --json-report --json-report-file=/workspace/python_tests.json --timeout=30 || true
 
   - name: python-security
     image: python:3.12-alpine
@@ -553,11 +539,7 @@ steps:
         path: /workspace
     commands:
       - pip install bandit bandit-sarif-formatter --break-system-packages -q
-      - bandit -r scripts/ tests/ project/
-          -f sarif
-          -o /workspace/python-sarif.json
-          --exclude tests/hardware/
-        || true
+      - bandit -r scripts/ tests/ project/ -f sarif -o /workspace/python-sarif.json --exclude tests/hardware/ || true
       - echo "Bandit done"
 
   - name: shellcheck
@@ -618,11 +600,7 @@ steps:
           echo "SONAR_TOKEN nicht gesetzt — SonarQube Report übersprungen"
           exit 0
         fi
-      - python3 .github/actions/sonarqube-report/sonarqube_report.py
-          --token "$SONAR_TOKEN"
-          --project "$SONAR_PROJECT_KEY"
-          --output /workspace/sonar-report.html
-        || true
+      - python3 .github/actions/sonarqube-report/sonarqube_report.py --token "$SONAR_TOKEN" --project "$SONAR_PROJECT_KEY" --output /workspace/sonar-report.html || true
 
   - name: sonarcloud-scan
     image: sonarsource/sonar-scanner-cli:latest
@@ -638,14 +616,15 @@ steps:
           echo "SONAR_TOKEN nicht gesetzt — SonarCloud übersprungen"
           exit 0
         fi
-      - sonar-scanner
-          -Dsonar.projectKey=paulefl_beaglebone_black
-          -Dsonar.organization=paulefl
-          -Dsonar.host.url=https://sonarcloud.io
-          -Dsonar.token=$SONAR_TOKEN
-          -Dsonar.go.coverage.reportPaths=/workspace/go_coverage.out
-          -Dsonar.c.lcov.reportPaths=/workspace/c-coverage.info
-        || true
+      - |
+        sonar-scanner \
+            -Dsonar.projectKey=paulefl_beaglebone_black \
+            -Dsonar.organization=paulefl \
+            -Dsonar.host.url=https://sonarcloud.io \
+            -Dsonar.token=$SONAR_TOKEN \
+            -Dsonar.go.coverage.reportPaths=/workspace/go_coverage.out \
+            -Dsonar.c.lcov.reportPaths=/workspace/c-coverage.info \
+            || true
     when:
       branch: [main]
       event: [push]
@@ -664,15 +643,8 @@ steps:
         path: /trend
     commands:
       - pip install reportlab jinja2 --quiet
-      - python3 scripts/collect_results.py
-          --workspace /workspace
-          --output /workspace/test_results.json
-        || true
-      - python3 scripts/generate_reports.py
-          --output /workspace/reports
-          --results /workspace/test_results.json
-          --trend /trend/test_trend.json
-        || true
+      - python3 scripts/collect_results.py --workspace /workspace --output /workspace/test_results.json || true
+      - python3 scripts/generate_reports.py --output /workspace/reports --results /workspace/test_results.json --trend /trend/test_trend.json || true
       - ls -lh /workspace/reports/ || true
 
   - name: quality-gates
@@ -682,12 +654,7 @@ steps:
       - name: workspace
         path: /workspace
     commands:
-      - python3 scripts/collect_results.py --check-gates
-          --results /workspace/test_results.json
-          --min-success-rate 90
-          --min-avg-coverage 75
-          --min-file-coverage 50
-        || true
+      - python3 scripts/collect_results.py --check-gates --results /workspace/test_results.json --min-success-rate 90 --min-avg-coverage 75 --min-file-coverage 50 || true
 
   - name: package-artifacts
     image: alpine
@@ -765,31 +732,21 @@ steps:
     depends_on: [validate-model]
     commands:
       - mkdir -p arch/model/export/plantuml
-      - scripts/bausteinsicht export-diagram
-          --model arch/model/beaglebone_black.jsonc
-          --diagram-format plantuml
-          --output arch/model/export/plantuml
+      - scripts/bausteinsicht export-diagram --model arch/model/beaglebone_black.jsonc --diagram-format plantuml --output arch/model/export/plantuml
 
   - name: export-mermaid
     image: debian:bookworm
     depends_on: [validate-model]
     commands:
       - mkdir -p arch/model/export/mermaid
-      - scripts/bausteinsicht export-diagram
-          --model arch/model/beaglebone_black.jsonc
-          --diagram-format mermaid
-          --output arch/model/export/mermaid
+      - scripts/bausteinsicht export-diagram --model arch/model/beaglebone_black.jsonc --diagram-format mermaid --output arch/model/export/mermaid
 
   - name: export-table
     image: debian:bookworm
     depends_on: [validate-model]
     commands:
       - mkdir -p arch/model/export/table
-      - scripts/bausteinsicht export-table
-          --model arch/model/beaglebone_black.jsonc
-          --table-format md
-          --combined
-          --output arch/model/export/table
+      - scripts/bausteinsicht export-table --model arch/model/beaglebone_black.jsonc --table-format md --combined --output arch/model/export/table
 
   - name: export-png
     image: debian:bookworm
@@ -797,15 +754,13 @@ steps:
     commands:
       - apt-get update -q
       - apt-get install -y -q xvfb libgbm1 wget jq
-      - DRAWIO_VERSION=$(wget -qO- https://api.github.com/repos/jgraph/drawio-desktop/releases/latest
-          | jq -r '.tag_name' | tr -d 'v')
+      - |
+        DRAWIO_VERSION=$(wget -qO- https://api.github.com/repos/jgraph/drawio-desktop/releases/latest | jq -r '.tag_name' | tr -d 'v')
       - wget -q "https://github.com/jgraph/drawio-desktop/releases/download/v${DRAWIO_VERSION}/drawio-amd64-${DRAWIO_VERSION}.deb"
       - apt-get install -y "./drawio-amd64-${DRAWIO_VERSION}.deb"
       - mkdir -p arch/model/export/png
       - dbus-daemon --system --fork 2>/dev/null || true
-      - xvfb-run -a scripts/bausteinsicht export
-          --model arch/model/beaglebone_black.jsonc
-          --output arch/model/export/png
+      - xvfb-run -a scripts/bausteinsicht export --model arch/model/beaglebone_black.jsonc --output arch/model/export/png
 
   - name: commit-exports
     image: alpine/git
@@ -854,15 +809,9 @@ steps:
       REGISTRY_OWNER: {from_secret: registry_owner}
     commands:
       - podman login -u $REGISTRY_USER -p $REGISTRY_TOKEN ghcr.io
-      - podman build
-          -t generic-builder:latest
-          -t generic-builder:${DRONE_COMMIT_SHA:0:8}
-          -f docker/builder/Dockerfile
-          docker/builder
-      - podman push generic-builder:latest
-          ghcr.io/${REGISTRY_OWNER}/generic-builder:latest
-      - podman push generic-builder:${DRONE_COMMIT_SHA:0:8}
-          ghcr.io/${REGISTRY_OWNER}/generic-builder:${DRONE_COMMIT_SHA:0:8}
+      - podman build -t generic-builder:latest -t generic-builder:${DRONE_COMMIT_SHA:0:8} -f docker/builder/Dockerfile docker/builder
+      - podman push generic-builder:latest ghcr.io/${REGISTRY_OWNER}/generic-builder:latest
+      - podman push generic-builder:${DRONE_COMMIT_SHA:0:8} ghcr.io/${REGISTRY_OWNER}/generic-builder:${DRONE_COMMIT_SHA:0:8}
       - echo "Image getaggt und gepushed mit SHA ${DRONE_COMMIT_SHA:0:8}"
 
 ---
@@ -916,9 +865,7 @@ steps:
       - SSH="ssh -i $KEY -o StrictHostKeyChecking=no $BEAGLE_USER@$BEAGLE_HOST"
       - SCP="scp -i $KEY -o StrictHostKeyChecking=no"
       - $SSH "mkdir -p ~/bin && rm -f ~/bin/*.so ~/bin/embedded ~/bin/bbcli"
-      - $SCP bin/embedded bin/libhardware.so bin/libhardware_rs.so
-          bin/bbcli-linux-arm
-          $BEAGLE_USER@$BEAGLE_HOST:~/bin/ 2>/dev/null || true
+      - $SCP bin/embedded bin/libhardware.so bin/libhardware_rs.so bin/bbcli-linux-arm $BEAGLE_USER@$BEAGLE_HOST:~/bin/ 2>/dev/null || true
       - $SSH "cp ~/bin/bbcli-linux-arm ~/bin/bbcli && chmod +x ~/bin/*"
       - echo "Deploy abgeschlossen"
 
@@ -929,9 +876,7 @@ steps:
       BEAGLE_HOST: {from_secret: beagle_host}
     commands:
       - pip install pytest requests pytest-json-report --break-system-packages -q
-      - pytest tests/hardware/test_hardware.py
-          -v --timeout=60
-          --json-report --json-report-file=reports/hardware-tests.json || true
+      - pytest tests/hardware/test_hardware.py -v --timeout=60 --json-report --json-report-file=reports/hardware-tests.json || true
 
   - name: test-api
     image: python:3.12-alpine
@@ -940,9 +885,7 @@ steps:
       BEAGLE_HOST: {from_secret: beagle_host}
     commands:
       - pip install pytest requests pytest-json-report --break-system-packages -q
-      - pytest tests/api/test_api.py
-          -v --timeout=30
-          --json-report --json-report-file=reports/api-tests.json || true
+      - pytest tests/api/test_api.py -v --timeout=30 --json-report --json-report-file=reports/api-tests.json || true
 
   - name: test-uart-on-bbb
     image: python:3.12-alpine
@@ -953,9 +896,7 @@ steps:
       BBCLI_REMOTE: /home/debian/bin/bbcli
     commands:
       - pip install pytest --break-system-packages -q
-      - pytest tests/hardware/test_uart.py
-          -v --timeout=30
-          --json-report --json-report-file=reports/uart-tests.json || true
+      - pytest tests/hardware/test_uart.py -v --timeout=30 --json-report --json-report-file=reports/uart-tests.json || true
 
   - name: test-cli-on-bbb
     image: alpine
@@ -988,9 +929,7 @@ steps:
     commands:
       - pip install pytest pytest-json-report --break-system-packages -q
       - chmod +x bin/bbcli-linux-amd64
-      - pytest tests/cli/test_cli.py
-          -v --timeout=30
-          --json-report --json-report-file=reports/cli-tests.json || true
+      - pytest tests/cli/test_cli.py -v --timeout=30 --json-report --json-report-file=reports/cli-tests.json || true
 
   - name: promote-to-stable
     image: alpine
