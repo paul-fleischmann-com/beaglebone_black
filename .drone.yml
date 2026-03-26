@@ -17,7 +17,9 @@ name: 1-libraries
 trigger:
   event: [push, pull_request, tag]
   paths:
-    include: [c-lib/**, project/rust-lib/**, .drone.yml]
+    - c-lib/**
+    - project/rust-lib/**
+    - .drone.yml
 
 steps:
   - name: build-c-lib
@@ -86,7 +88,10 @@ name: 2-embedded-sw
 trigger:
   event: [push, pull_request, tag]
   paths:
-    include: [project/go-api/**, c-lib/**, project/rust-lib/**, .drone.yml]
+    - project/go-api/**
+    - c-lib/**
+    - project/rust-lib/**
+    - .drone.yml
 
 depends_on: [1-libraries]
 
@@ -208,7 +213,8 @@ name: 3-tools
 trigger:
   event: [push, pull_request, tag]
   paths:
-    include: [tools/**, .drone.yml]
+    - tools/**
+    - .drone.yml
 
 steps:
   - name: lint-cli
@@ -359,7 +365,8 @@ name: 4-webapp
 trigger:
   event: [push, pull_request, tag]
   paths:
-    include: [tools/web-gui/**, .drone.yml]
+    - tools/web-gui/**
+    - .drone.yml
 
 steps:
   - name: validate-html
@@ -502,10 +509,9 @@ name: 7-reports
 trigger:
   event: [push, pull_request, tag]
   paths:
-    include:
-      - tests/**
-      - project/go-api/**
-      - tools/**
+    - tests/**
+    - project/go-api/**
+    - tools/**
       - scripts/**
       - docs/**
       - "**/*.adoc"
@@ -752,7 +758,8 @@ name: 8-bausteinsicht
 trigger:
   event: [push, pull_request]
   paths:
-    include: [arch/model/**, .drone.yml]
+    - arch/model/**
+    - .drone.yml
 
 steps:
   - name: validate-model
@@ -842,7 +849,8 @@ trigger:
   event: [push]
   branch: [main]
   paths:
-    include: [docker/builder/**, .drone.yml]
+    - docker/builder/**
+    - .drone.yml
 
 steps:
   - name: build-image
