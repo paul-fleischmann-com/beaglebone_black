@@ -28,7 +28,7 @@ steps:
     depends_on: [build-libraries]
     commands:
       - apt-get update -q && apt-get install -y -q gcc make
-      - make test-c
+      - make -C c-lib test
 
   - name: test-rust-lib
     image: rust:alpine
