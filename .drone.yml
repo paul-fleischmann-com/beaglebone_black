@@ -419,7 +419,7 @@ steps:
     depends_on: [build-arm]
     environment:
       REGISTRY_USER:  {from_secret: registry_user}
-      REGISTRY_TOKEN: {from_secret: registry_token}
+      REGISTRY_TOKEN: {from_secret: Bau_token}
     commands:
       - echo "$REGISTRY_TOKEN" | podman login -u $REGISTRY_USER --password-stdin docker.io
       - podman build --platform linux/arm/v7 -f project/go-api/Dockerfile.embedded -t myuser/embedded-sw:$DRONE_TAG -t myuser/embedded-sw:latest .
@@ -799,7 +799,7 @@ steps:
     privileged: true
     environment:
       REGISTRY_USER:  {from_secret: registry_user}
-      REGISTRY_TOKEN: {from_secret: registry_token}
+      REGISTRY_TOKEN: {from_secret: Bau_token}
     commands:
       - |
         podman login ghcr.io -u "$REGISTRY_USER" -p "$REGISTRY_TOKEN"
@@ -823,7 +823,7 @@ steps:
     depends_on: [clone-bausteinsicht-repo]
     environment:
       REGISTRY_USER:  {from_secret: registry_user}
-      REGISTRY_TOKEN: {from_secret: registry_token}
+      REGISTRY_TOKEN: {from_secret: Bau_token}
     commands:
       - |
         podman login ghcr.io -u "$REGISTRY_USER" -p "$REGISTRY_TOKEN"
@@ -845,7 +845,7 @@ steps:
     depends_on: []
     environment:
       REGISTRY_USER:  {from_secret: registry_user}
-      REGISTRY_TOKEN: {from_secret: registry_token}
+      REGISTRY_TOKEN: {from_secret: Bau_token}
     commands:
       - |
         podman login ghcr.io -u "$REGISTRY_USER" -p "$REGISTRY_TOKEN"
