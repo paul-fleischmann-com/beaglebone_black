@@ -63,3 +63,104 @@ steps:
         echo "Coverage: ${total}%"
         awk "BEGIN{exit !($total >= 75)}" || (echo "❌ Coverage gate: ${total}% < 75%" && exit 1)
         echo "✅ Coverage gate: ${total}% >= 75%"
+
+---
+# ════════════════════════════════════════
+# PIPELINE 2 — Embedded SW (Go API + HAL)
+# ════════════════════════════════════════
+kind: pipeline
+type: docker
+name: 2-embedded-sw
+
+trigger:
+  event: [push, pull_request, tag]
+  paths:
+    - project/go-api/**
+    - c-lib/**
+    - project/rust-lib/**
+    - .drone.yml
+
+image_pull_secrets:
+  - dockerconfigjson
+
+steps:
+  - name: test-hal-unit
+    image: golang:1.22
+    commands:
+      - cd project/go-api && go test ./pkg/hal/... -v -count=1
+
+  - name: lint-go
+    image: golang:1.22
+    depends_on: []
+    commands:
+      - make lint
+
+  - name: build-go-api
+    image: ghcr.io/paulefl/generic-builder:latest
+    depends_on: [test-hal-unit]
+    environment:
+      SRC: /drone/src
+      OUTPUT: /drone/src/bin
+    commands:
+      - bash /drone/src/scripts/build-arm.sh
+
+  - name: deploy-beaglebone
+    image: alpine
+    depends_on: [build-go-api]
+    environment:
+      BEAGLE_HOST: {from_secret: beagle_host}
+      BEAGLE_USER: {from_secret: beagle_user}
+      BEAGLE_KEY:  {from_secret: beagle_ssh_key}
+    commands:
+      - apk add --no-cache openssh-client
+      - mkdir -p ~/.ssh
+      - echo "$BEAGLE_KEY" | base64 -d > ~/.ssh/id_rsa && chmod 600 ~/.ssh/id_rsa
+      - ssh-keyscan -H $BEAGLE_HOST >> ~/.ssh/known_hosts
+      - scp bin/embedded project/go-api/libs/libhardware.so project/go-api/libs/libhardware_rs.so bin/bbcli-linux-arm $BEAGLE_USER@$BEAGLE_HOST:/app/
+      - |
+        ssh $BEAGLE_USER@$BEAGLE_HOST \
+            "cp /app/bbcli-linux-arm /app/bbcli && \
+             systemctl restart embedded-sw && \
+             sleep 3 && \
+             systemctl is-active embedded-sw"
+    when:
+      branch: [main]
+      event:  [push]
+
+  - name: test-hardware-c
+    image: python:3.12-alpine
+    depends_on: [deploy-beaglebone]
+    environment:
+      BEAGLE_HOST: {from_secret: beagle_host}
+      HW_BACKEND: c
+    commands:
+      - pip install pytest requests --break-system-packages -q
+      - pytest tests/hardware/ -v --timeout=60
+    when:
+      branch: [main]
+      event:  [push]
+
+  - name: test-hardware-rust
+    image: python:3.12-alpine
+    depends_on: [deploy-beaglebone]
+    environment:
+      BEAGLE_HOST: {from_secret: beagle_host}
+      HW_BACKEND: rust
+    commands:
+      - pip install pytest requests --break-system-packages -q
+      - pytest tests/hardware/ -v --timeout=60
+    when:
+      branch: [main]
+      event:  [push]
+
+  - name: test-hardware-auto
+    image: python:3.12-alpine
+    depends_on: [test-hardware-c, test-hardware-rust]
+    environment:
+      BEAGLE_HOST: {from_secret: beagle_host}
+    commands:
+      - pip install pytest requests --break-system-packages -q
+      - pytest tests/hardware/ -v --timeout=60
+    when:
+      branch: [main]
+      event:  [push]
