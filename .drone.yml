@@ -31,7 +31,7 @@ steps:
       - make test-c
 
   - name: test-rust-lib
-    image: rust:1.77-alpine
+    image: rust:alpine
     depends_on: [build-libraries]
     commands:
       - apk add --no-cache musl-dev
