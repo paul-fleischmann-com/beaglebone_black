@@ -508,3 +508,324 @@ steps:
       status: [success, failure]
       branch: [main]
       event:  [push, tag]
+
+---
+# ════════════════════════════════════════
+# PIPELINE 8 — Bausteinsicht
+# ════════════════════════════════════════
+kind: pipeline
+type: docker
+name: 8-bausteinsicht
+
+trigger:
+  event: [push, pull_request]
+  paths:
+    - arch/model/**
+    - .drone.yml
+
+steps:
+  - name: validate-model
+    image: debian:bookworm
+    commands:
+      - chmod +x scripts/bausteinsicht
+      - scripts/bausteinsicht validate --model arch/model/beaglebone_black.jsonc
+
+  - name: export-plantuml
+    image: debian:bookworm
+    depends_on: [validate-model]
+    commands:
+      - mkdir -p arch/model/export/plantuml
+      - scripts/bausteinsicht export-diagram --model arch/model/beaglebone_black.jsonc --diagram-format plantuml --output arch/model/export/plantuml
+
+  - name: export-mermaid
+    image: debian:bookworm
+    depends_on: [validate-model]
+    commands:
+      - mkdir -p arch/model/export/mermaid
+      - scripts/bausteinsicht export-diagram --model arch/model/beaglebone_black.jsonc --diagram-format mermaid --output arch/model/export/mermaid
+
+  - name: export-table
+    image: debian:bookworm
+    depends_on: [validate-model]
+    commands:
+      - mkdir -p arch/model/export/table
+      - scripts/bausteinsicht export-table --model arch/model/beaglebone_black.jsonc --table-format md --combined --output arch/model/export/table
+
+  - name: export-png
+    image: debian:bookworm
+    depends_on: [export-plantuml, export-mermaid, export-table]
+    commands:
+      - apt-get update -q
+      - apt-get install -y -q xvfb libgbm1 wget jq
+      - |
+        DRAWIO_VERSION=$(wget -qO- https://api.github.com/repos/jgraph/drawio-desktop/releases/latest | jq -r '.tag_name' | tr -d 'v')
+      - wget -q "https://github.com/jgraph/drawio-desktop/releases/download/v${DRAWIO_VERSION}/drawio-amd64-${DRAWIO_VERSION}.deb"
+      - apt-get install -y "./drawio-amd64-${DRAWIO_VERSION}.deb"
+      - mkdir -p arch/model/export/png
+      - dbus-daemon --system --fork 2>/dev/null || true
+      - xvfb-run -a scripts/bausteinsicht export --model arch/model/beaglebone_black.jsonc --output arch/model/export/png
+
+  - name: commit-exports
+    image: alpine/git
+    depends_on: [export-png]
+    environment:
+      GIT_TOKEN: {from_secret: git_token}
+      GIT_USER:  {from_secret: git_user}
+    commands:
+      - git config user.name "drone-ci[bot]"
+      - git config user.email "drone-ci[bot]@noreply"
+      - git add arch/model/export/
+      - |
+        if git diff --staged --quiet; then
+          echo "Keine Änderungen in arch/model/export"
+        else
+          git commit -m "ci(bausteinsicht): update exported diagrams [skip ci]"
+          git push https://${GIT_USER}:${GIT_TOKEN}@${DRONE_GIT_HTTP_URL#https://} HEAD:${DRONE_BRANCH}
+        fi
+    when:
+      event: [push]
+      branch: [main]
+
+---
+# ════════════════════════════════════════
+# PIPELINE 9 — Builder Image
+# ════════════════════════════════════════
+kind: pipeline
+type: docker
+name: 9-build-container
+
+trigger:
+  event: [push]
+  branch: [main]
+  paths:
+    - docker/builder/**
+    - .drone.yml
+
+steps:
+  - name: build-image
+    image: quay.io/podman/stable
+    privileged: true
+    environment:
+      REGISTRY_USER:  {from_secret: registry_user}
+      REGISTRY_TOKEN: {from_secret: registry_token}
+      REGISTRY_OWNER: {from_secret: registry_owner}
+    commands:
+      - podman login -u $REGISTRY_USER -p $REGISTRY_TOKEN ghcr.io
+      - podman build -t generic-builder:latest -t generic-builder:${DRONE_COMMIT_SHA:0:8} -f docker/builder/Dockerfile docker/builder
+      - podman push generic-builder:latest ghcr.io/${REGISTRY_OWNER}/generic-builder:latest
+      - podman push generic-builder:${DRONE_COMMIT_SHA:0:8} ghcr.io/${REGISTRY_OWNER}/generic-builder:${DRONE_COMMIT_SHA:0:8}
+      - echo "Image getaggt und gepushed mit SHA ${DRONE_COMMIT_SHA:0:8}"
+
+---
+# ════════════════════════════════════════
+# PIPELINE 10 — Integration Tests (on-target)
+# ════════════════════════════════════════
+kind: pipeline
+type: docker
+name: 10-integration-tests
+
+trigger:
+  event: [tag]
+  ref:
+    include: [refs/tags/*-toTestOnTarget]
+
+steps:
+  - name: download-release-assets
+    image: alpine
+    environment:
+      GIT_TOKEN:  {from_secret: git_token}
+      GITEA_URL:  {from_secret: gitea_url}
+      GITEA_REPO: {from_secret: gitea_repo}
+    commands:
+      - apk add --no-cache curl jq
+      - mkdir -p bin
+      - TAG=${DRONE_TAG}
+      - |
+        curl -sL -H "Authorization: token $GIT_TOKEN" \
+          "${GITEA_URL}/api/v1/repos/${GITEA_REPO}/releases/tags/${TAG}" \
+          | jq -r '.assets[] | .browser_download_url' \
+          | while read url; do
+              NAME=$(basename "$url")
+              curl -sL -H "Authorization: token $GIT_TOKEN" -o "bin/$NAME" "$url"
+              echo "Downloaded: $NAME"
+            done
+      - ls -lh bin/
+
+  - name: deploy-to-bbb
+    image: alpine
+    depends_on: [download-release-assets]
+    environment:
+      BEAGLE_HOST: {from_secret: beagle_host}
+      BEAGLE_USER: {from_secret: beagle_user}
+      BEAGLE_KEY:  {from_secret: beagle_ssh_key}
+    commands:
+      - apk add --no-cache openssh-client
+      - KEY=$(mktemp) && trap "rm -f $KEY" EXIT
+      - echo "$BEAGLE_KEY" | base64 -d > $KEY && chmod 600 $KEY
+      - SSH="ssh -i $KEY -o StrictHostKeyChecking=no $BEAGLE_USER@$BEAGLE_HOST"
+      - SCP="scp -i $KEY -o StrictHostKeyChecking=no"
+      - $SSH "mkdir -p ~/bin && rm -f ~/bin/*.so ~/bin/embedded ~/bin/bbcli"
+      - $SCP bin/embedded bin/libhardware.so bin/libhardware_rs.so bin/bbcli-linux-arm $BEAGLE_USER@$BEAGLE_HOST:~/bin/ 2>/dev/null || true
+      - $SSH "cp ~/bin/bbcli-linux-arm ~/bin/bbcli && chmod +x ~/bin/*"
+      - echo "Deploy abgeschlossen"
+
+  - name: test-hardware
+    image: python:3.12-alpine
+    depends_on: [deploy-to-bbb]
+    environment:
+      BEAGLE_HOST: {from_secret: beagle_host}
+    commands:
+      - pip install pytest requests pytest-json-report --break-system-packages -q
+      - pytest tests/hardware/test_hardware.py -v --timeout=60 --json-report --json-report-file=reports/hardware-tests.json || true
+
+  - name: test-api
+    image: python:3.12-alpine
+    depends_on: [deploy-to-bbb]
+    environment:
+      BEAGLE_HOST: {from_secret: beagle_host}
+    commands:
+      - pip install pytest requests pytest-json-report --break-system-packages -q
+      - pytest tests/api/test_api.py -v --timeout=30 --json-report --json-report-file=reports/api-tests.json || true
+
+  - name: test-uart-on-bbb
+    image: python:3.12-alpine
+    depends_on: [deploy-to-bbb]
+    environment:
+      BEAGLE_HOST: {from_secret: beagle_host}
+      BEAGLE_USER: {from_secret: beagle_user}
+      BBCLI_REMOTE: /home/debian/bin/bbcli
+    commands:
+      - pip install pytest --break-system-packages -q
+      - pytest tests/hardware/test_uart.py -v --timeout=30 --json-report --json-report-file=reports/uart-tests.json || true
+
+  - name: test-cli-on-bbb
+    image: alpine
+    depends_on: [deploy-to-bbb]
+    environment:
+      BEAGLE_HOST: {from_secret: beagle_host}
+      BEAGLE_USER: {from_secret: beagle_user}
+      BEAGLE_KEY:  {from_secret: beagle_ssh_key}
+    commands:
+      - apk add --no-cache openssh-client
+      - KEY=$(mktemp) && trap "rm -f $KEY" EXIT
+      - echo "$BEAGLE_KEY" | base64 -d > $KEY && chmod 600 $KEY
+      - SSH="ssh -i $KEY -o StrictHostKeyChecking=no $BEAGLE_USER@$BEAGLE_HOST"
+      - $SSH "~/bin/bbcli --version"
+      - $SSH "~/bin/bbcli system status"
+      - $SSH "~/bin/bbcli bme280 read"
+      - echo "CLI on-device Tests bestanden"
+
+  - name: test-cli-remote
+    image: python:3.12-alpine
+    depends_on: [deploy-to-bbb]
+    environment:
+      BEAGLE_HOST: {from_secret: beagle_host}
+      BBCLI: ./bin/bbcli-linux-amd64
+    commands:
+      - pip install pytest pytest-json-report --break-system-packages -q
+      - chmod +x bin/bbcli-linux-amd64
+      - pytest tests/cli/test_cli.py -v --timeout=30 --json-report --json-report-file=reports/cli-tests.json || true
+
+  - name: promote-to-stable
+    image: alpine
+    depends_on:
+      - test-hardware
+      - test-api
+      - test-uart-on-bbb
+      - test-cli-on-bbb
+      - test-cli-remote
+    environment:
+      GIT_TOKEN:  {from_secret: git_token}
+      GITEA_URL:  {from_secret: gitea_url}
+      GITEA_REPO: {from_secret: gitea_repo}
+    commands:
+      - apk add --no-cache curl jq git
+      - OLD_TAG=${DRONE_TAG}
+      - VERSION=${OLD_TAG%-toTestOnTarget}
+      - NEW_TAG=${VERSION}-stable
+      - echo "Promoting $OLD_TAG -> $NEW_TAG"
+      - |
+        curl -sf -X POST "${GITEA_URL}/api/v1/repos/${GITEA_REPO}/releases" \
+          -H "Authorization: token $GIT_TOKEN" \
+          -H "Content-Type: application/json" \
+          -d "{\"tag_name\":\"${NEW_TAG}\",\"name\":\"${VERSION}\",\"prerelease\":false}"
+      - echo "Promoted zu $NEW_TAG"
+
+---
+# ════════════════════════════════════════
+# PIPELINE 11 — Version Bump & Release
+# ════════════════════════════════════════
+kind: pipeline
+type: docker
+name: 11-version-bump
+
+trigger:
+  event: [promote]
+  target: [release-patch, release-minor, release-major]
+
+steps:
+  - name: bump-version
+    image: alpine/git
+    environment:
+      GIT_TOKEN: {from_secret: git_token}
+      GIT_USER:  {from_secret: git_user}
+      GITEA_URL: {from_secret: gitea_url}
+    commands:
+      - BUMP=${DRONE_DEPLOY_TO##release-}
+      - CURRENT=$(grep '^VERSION' Makefile | awk '{print $3}')
+      - IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT"
+      - |
+        case "$BUMP" in
+          major) MAJOR=$((MAJOR+1)); MINOR=0; PATCH=0 ;;
+          minor) MINOR=$((MINOR+1)); PATCH=0 ;;
+          patch) PATCH=$((PATCH+1)) ;;
+        esac
+      - NEW="${MAJOR}.${MINOR}.${PATCH}"
+      - sed -i "s/^VERSION = .*/VERSION = $NEW/" Makefile
+      - git config user.name "drone-ci[bot]"
+      - git config user.email "drone-ci[bot]@noreply"
+      - git add Makefile CHANGELOG.md
+      - |
+        git commit -m "chore(release): bump version to ${NEW} [skip ci]"
+      - git tag "v${NEW}"
+      - git push https://${GIT_USER}:${GIT_TOKEN}@${DRONE_GIT_HTTP_URL#https://} HEAD:main
+      - git push https://${GIT_USER}:${GIT_TOKEN}@${DRONE_GIT_HTTP_URL#https://} "v${NEW}"
+
+---
+# ════════════════════════════════════════
+# PIPELINE 12 — Changelog Update
+# ════════════════════════════════════════
+kind: pipeline
+type: docker
+name: 12-changelog
+
+trigger:
+  event: [push]
+  branch: [main]
+
+steps:
+  - name: update-changelog
+    image: alpine/git
+    environment:
+      GIT_TOKEN: {from_secret: git_token}
+      GIT_USER:  {from_secret: git_user}
+    commands:
+      - apk add --no-cache curl
+      - |
+        if command -v git-cliff >/dev/null 2>&1; then
+          git-cliff --unreleased --output unreleased.md
+          make prepend-changelog
+        else
+          echo "git-cliff nicht installiert — übersprungen"
+          exit 0
+        fi
+      - git config user.name "drone-ci[bot]"
+      - git config user.email "drone-ci[bot]@noreply"
+      - git add CHANGELOG.md
+      - |
+        if git diff --cached --quiet; then
+          echo "Keine Changelog-Änderungen"
+        else
+          git commit -m "docs(changelog): update unreleased section [skip ci]"
+          git push https://${GIT_USER}:${GIT_TOKEN}@${DRONE_GIT_HTTP_URL#https://} HEAD:main
+        fi
