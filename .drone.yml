@@ -830,7 +830,7 @@ steps:
         SHA8=$(echo "$DRONE_COMMIT_SHA" | head -c8)
         podman build -t bausteinsicht-base:latest \
           -f docker/bausteinsicht/repo/.devcontainer/Dockerfile \
-          docker/bausteinsicht/repo
+          docker/bausteinsicht/repo/.devcontainer
         podman build -t bausteinsicht:latest -t bausteinsicht:$SHA8 \
           --build-arg BASE_IMAGE=bausteinsicht-base:latest \
           -f docker/bausteinsicht/Dockerfile \
