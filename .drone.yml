@@ -355,7 +355,8 @@ steps:
       REGISTRY_USER:  {from_secret: registry_user}
       REGISTRY_TOKEN: {from_secret: registry_token}
     commands:
-      - echo "step ok"
+      - podman login -u $REGISTRY_USER -p $REGISTRY_TOKEN docker.io
+      - echo "login ok"
 
 ---
 # ════════════════════════════════════════
