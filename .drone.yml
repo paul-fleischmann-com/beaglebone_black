@@ -814,7 +814,7 @@ steps:
     image: alpine/git
     depends_on: []
     environment:
-      GIT_TOKEN: {from_secret: git_token}
+      GIT_TOKEN: {from_secret: Bau_token}
     commands:
       - git clone --depth 1 https://oauth2:$GIT_TOKEN@github.com/docToolchain/Bausteinsicht.git /drone/src/docker/bausteinsicht/repo
 
