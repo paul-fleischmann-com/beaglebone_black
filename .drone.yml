@@ -800,14 +800,13 @@ steps:
     environment:
       REGISTRY_USER:  {from_secret: registry_user}
       REGISTRY_TOKEN: {from_secret: registry_token}
-      REGISTRY_OWNER: {from_secret: registry_owner}
     commands:
       - |
         podman login ghcr.io -u "$REGISTRY_USER" -p "$REGISTRY_TOKEN"
         SHA8=$(echo "$DRONE_COMMIT_SHA" | head -c8)
         podman build -t generic-builder:latest -t generic-builder:$SHA8 -f docker/builder/Dockerfile docker/builder
-        podman push generic-builder:latest ghcr.io/$REGISTRY_OWNER/generic-builder:latest
-        podman push generic-builder:$SHA8 ghcr.io/$REGISTRY_OWNER/generic-builder:$SHA8
+        podman push generic-builder:latest ghcr.io/$REGISTRY_USER/generic-builder:latest
+        podman push generic-builder:$SHA8 ghcr.io/$REGISTRY_USER/generic-builder:$SHA8
         echo "generic-builder gepushed mit SHA $SHA8"
 
   - name: clone-bausteinsicht-repo
@@ -825,7 +824,6 @@ steps:
     environment:
       REGISTRY_USER:  {from_secret: registry_user}
       REGISTRY_TOKEN: {from_secret: registry_token}
-      REGISTRY_OWNER: {from_secret: registry_owner}
     commands:
       - |
         podman login ghcr.io -u "$REGISTRY_USER" -p "$REGISTRY_TOKEN"
@@ -837,8 +835,8 @@ steps:
           --build-arg BASE_IMAGE=bausteinsicht-base:latest \
           -f docker/bausteinsicht/Dockerfile \
           docker/bausteinsicht
-        podman push bausteinsicht:latest ghcr.io/$REGISTRY_OWNER/bausteinsicht:latest
-        podman push bausteinsicht:$SHA8 ghcr.io/$REGISTRY_OWNER/bausteinsicht:$SHA8
+        podman push bausteinsicht:latest ghcr.io/$REGISTRY_USER/bausteinsicht:latest
+        podman push bausteinsicht:$SHA8 ghcr.io/$REGISTRY_USER/bausteinsicht:$SHA8
         echo "bausteinsicht gepushed mit SHA $SHA8"
 
   - name: build-strictdoc
@@ -848,7 +846,6 @@ steps:
     environment:
       REGISTRY_USER:  {from_secret: registry_user}
       REGISTRY_TOKEN: {from_secret: registry_token}
-      REGISTRY_OWNER: {from_secret: registry_owner}
     commands:
       - |
         podman login ghcr.io -u "$REGISTRY_USER" -p "$REGISTRY_TOKEN"
@@ -856,8 +853,8 @@ steps:
         podman build -t strictdoc:latest -t strictdoc:$SHA8 \
           -f docker/strictdoc/Dockerfile \
           docker/strictdoc
-        podman push strictdoc:latest ghcr.io/$REGISTRY_OWNER/strictdoc:latest
-        podman push strictdoc:$SHA8 ghcr.io/$REGISTRY_OWNER/strictdoc:$SHA8
+        podman push strictdoc:latest ghcr.io/$REGISTRY_USER/strictdoc:latest
+        podman push strictdoc:$SHA8 ghcr.io/$REGISTRY_USER/strictdoc:$SHA8
         echo "strictdoc gepushed mit SHA $SHA8"
 
 ---
