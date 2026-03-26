@@ -7,7 +7,7 @@ type: docker
 name: 1-libraries
 
 trigger:
-  event: [push, pull_request]
+  event: [push, pull_request,custom]
   branch: [main]
   paths:
     - project/c-lib/**
@@ -84,7 +84,7 @@ type: docker
 name: 2-embedded-sw
 
 trigger:
-  event: [push, pull_request]
+  event: [push, pull_request,custom]
   branch: [main]
   paths:
     - project/go-api/**
@@ -183,7 +183,7 @@ type: docker
 name: 3-tools
 
 trigger:
-  event: [push, pull_request]
+  event: [push, pull_request,custom]
   branch: [main]
   paths:
     - tools/**
@@ -326,7 +326,7 @@ type: docker
 name: 4-webapp
 
 trigger:
-  event: [push, pull_request]
+  event: [push, pull_request,custom]
   branch: [main]
   paths:
     - tools/web-gui/**
@@ -504,7 +504,7 @@ type: docker
 name: 7-reports
 
 trigger:
-  event: [push, pull_request]
+  event: [push, pull_request,custom]
   branch: [main]
 
 steps:
@@ -711,7 +711,7 @@ type: docker
 name: 8-bausteinsicht
 
 trigger:
-  event: [push, pull_request]
+  event: [push, pull_request,custom]
   branch: [main]
   paths:
     - arch/model/**
@@ -785,7 +785,7 @@ type: docker
 name: 9-build-container
 
 trigger:
-  event: [push, pull_request]
+  event: [push, pull_request,custom]
   branch: [main]
   paths:
     - docker/builder/**
@@ -1038,7 +1038,7 @@ type: docker
 name: 12-changelog
 
 trigger:
-  event: [push, pull_request]
+  event: [push, pull_request,custom]
   branch: [main]
 
 steps:
