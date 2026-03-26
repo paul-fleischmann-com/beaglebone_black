@@ -19,11 +19,8 @@ image_pull_secrets:
 steps:
   - name: build-libraries
     image: ghcr.io/paulefl/generic-builder:latest
-    environment:
-      SRC: /drone/src
-      OUTPUT: /drone/src/bin
     commands:
-      - bash /drone/src/scripts/build-arm.sh
+      - SRC=/drone/src OUTPUT=/drone/src/bin bash /drone/src/scripts/build-arm.sh
 
   - name: test-c-lib
     image: debian:bookworm
@@ -98,11 +95,8 @@ steps:
   - name: build-go-api
     image: ghcr.io/paulefl/generic-builder:latest
     depends_on: [test-hal-unit]
-    environment:
-      SRC: /drone/src
-      OUTPUT: /drone/src/bin
     commands:
-      - bash /drone/src/scripts/build-arm.sh
+      - SRC=/drone/src OUTPUT=/drone/src/bin bash /drone/src/scripts/build-arm.sh
 
   - name: deploy-beaglebone
     image: alpine
