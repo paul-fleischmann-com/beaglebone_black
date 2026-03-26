@@ -42,6 +42,7 @@ reports/output/
 tooling/
 arch/.cache/
 docs/output/
+build/*
 
 # ── IDE ──────────────────────────────────
 .vscode/

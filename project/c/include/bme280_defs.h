@@ -108,7 +108,7 @@
  * BME280_INTF_RET_TYPE is the read/write interface return type which can be overwritten by the build system.
  */
 #ifndef BME280_INTF_RET_TYPE
-#define BME280_INTF_RET_TYPE                      int8_t
+typedef int8_t BME280_INTF_RET_TYPE;
 #endif
 
 /*!

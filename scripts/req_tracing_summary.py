@@ -9,19 +9,22 @@ used directly; otherwise strictdoc is invoked automatically.
 import argparse
 import json
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
+
+STRICTDOC = shutil.which("strictdoc") or "strictdoc"
 
 
 def export_json(input_path=".", output_dir=None):
     """Run strictdoc export --formats json and return path to index.json."""
     if output_dir is None:
         output_dir = tempfile.mkdtemp(prefix="strictdoc_json_")
-    result = subprocess.run(
-        ["strictdoc", "export", input_path, "--formats", "json",
+    result = subprocess.run(  # nosec B603 — STRICTDOC is a resolved constant; shell=False prevents injection
+        [STRICTDOC, "export", input_path, "--formats", "json",
          "--output-dir", output_dir, "--no-parallelization"],
-        capture_output=True, text=True,
+        capture_output=True, text=True, timeout=300,
     )
     if result.returncode != 0:
         print(result.stderr, file=sys.stderr)

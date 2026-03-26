@@ -28,11 +28,12 @@ usage() {
     echo "  source-dir      Verzeichnis mit *.gcda/*.gcno Dateien" >&2
     echo "  output.info     Zieldatei für lcov-Report" >&2
     echo "  filter-pattern  Exclude-Muster (Standard: '/usr/*')" >&2
-    exit 1
+    return 1
 }
 
-if [ $# -lt 2 ]; then
+if [[ $# -lt 2 ]]; then
     usage
+    exit 1
 fi
 
 SOURCE_DIR="$1"
@@ -40,7 +41,7 @@ OUTPUT_FILE="$2"
 shift 2
 
 # Standard-Filter wenn keine angegeben
-if [ $# -eq 0 ]; then
+if [[ $# -eq 0 ]]; then
     set -- '/usr/*'
 fi
 
@@ -51,7 +52,7 @@ if ! command -v lcov >/dev/null 2>&1; then
     exit 2
 fi
 
-if [ ! -d "$SOURCE_DIR" ]; then
+if [[ ! -d "$SOURCE_DIR" ]]; then
     echo "Fehler: Quell-Verzeichnis '$SOURCE_DIR' nicht gefunden." >&2
     exit 3
 fi
@@ -59,7 +60,7 @@ fi
 # ── Coverage erfassen ─────────────────────────────────────────────────────────
 
 OUTPUT_DIR="$(dirname "$OUTPUT_FILE")"
-if [ -n "$OUTPUT_DIR" ] && [ "$OUTPUT_DIR" != "." ]; then
+if [[ -n "$OUTPUT_DIR" && "$OUTPUT_DIR" != "." ]]; then
     mkdir -p "$OUTPUT_DIR"
 fi
 

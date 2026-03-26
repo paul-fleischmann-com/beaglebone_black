@@ -3,6 +3,7 @@ import json
 import os
 import sys
 
+import defusedxml.ElementTree as ET
 import pytest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
@@ -15,8 +16,10 @@ import junit_to_sonar_generic as jts
 def test_shellcheck_to_sarif_empty():
     """Leere Findings → valides SARIF mit 0 Results."""
     sarif = sc.convert([])
-    assert sarif["version"] == "2.1.0"
-    assert sarif["runs"][0]["results"] == []
+    if sarif["version"] != "2.1.0":
+        pytest.fail(f"Expected SARIF version '2.1.0', got {sarif['version']!r}")
+    if sarif["runs"][0]["results"] != []:
+        pytest.fail("Expected empty results list for empty input")
 
 
 def test_shellcheck_to_sarif_finding():
@@ -33,14 +36,17 @@ def test_shellcheck_to_sarif_finding():
     }]
     sarif = sc.convert(findings)
     results = sarif["runs"][0]["results"]
-    assert len(results) == 1
-    assert results[0]["ruleId"] == "SC2086"
-    assert "Double quote" in results[0]["message"]["text"]
+    if len(results) != 1:
+        pytest.fail(f"Expected 1 result, got {len(results)}")
+    if results[0]["ruleId"] != "SC2086":
+        pytest.fail(f"Expected ruleId 'SC2086', got {results[0]['ruleId']!r}")
+    if "Double quote" not in results[0]["message"]["text"]:
+        pytest.fail("Expected 'Double quote' in result message text")
 
 
 # ── TOOL-SAR-001: junit_to_sonar_generic ────────────────────────────────────
 
-JUNIT_PASS = """<?xml version="1.0"?>
+JUNIT_ALL_GREEN = """<?xml version="1.0"?>
 <testsuites>
   <testsuite name="pkg/hal" tests="1" failures="0">
     <testcase classname="pkg/hal" name="TestFoo" time="0.01"/>
@@ -48,7 +54,7 @@ JUNIT_PASS = """<?xml version="1.0"?>
 </testsuites>
 """
 
-JUNIT_FAIL = """<?xml version="1.0"?>
+JUNIT_WITH_FAILURE = """<?xml version="1.0"?>
 <testsuites>
   <testsuite name="pkg/hal" tests="1" failures="1">
     <testcase classname="pkg/hal" name="TestBar" time="0.02">
@@ -61,26 +67,30 @@ JUNIT_FAIL = """<?xml version="1.0"?>
 
 def test_junit_to_sonar_empty(tmp_path):
     """Alle Tests bestanden → 0 Failures in Sonar Generic XML."""
-    import xml.etree.ElementTree as ET
+
     in_file  = tmp_path / "junit.xml"
     out_file = tmp_path / "sonar.xml"
-    in_file.write_text(JUNIT_PASS)
+    in_file.write_text(JUNIT_ALL_GREEN)
     jts.convert(str(in_file), str(out_file))
     tree = ET.parse(str(out_file))
     root = tree.getroot()
     failures = root.findall(".//testCase[@status='ERROR']") + root.findall(".//testCase[@status='FAILED']")
-    assert len(failures) == 0
+    if len(failures) != 0:
+        pytest.fail(f"Expected 0 failures for passing tests, got {len(failures)}")
 
 
 def test_junit_to_sonar_with_failure(tmp_path):
     """Fehlgeschlagener Test erscheint als <failure> Child im Sonar Generic XML."""
-    import xml.etree.ElementTree as ET
+
     in_file  = tmp_path / "junit.xml"
     out_file = tmp_path / "sonar.xml"
-    in_file.write_text(JUNIT_FAIL)
+    in_file.write_text(JUNIT_WITH_FAILURE)
     jts.convert(str(in_file), str(out_file))
     tree = ET.parse(str(out_file))
     root = tree.getroot()
     failures = root.findall(".//failure")
-    assert len(failures) >= 1
-    assert "assert failed" in (failures[0].get("message", "") or failures[0].text or "")
+    if len(failures) < 1:
+        pytest.fail("Expected at least one <failure> element in Sonar Generic XML")
+    msg = failures[0].get("message", "") or failures[0].text or ""
+    if "assert failed" not in msg:
+        pytest.fail(f"Expected 'assert failed' in failure message, got {msg!r}")

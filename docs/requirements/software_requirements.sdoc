@@ -254,3 +254,228 @@ RELATIONS:
   VALUE: SWR-002
 - TYPE: File
   VALUE: tests/api/test_api.py
+
+[SW_REQUIREMENT]
+UID: API-001
+TITLE: HealthHandler Response-Format
+STATEMENT: GET /api/v1/health muss HTTP 200 zurückgeben und ein JSON-Objekt mit den Feldern status, backend, driver und arch enthalten.
+STATUS: Active
+PRIORITY: High
+RELATIONS:
+- TYPE: Parent
+  VALUE: SWR-001
+- TYPE: File
+  VALUE: project/go-api/pkg/api/handlers.go
+- TYPE: File
+  VALUE: project/go-api/pkg/api/handlers_test.go
+
+[TEST_CASE]
+UID: TC-009
+TITLE: HealthHandler gibt 200 mit Pflichtfeldern zurück
+STATEMENT: Verifiziert, dass GET /api/v1/health HTTP 200 liefert und das JSON-Objekt die Felder status, backend, driver und arch enthält.
+TEST_TYPE: Unit
+RELATIONS:
+- TYPE: Parent
+  VALUE: API-001
+- TYPE: File
+  VALUE: project/go-api/pkg/api/handlers_test.go
+
+[SW_REQUIREMENT]
+UID: API-002
+TITLE: BME280Handler Happy Path
+STATEMENT: GET /api/v1/bme280 muss HTTP 200 zurückgeben und ein JSON-Objekt mit den Messwerten temperature, humidity und pressure enthalten, wenn der Treiber erfolgreich liest.
+STATUS: Active
+PRIORITY: High
+RELATIONS:
+- TYPE: Parent
+  VALUE: SWR-001
+- TYPE: File
+  VALUE: project/go-api/pkg/api/handlers.go
+- TYPE: File
+  VALUE: project/go-api/pkg/api/handlers_test.go
+
+[TEST_CASE]
+UID: TC-010
+TITLE: BME280Handler gibt 200 mit Sensordaten zurück
+STATEMENT: Verifiziert, dass GET /api/v1/bme280 HTTP 200 liefert und das JSON die Felder temperature, humidity, pressure enthält.
+TEST_TYPE: Unit
+RELATIONS:
+- TYPE: Parent
+  VALUE: API-002
+- TYPE: File
+  VALUE: project/go-api/pkg/api/handlers_test.go
+
+[SW_REQUIREMENT]
+UID: API-003
+TITLE: BME280Handler Fehlerfall
+STATEMENT: GET /api/v1/bme280 muss HTTP 500 zurückgeben, wenn der Hardware-Treiber einen Fehler meldet.
+STATUS: Active
+PRIORITY: High
+RELATIONS:
+- TYPE: Parent
+  VALUE: SWR-001
+- TYPE: File
+  VALUE: project/go-api/pkg/api/handlers.go
+- TYPE: File
+  VALUE: project/go-api/pkg/api/handlers_test.go
+
+[TEST_CASE]
+UID: TC-011
+TITLE: BME280Handler gibt 500 bei Treiberfehler zurück
+STATEMENT: Verifiziert, dass GET /api/v1/bme280 HTTP 500 liefert, wenn BME280Read() einen Fehler zurückgibt.
+TEST_TYPE: Unit
+RELATIONS:
+- TYPE: Parent
+  VALUE: API-003
+- TYPE: File
+  VALUE: project/go-api/pkg/api/handlers_test.go
+
+[SW_REQUIREMENT]
+UID: API-004
+TITLE: GPIOReadHandler Happy Path
+STATEMENT: GET /api/v1/gpio/{pin} muss HTTP 200 zurückgeben und ein JSON-Objekt mit den Feldern pin, value und backend enthalten.
+STATUS: Active
+PRIORITY: Medium
+RELATIONS:
+- TYPE: Parent
+  VALUE: SWR-001
+- TYPE: File
+  VALUE: project/go-api/pkg/api/handlers.go
+- TYPE: File
+  VALUE: project/go-api/pkg/api/handlers_test.go
+
+[TEST_CASE]
+UID: TC-012
+TITLE: GPIOReadHandler gibt 200 mit GPIO-Daten zurück
+STATEMENT: Verifiziert, dass GET /api/v1/gpio/{pin} HTTP 200 liefert und das JSON die Felder pin, value und backend enthält.
+TEST_TYPE: Unit
+RELATIONS:
+- TYPE: Parent
+  VALUE: API-004
+- TYPE: File
+  VALUE: project/go-api/pkg/api/handlers_test.go
+
+[SW_REQUIREMENT]
+UID: API-005
+TITLE: GPIOAllHandler Response-Format
+STATEMENT: GET /api/v1/gpio muss HTTP 200 zurückgeben und ein JSON-Objekt mit dem Feld pins als Array liefern.
+STATUS: Active
+PRIORITY: Medium
+RELATIONS:
+- TYPE: Parent
+  VALUE: SWR-001
+- TYPE: File
+  VALUE: project/go-api/pkg/api/handlers.go
+- TYPE: File
+  VALUE: project/go-api/pkg/api/handlers_test.go
+
+[TEST_CASE]
+UID: TC-013
+TITLE: GPIOAllHandler gibt 200 mit pins-Array zurück
+STATEMENT: Verifiziert, dass GET /api/v1/gpio HTTP 200 liefert und das JSON das Feld pins als Array enthält.
+TEST_TYPE: Unit
+RELATIONS:
+- TYPE: Parent
+  VALUE: API-005
+- TYPE: File
+  VALUE: project/go-api/pkg/api/handlers_test.go
+
+[SW_REQUIREMENT]
+UID: API-006
+TITLE: UARTSendHandler Happy Path
+STATEMENT: POST /api/v1/uart/send mit gültigem JSON muss HTTP 200 zurückgeben und ein JSON-Objekt mit dem Feld bytes_sent enthalten, das der Länge der gesendeten Daten entspricht.
+STATUS: Active
+PRIORITY: Medium
+RELATIONS:
+- TYPE: Parent
+  VALUE: SWR-001
+- TYPE: File
+  VALUE: project/go-api/pkg/api/handlers.go
+- TYPE: File
+  VALUE: project/go-api/pkg/api/handlers_test.go
+
+[TEST_CASE]
+UID: TC-014
+TITLE: UARTSendHandler gibt 200 mit bytes_sent zurück
+STATEMENT: Verifiziert, dass POST /api/v1/uart/send HTTP 200 liefert und bytes_sent der Länge der übertragenen Daten entspricht.
+TEST_TYPE: Unit
+RELATIONS:
+- TYPE: Parent
+  VALUE: API-006
+- TYPE: File
+  VALUE: project/go-api/pkg/api/handlers_test.go
+
+[SW_REQUIREMENT]
+UID: API-007
+TITLE: UARTReceiveHandler Happy Path
+STATEMENT: GET /api/v1/uart/receive muss HTTP 200 zurückgeben und ein JSON-Objekt mit UART-Empfangsdaten liefern.
+STATUS: Active
+PRIORITY: Medium
+RELATIONS:
+- TYPE: Parent
+  VALUE: SWR-001
+- TYPE: File
+  VALUE: project/go-api/pkg/api/handlers.go
+- TYPE: File
+  VALUE: project/go-api/pkg/api/handlers_test.go
+
+[TEST_CASE]
+UID: TC-015
+TITLE: UARTReceiveHandler gibt 200 zurück
+STATEMENT: Verifiziert, dass GET /api/v1/uart/receive HTTP 200 liefert.
+TEST_TYPE: Unit
+RELATIONS:
+- TYPE: Parent
+  VALUE: API-007
+- TYPE: File
+  VALUE: project/go-api/pkg/api/handlers_test.go
+
+[SW_REQUIREMENT]
+UID: API-008
+TITLE: SPITransferHandler Happy Path
+STATEMENT: POST /api/v1/spi/transfer mit gültigem JSON muss HTTP 200 zurückgeben und ein JSON-Objekt mit den empfangenen SPI-Daten (rx_buf) liefern.
+STATUS: Active
+PRIORITY: Medium
+RELATIONS:
+- TYPE: Parent
+  VALUE: SWR-001
+- TYPE: File
+  VALUE: project/go-api/pkg/api/handlers.go
+- TYPE: File
+  VALUE: project/go-api/pkg/api/handlers_test.go
+
+[TEST_CASE]
+UID: TC-016
+TITLE: SPITransferHandler gibt 200 mit RX-Daten zurück
+STATEMENT: Verifiziert, dass POST /api/v1/spi/transfer HTTP 200 liefert und rx_buf die gespiegelten TX-Daten enthält (Mock-Loopback).
+TEST_TYPE: Unit
+RELATIONS:
+- TYPE: Parent
+  VALUE: API-008
+- TYPE: File
+  VALUE: project/go-api/pkg/api/handlers_test.go
+
+[SW_REQUIREMENT]
+UID: API-009
+TITLE: Content-Type JSON Header
+STATEMENT: Alle GET- und POST-Handler der REST API müssen den Response-Header Content-Type auf application/json setzen.
+STATUS: Active
+PRIORITY: High
+RELATIONS:
+- TYPE: Parent
+  VALUE: SWR-001
+- TYPE: File
+  VALUE: project/go-api/pkg/api/handlers.go
+- TYPE: File
+  VALUE: project/go-api/pkg/api/handlers_test.go
+
+[TEST_CASE]
+UID: TC-017
+TITLE: Alle Handler setzen Content-Type application/json
+STATEMENT: Verifiziert, dass HealthHandler, BME280Handler, GPIOReadHandler, GPIOAllHandler, GPIOWriteHandler, UARTSendHandler, UARTReceiveHandler und SPITransferHandler den Header Content-Type: application/json setzen.
+TEST_TYPE: Unit
+RELATIONS:
+- TYPE: Parent
+  VALUE: API-009
+- TYPE: File
+  VALUE: project/go-api/pkg/api/handlers_test.go

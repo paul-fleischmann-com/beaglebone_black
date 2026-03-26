@@ -842,30 +842,29 @@ def generate_pdf():
     C_GREEN  = colors.HexColor("#22c55e")
     C_RED    = colors.HexColor("#ef4444")
     C_YELLOW = colors.HexColor("#f59e0b")
-    C_PURPLE = colors.HexColor("#8b5cf6")
     C_GRAY   = colors.HexColor("#64748b")
     C_LIGHT  = colors.HexColor("#94a3b8")
-    C_WHITE  = colors.white
+
 
     styles = getSampleStyleSheet()
-    def S(name, **kw):
+    def Styles(name, **kw):
         return ParagraphStyle(name, parent=styles["Normal"], **kw)
 
-    sTitle  = S("T", fontSize=22, textColor=C_BLUE,
+    styleTitle  = Styles("T", fontSize=22, textColor=C_BLUE,
                 spaceAfter=6, fontName="Helvetica-Bold",
                 alignment=TA_CENTER)
-    sSub    = S("S", fontSize=10, textColor=C_GRAY,
+    sSub    = Styles("S", fontSize=10, textColor=C_GRAY,
                 spaceAfter=4, alignment=TA_CENTER)
-    sH1     = S("H1", fontSize=14, textColor=C_BLUE,
+    sH1     = Styles("H1", fontSize=14, textColor=C_BLUE,
                 spaceBefore=16, spaceAfter=8,
                 fontName="Helvetica-Bold")
-    sH2     = S("H2", fontSize=11, textColor=C_LIGHT,
+    sH2     = Styles("H2", fontSize=11, textColor=C_LIGHT,
                 spaceBefore=10, spaceAfter=6,
                 fontName="Helvetica-Bold")
-    sBody   = S("B", fontSize=9, textColor=C_LIGHT,
+    sBody   = Styles("B", fontSize=9, textColor=C_LIGHT,
                 spaceAfter=4, leading=14)
-    sSmall  = S("SM", fontSize=8, textColor=C_GRAY)
-    sCode   = S("C", fontSize=8, textColor=C_GREEN,
+    sSmall  = Styles("SM", fontSize=8, textColor=C_GRAY)
+    sCode   = Styles("C", fontSize=8, textColor=C_GREEN,
                 fontName="Courier", backColor=C_CARD)
 
     def TS(*cmds):
@@ -890,7 +889,7 @@ def generate_pdf():
     # ── Titelseite ──
     story += [
         Spacer(1, 3*cm),
-        Paragraph(PROJEKT, sTitle),
+        Paragraph(PROJEKT, styleTitle),
         Paragraph("Test &amp; Requirements Report", sSub),
         Paragraph(f"Version {VERSION}  |  {DATUM}", sSub),
         Spacer(1, 1*cm),

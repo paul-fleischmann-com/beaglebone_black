@@ -23,7 +23,7 @@ PDF_FILES=$(find  "$OUTPUT_DIR" -name "*.pdf"  -not -path "*/.cache/*" 2>/dev/nu
       echo "| Datei | Größe |"
       echo "|-------|-------|"
       while IFS= read -r f; do
-        rel="${f#$OUTPUT_DIR/}"
+        rel="${f#"$OUTPUT_DIR/"}"
         size=$(du -sh "$f" 2>/dev/null | cut -f1 || echo "?")
         echo "| \`$rel\` | $size |"
       done <<< "$HTML_FILES"
@@ -35,7 +35,7 @@ PDF_FILES=$(find  "$OUTPUT_DIR" -name "*.pdf"  -not -path "*/.cache/*" 2>/dev/nu
       echo "| Datei | Größe |"
       echo "|-------|-------|"
       while IFS= read -r f; do
-        rel="${f#$OUTPUT_DIR/}"
+        rel="${f#"$OUTPUT_DIR/"}"
         size=$(du -sh "$f" 2>/dev/null | cut -f1 || echo "?")
         echo "| \`$rel\` | $size |"
       done <<< "$PDF_FILES"
