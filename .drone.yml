@@ -1,3 +1,85 @@
+# ════════════════════════════════════════
+# PIPELINE 0 — DISPATCHER (JOB CONTROL LAYER)
+# ════════════════════════════════════════
+kind: pipeline
+type: docker
+name: 0-dispatcher
+
+trigger:
+  event:
+    - custom
+
+steps:
+  - name: route-job
+    image: alpine
+    environment:
+      PIPELINE: ${PIPELINE}
+      IMAGE_TAG: ${IMAGE_TAG}
+      TARGET: ${TARGET}
+      MODE: ${MODE}
+      BUILD_TYPE: ${BUILD_TYPE}
+    commands:
+      - echo "===================================="
+      - echo "DRONE DISPATCHER ACTIVE"
+      - echo "PIPELINE=$PIPELINE"
+      - echo "TARGET=$TARGET"
+      - echo "MODE=$MODE"
+      - echo "BUILD_TYPE=$BUILD_TYPE"
+      - echo "===================================="
+
+      # ═══════════════════════════════
+      # 9 - BUILD CONTAINER PIPELINE
+      # ═══════════════════════════════
+      - |
+        if [ "$PIPELINE" = "9-build-container" ]; then
+          echo "→ Triggering: 9-build-container logic"
+
+          # nutzt existierenden Code aus Pipeline 9
+          echo "NOTE: run via existing pipeline trigger pattern"
+          exit 0
+
+      # ═══════════════════════════════
+      # LIBRARIES ONLY
+      # ═══════════════════════════════
+      elif [ "$PIPELINE" = "1-libraries" ]; then
+          echo "→ Triggering library validation"
+          exit 0
+
+      # ═══════════════════════════════
+      # EMBEDDED SW
+      # ═══════════════════════════════
+      elif [ "$PIPELINE" = "2-embedded-sw" ]; then
+          echo "→ Triggering embedded system flow"
+          exit 0
+
+      # ═══════════════════════════════
+      # TOOLS BUILD
+      # ═══════════════════════════════
+      elif [ "$PIPELINE" = "3-tools" ]; then
+          echo "→ Triggering tools pipeline"
+          exit 0
+
+      # ═══════════════════════════════
+      # WEBAPP
+      # ═══════════════════════════════
+      elif [ "$PIPELINE" = "4-webapp" ]; then
+          echo "→ Triggering webapp pipeline"
+          exit 0
+
+      # ═══════════════════════════════
+      # RELEASE FLOW
+      # ═══════════════════════════════
+      elif [ "$PIPELINE" = "release" ]; then
+          echo "→ Triggering release flow"
+          exit 0
+
+      # ═══════════════════════════════
+      # UNKNOWN
+      # ═══════════════════════════════
+      else
+          echo "ERROR: Unknown PIPELINE=$PIPELINE"
+          exit 1
+      fi
 ---
 # ════════════════════════════════════════
 # PIPELINE 1 — C & Rust Libraries
@@ -786,7 +868,7 @@ name: 9-build-container
 
 trigger:
   event: [push, pull_request,custom]
-  branch: [main,develop]
+  branch: [main,container_build]
   paths:
     - docker/builder/**
     - docker/bausteinsicht/**
