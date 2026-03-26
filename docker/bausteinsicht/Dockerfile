@@ -1,30 +1,26 @@
 # =============================================
 # Bausteinsicht CI Container
-# Pre-installed: bausteinsicht, DrawIO, xvfb
+# Base: Bausteinsicht .devcontainer/Dockerfile
+# Extra: DrawIO (headless export), xvfb, dbus
 # =============================================
-FROM debian:bookworm
+# NOTE: This Dockerfile is NOT used directly.
+# Pipeline 9 clones the Bausteinsicht repo and
+# builds from .devcontainer/Dockerfile as base,
+# then extends it with this file.
+# =============================================
+
+ARG BASE_IMAGE=bausteinsicht-base:latest
+FROM ${BASE_IMAGE}
 
 ARG DRAWIO_VERSION=26.0.4
 
-# System dependencies
+# Add DrawIO + headless display dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl wget jq git ca-certificates \
-    xvfb libgbm1 dbus \
-    libx11-xcb1 libxcb-dri3-0 \
-    && rm -rf /var/lib/apt/lists/*
-
-# Pre-install DrawIO (pinned version — update ARG to upgrade)
-RUN wget -q "https://github.com/jgraph/drawio-desktop/releases/download/v${DRAWIO_VERSION}/drawio-amd64-${DRAWIO_VERSION}.deb" \
-    && apt-get update && apt-get install -y ./drawio-amd64-${DRAWIO_VERSION}.deb \
+    wget xvfb libgbm1 dbus libx11-xcb1 libxcb-dri3-0 \
+    && wget -q "https://github.com/jgraph/drawio-desktop/releases/download/v${DRAWIO_VERSION}/drawio-amd64-${DRAWIO_VERSION}.deb" \
+    && apt-get install -y ./drawio-amd64-${DRAWIO_VERSION}.deb \
     && rm -f drawio-amd64-${DRAWIO_VERSION}.deb \
     && rm -rf /var/lib/apt/lists/*
-
-# Install bausteinsicht from GitHub releases
-RUN BAUSTEINSICHT_VERSION=$(curl -sSf https://api.github.com/repos/docToolchain/Bausteinsicht/releases/latest \
-        | jq -r '.tag_name') \
-    && curl -sSfL "https://github.com/docToolchain/Bausteinsicht/releases/download/${BAUSTEINSICHT_VERSION}/bausteinsicht-linux-amd64.tar.gz" \
-        | tar -xz -C /usr/local/bin \
-    && chmod +x /usr/local/bin/bausteinsicht
 
 WORKDIR /workspace
 ENTRYPOINT ["/bin/bash"]

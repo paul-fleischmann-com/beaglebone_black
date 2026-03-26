@@ -703,10 +703,18 @@ steps:
         podman push generic-builder:$SHA8 ghcr.io/$REGISTRY_OWNER/generic-builder:$SHA8
         echo "generic-builder gepushed mit SHA $SHA8"
 
+  - name: clone-bausteinsicht-repo
+    image: alpine/git
+    depends_on: []
+    environment:
+      GIT_TOKEN: {from_secret: git_token}
+    commands:
+      - git clone --depth 1 https://oauth2:$GIT_TOKEN@github.com/docToolchain/Bausteinsicht.git /drone/src/docker/bausteinsicht/repo
+
   - name: build-bausteinsicht
     image: quay.io/podman/stable
     privileged: true
-    depends_on: []
+    depends_on: [clone-bausteinsicht-repo]
     environment:
       REGISTRY_USER:  {from_secret: registry_user}
       REGISTRY_TOKEN: {from_secret: registry_token}
@@ -715,7 +723,13 @@ steps:
       - |
         echo "$REGISTRY_TOKEN" | podman login -u $REGISTRY_USER --password-stdin ghcr.io
         SHA8=$(echo "$DRONE_COMMIT_SHA" | head -c8)
-        podman build -t bausteinsicht:latest -t bausteinsicht:$SHA8 -f docker/bausteinsicht/Dockerfile docker/bausteinsicht
+        podman build -t bausteinsicht-base:latest \
+          -f docker/bausteinsicht/repo/.devcontainer/Dockerfile \
+          docker/bausteinsicht/repo
+        podman build -t bausteinsicht:latest -t bausteinsicht:$SHA8 \
+          --build-arg BASE_IMAGE=bausteinsicht-base:latest \
+          -f docker/bausteinsicht/Dockerfile \
+          docker/bausteinsicht
         podman push bausteinsicht:latest ghcr.io/$REGISTRY_OWNER/bausteinsicht:latest
         podman push bausteinsicht:$SHA8 ghcr.io/$REGISTRY_OWNER/bausteinsicht:$SHA8
         echo "bausteinsicht gepushed mit SHA $SHA8"
