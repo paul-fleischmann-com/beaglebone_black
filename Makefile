@@ -28,6 +28,10 @@ cli:
 	cd tools/cli && GOOS=linux GOARCH=amd64 CGO_ENABLED=0 \
 	  go build -o ../../bin/bbcli-linux-amd64 .
 
+cli-arm:
+	cd tools/cli && GOOS=linux GOARCH=arm GOARM=7 CGO_ENABLED=0 \
+	  go build -o ../../bin/bbcli-linux-arm .
+
 test:
 	./scripts/test.sh
 
@@ -54,6 +58,7 @@ test-report:
 test-report-open:
 	./scripts/report.sh --open
 
+# CLI running on BBB : 	scp bin/bbcli-linux-arm debian@192.168.7.2:/app/bbcli
 deploy:
 	scp bin/embedded project/go-api/libs/libhardware.so project/go-api/libs/libhardware_rs.so \
 	  debian@192.168.7.2:/app/
@@ -115,4 +120,4 @@ clean:
 version:
 	@echo "$(VERSION)"
 
-.PHONY: all c-lib rust-lib go-api cli test test-ci test-cover lint test-python test-report test-report-open deploy clean req-tracing version adoc-build adoc-summary build-arm checksums release-candidate prepend-changelog install-java install-asciidoctor setup-env
+.PHONY: all c-lib rust-lib go-api cli cli-arm test test-ci test-cover lint test-python test-report test-report-open deploy clean req-tracing version adoc-build adoc-summary build-arm checksums release-candidate prepend-changelog install-java install-asciidoctor setup-env

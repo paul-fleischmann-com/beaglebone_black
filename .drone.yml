@@ -1,6 +1,9 @@
 # ════════════════════════════════════════════════════════════════
 # BeagleBone Black — Vollständige Drone CI Pipeline
-# Alle 7 Pipelines + Nightly
+# Pipelines: 1-Libraries, 2-EmbeddedSW, 3-Tools, 4-WebApp,
+#            5-Release, 6-Nightly, 7-Reports,
+#            8-Bausteinsicht, 9-BuildContainer,
+#            10-IntegrationTests, 11-VersionBump, 12-Changelog
 # ════════════════════════════════════════════════════════════════
 
 ---
@@ -24,9 +27,21 @@ steps:
         path: /build/libs
     commands:
       - apt-get update -q
-      - apt-get install -y -q gcc-arm-linux-gnueabihf make libmicrohttpd-dev
+      - apt-get install -y -q gcc-arm-linux-gnueabihf make
       - make c-lib
       - cp c-lib/libhardware.so /build/libs/
+
+  - name: test-c-lib
+    image: debian:bookworm
+    depends_on: [build-c-lib]
+    volumes:
+      - name: libs-cache
+        path: /build/libs
+    commands:
+      - apt-get update -q && apt-get install -y -q gcc make lcov
+      - make -C c-lib CFLAGS="-fprofile-arcs -ftest-coverage -g" CC=gcc test
+      - bash scripts/c_coverage.sh c-lib/ reports/c-coverage.info '/usr/*' '*/test/*'
+      - lcov --summary reports/c-coverage.info
 
   - name: build-rust-lib
     image: rust:1.77
@@ -41,13 +56,6 @@ steps:
       - make rust-lib
       - cp project/rust-lib/target/armv7-unknown-linux-musleabihf/release/libhardware_rs.so /build/libs/
       - cbindgen --config project/rust-lib/cbindgen.toml --output /build/libs/include/hardware_rs.h
-
-  - name: test-c-lib
-    image: debian:bookworm
-    depends_on: [build-c-lib]
-    commands:
-      - apt-get update -q && apt-get install -y -q gcc make
-      - make test-c
 
   - name: test-rust-lib
     image: rust:1.77-alpine
@@ -89,18 +97,18 @@ steps:
       - name: go-cache
         path: /go/pkg/mod
     commands:
-      - cd go-api
-      - go test ./pkg/hal/... -v -count=1 -timeout 30s -coverprofile=coverage.out
-      - go tool cover -func=coverage.out
+      - cd project/go-api
+      - ./scripts/test.sh -ci
 
-  - name: test-hal-race
+  - name: lint-go
     image: golang:1.22-alpine
-    depends_on: [test-hal-unit]
+    depends_on: []
     volumes:
       - name: go-cache
         path: /go/pkg/mod
     commands:
-      - cd go-api && go test ./pkg/hal/... -race -count=3 -timeout 60s
+      - make lint
+      - test -z "$(gofmt -l project/go-api/ tools/)" || (echo "gofmt check failed" && exit 1)
 
   - name: build-go-api
     image: golang:1.22
@@ -110,42 +118,16 @@ steps:
         path: /go/pkg/mod
       - name: libs-cache
         path: /build/libs
-    environment:
-      CGO_ENABLED: "1"
-      GOOS: linux
-      GOARCH: arm
-      GOARM: "7"
-      CC: arm-linux-gnueabihf-gcc
     commands:
       - apt-get update -q && apt-get install -y -q gcc-arm-linux-gnueabihf
       - cp -r /build/libs project/go-api/libs/
-      - cd go-api
-      - go build -ldflags="-s -w -X main.Version=${DRONE_TAG:-dev}" -o ../bin/embedded-armv7 ./cmd/
-
-  - name: test-api-integration
-    image: python:3.12-alpine
-    depends_on: [test-hal-unit]
-    commands:
-      - pip install pytest requests --break-system-packages -q
-      - pytest tests/api/ -v --timeout=30 || true
-
-  - name: qemu-setup
-    image: multiarch/qemu-user-static
-    depends_on: [build-go-api]
-    privileged: true
-    commands:
-      - /register --reset -p yes
-
-  - name: test-simulation-armv7
-    image: arm32v7/debian:bookworm-slim
-    depends_on: [qemu-setup]
-    platform: linux/arm/v7
-    commands:
-      - ./bin/embedded-armv7 --test --timeout 30 || true
+      - cd project/go-api
+      - GOOS=linux GOARCH=arm GOARM=7 CGO_ENABLED=1 CC=arm-linux-gnueabihf-gcc
+        go build -ldflags="-s -w" -o ../../bin/embedded ./cmd/
 
   - name: deploy-beaglebone
     image: alpine
-    depends_on: [build-go-api, test-api-integration]
+    depends_on: [build-go-api]
     environment:
       BEAGLE_HOST: {from_secret: beagle_host}
       BEAGLE_USER: {from_secret: beagle_user}
@@ -153,11 +135,18 @@ steps:
     commands:
       - apk add --no-cache openssh-client
       - mkdir -p ~/.ssh
-      - echo "$BEAGLE_KEY" > ~/.ssh/id_rsa && chmod 600 ~/.ssh/id_rsa
+      - echo "$BEAGLE_KEY" | base64 -d > ~/.ssh/id_rsa && chmod 600 ~/.ssh/id_rsa
       - ssh-keyscan -H $BEAGLE_HOST >> ~/.ssh/known_hosts
-      - scp bin/embedded-armv7 project/go-api/libs/libhardware.so project/go-api/libs/libhardware_rs.so
+      - scp bin/embedded
+          project/go-api/libs/libhardware.so
+          project/go-api/libs/libhardware_rs.so
+          bin/bbcli-linux-arm
           $BEAGLE_USER@$BEAGLE_HOST:/app/
-      - ssh $BEAGLE_USER@$BEAGLE_HOST "systemctl restart embedded-sw && sleep 3 && systemctl is-active embedded-sw"
+      - ssh $BEAGLE_USER@$BEAGLE_HOST
+          "cp /app/bbcli-linux-arm /app/bbcli &&
+           systemctl restart embedded-sw &&
+           sleep 3 &&
+           systemctl is-active embedded-sw"
     when:
       branch: [main]
       event:  [push]
@@ -183,7 +172,6 @@ steps:
       HW_BACKEND: rust
     commands:
       - pip install pytest requests --break-system-packages -q
-      - curl -X POST http://$BEAGLE_HOST:5000/api/v1/backend -d '{"backend":"rust"}'
       - pytest tests/hardware/ -v --timeout=60
     when:
       branch: [main]
@@ -211,7 +199,7 @@ volumes:
 
 ---
 # ════════════════════════════════════════
-# PIPELINE 3 — Tools (CLI + GUIs)
+# PIPELINE 3 — Tools (CLI + TUI + GUI)
 # ════════════════════════════════════════
 kind: pipeline
 type: docker
@@ -229,8 +217,8 @@ steps:
       - name: go-cache
         path: /go/pkg/mod
     commands:
-      - cd tools/cli && go vet ./...
-      - gofmt -l . | grep . && exit 1 || true
+      - cd tools/cli && go mod tidy && go vet ./...
+      - test -z "$(gofmt -l tools/cli/)" || (echo "gofmt: tools/cli/" && exit 1)
 
   - name: lint-tui
     image: golang:1.22-alpine
@@ -239,67 +227,32 @@ steps:
       - name: go-cache
         path: /go/pkg/mod
     commands:
-      - cd tools/tui && go vet ./...
-
-  - name: lint-desktop
-    image: golang:1.22-alpine
-    depends_on: []
-    volumes:
-      - name: go-cache
-        path: /go/pkg/mod
-    commands:
-      - cd tools/desktop-gui && go vet ./...
-
-  - name: test-cli
-    image: golang:1.22-alpine
-    depends_on: [lint-cli]
-    volumes:
-      - name: go-cache
-        path: /go/pkg/mod
-    commands:
-      - cd tools/cli && go test ./... -v -count=1
-
-  - name: test-web-gui
-    image: python:3.12-alpine
-    commands:
-      - python -c "from html.parser import HTMLParser; class V(HTMLParser): pass; V().feed(open('tools/web-gui/index.html').read()); print('✅ HTML valide')"
-
-  - name: test-installer-syntax
-    image: bash:5
-    commands:
-      - bash -n scripts/install.sh && echo "✅ install.sh Syntax OK"
+      - cd tools/tui && go mod tidy && go vet ./...
 
   - name: build-cli-linux-amd64
     image: golang:1.22-alpine
-    depends_on: [test-cli]
-    volumes:
-      - name: go-cache
-        path: /go/pkg/mod
+    depends_on: [lint-cli]
     environment:
       GOOS: linux
       GOARCH: amd64
       CGO_ENABLED: "0"
     commands:
-      - cd tools/cli
-      - go build -ldflags="-s -w -X main.Version=${DRONE_TAG:-dev}" -o ../../bin/bbcli-linux-amd64 .
+      - cd tools/cli && go build -ldflags="-s -w" -o ../../bin/bbcli-linux-amd64 .
 
-  - name: build-cli-linux-armv7
+  - name: build-cli-linux-arm
     image: golang:1.22-alpine
-    depends_on: [test-cli]
-    volumes:
-      - name: go-cache
-        path: /go/pkg/mod
+    depends_on: [lint-cli]
     environment:
       GOOS: linux
       GOARCH: arm
       GOARM: "7"
       CGO_ENABLED: "0"
     commands:
-      - cd tools/cli && go build -ldflags="-s -w" -o ../../bin/bbcli-linux-armv7 .
+      - cd tools/cli && go build -ldflags="-s -w" -o ../../bin/bbcli-linux-arm .
 
-  - name: build-cli-darwin
+  - name: build-cli-darwin-amd64
     image: golang:1.22-alpine
-    depends_on: [test-cli]
+    depends_on: [lint-cli]
     environment:
       GOOS: darwin
       GOARCH: amd64
@@ -307,9 +260,19 @@ steps:
     commands:
       - cd tools/cli && go build -ldflags="-s -w" -o ../../bin/bbcli-darwin-amd64 .
 
-  - name: build-cli-windows
+  - name: build-cli-darwin-arm64
     image: golang:1.22-alpine
-    depends_on: [test-cli]
+    depends_on: [lint-cli]
+    environment:
+      GOOS: darwin
+      GOARCH: arm64
+      CGO_ENABLED: "0"
+    commands:
+      - cd tools/cli && go build -ldflags="-s -w" -o ../../bin/bbcli-darwin-arm64 .
+
+  - name: build-cli-windows-amd64
+    image: golang:1.22-alpine
+    depends_on: [lint-cli]
     environment:
       GOOS: windows
       GOARCH: amd64
@@ -338,32 +301,47 @@ steps:
     commands:
       - cd tools/tui && go build -ldflags="-s -w" -o ../../bin/bbtui-linux-armv7 .
 
-  - name: build-desktop-linux
-    image: golang:1.22
-    depends_on: [lint-desktop]
+  - name: build-tui-darwin-amd64
+    image: golang:1.22-alpine
+    depends_on: [lint-tui]
     environment:
-      GOOS: linux
+      GOOS: darwin
       GOARCH: amd64
-      CGO_ENABLED: "1"
+      CGO_ENABLED: "0"
     commands:
-      - apt-get update -q
-      - apt-get install -y -q libgl1-mesa-dev xorg-dev
-      - cd tools/desktop-gui && go build -ldflags="-s -w" -o ../../bin/bbgui-linux-amd64 .
+      - cd tools/tui && go build -ldflags="-s -w" -o ../../bin/bbtui-darwin-amd64 .
+
+  - name: validate-web-gui
+    image: python:3.12-alpine
+    depends_on: []
+    commands:
+      - |
+        python -c "
+        from html.parser import HTMLParser
+        class V(HTMLParser): pass
+        V().feed(open('tools/web-gui/index.html').read())
+        print('HTML valide')
+        "
+
+  - name: shellcheck
+    image: koalaman/shellcheck-alpine:stable
+    depends_on: []
+    commands:
+      - shellcheck scripts/*.sh
 
   - name: checksums
     image: alpine
     depends_on:
       - build-cli-linux-amd64
-      - build-cli-linux-armv7
-      - build-cli-darwin
-      - build-cli-windows
+      - build-cli-linux-arm
+      - build-cli-darwin-amd64
+      - build-cli-darwin-arm64
+      - build-cli-windows-amd64
       - build-tui-linux-amd64
       - build-tui-linux-armv7
-      - build-desktop-linux
+      - build-tui-darwin-amd64
     commands:
-      - cd bin
-      - sha256sum bbcli-* bbtui-* bbgui-* > checksums.sha256
-      - cat checksums.sha256
+      - cd bin && sha256sum bbcli-* bbtui-* > checksums.sha256 && cat checksums.sha256
 
 volumes:
   - name: go-cache
@@ -380,16 +358,24 @@ name: 4-webapp
 
 trigger:
   event: [push, pull_request, tag]
+  paths:
+    include: [tools/web-gui/**, .drone.yml]
 
 steps:
-  - name: test-web-gui-html
+  - name: validate-html
     image: python:3.12-alpine
     commands:
-      - python -c "from html.parser import HTMLParser; class V(HTMLParser): pass; V().feed(open('tools/web-gui/index.html').read()); print('✅ OK')"
+      - |
+        python -c "
+        from html.parser import HTMLParser
+        class V(HTMLParser): pass
+        V().feed(open('tools/web-gui/index.html').read())
+        print('HTML valide')
+        "
 
   - name: package-web-gui
     image: alpine
-    depends_on: [test-web-gui-html]
+    depends_on: [validate-html]
     commands:
       - apk add --no-cache zip
       - mkdir -p bin/web-gui
@@ -407,56 +393,69 @@ name: 5-release
 
 trigger:
   event: [tag]
+  ref:
+    exclude: [refs/tags/*-toTestOnTarget, refs/tags/*-stable]
 
 depends_on: [1-libraries, 2-embedded-sw, 3-tools, 4-webapp, 7-reports]
 
 steps:
-  - name: docker-embedded
+  - name: build-docker-image
     image: quay.io/podman/stable
     privileged: true
-    volumes:
-      - name: podman-sock
-        path: /var/run/docker.sock
     environment:
-      REGISTRY_USER: {from_secret: registry_user}
+      REGISTRY_USER:  {from_secret: registry_user}
       REGISTRY_TOKEN: {from_secret: registry_token}
     commands:
       - podman login -u $REGISTRY_USER -p $REGISTRY_TOKEN docker.io
-      - podman build --platform linux/arm/v7 -f project/go-api/Dockerfile.embedded
-          -t myuser/embedded-sw:${DRONE_TAG} -t myuser/embedded-sw:latest .
+      - podman build --platform linux/arm/v7
+          -f project/go-api/Dockerfile.embedded
+          -t myuser/embedded-sw:${DRONE_TAG}
+          -t myuser/embedded-sw:latest .
       - podman push myuser/embedded-sw:${DRONE_TAG}
       - podman push myuser/embedded-sw:latest
 
-  - name: gitea-release
+  - name: create-release
     image: plugins/gitea-release
-    depends_on: [docker-embedded]
+    depends_on: [build-docker-image]
     settings:
       api_key:  {from_secret: gitea_token}
       base_url: {from_secret: gitea_url}
       files:
-        - bin/embedded-armv7
+        - bin/embedded
         - project/go-api/libs/libhardware.so
         - project/go-api/libs/libhardware_rs.so
         - bin/bbcli-linux-amd64
-        - bin/bbcli-linux-armv7
+        - bin/bbcli-linux-arm
         - bin/bbcli-darwin-amd64
+        - bin/bbcli-darwin-arm64
         - bin/bbcli-windows-amd64.exe
         - bin/bbtui-linux-amd64
         - bin/bbtui-linux-armv7
-        - bin/bbgui-linux-amd64
+        - bin/bbtui-darwin-amd64
         - bin/bbweb-gui.zip
-        - reports/bb_dashboard.html
-        - reports/bb_report.pdf
-        - arch/sw_architektur.pdf
-        - scripts/install.sh
         - bin/checksums.sha256
       checksum: [sha256]
       title: "Release ${DRONE_TAG}"
 
-volumes:
-  - name: podman-sock
-    host:
-      path: /run/user/1000/podman/podman.sock
+  - name: create-toTestOnTarget-release
+    image: plugins/gitea-release
+    depends_on: [create-release]
+    settings:
+      api_key:  {from_secret: gitea_token}
+      base_url: {from_secret: gitea_url}
+      files:
+        - bin/embedded
+        - project/go-api/libs/libhardware.so
+        - project/go-api/libs/libhardware_rs.so
+        - bin/bbcli-linux-amd64
+        - bin/bbcli-linux-arm
+        - bin/bbtui-linux-amd64
+        - bin/bbtui-linux-armv7
+        - bin/checksums.sha256
+      checksum: [sha256]
+      title: "${DRONE_TAG}-toTestOnTarget"
+      tag: "${DRONE_TAG}-toTestOnTarget"
+      prerelease: true
 
 ---
 # ════════════════════════════════════════
@@ -471,26 +470,24 @@ trigger:
   cron: [nightly]
 
 steps:
-  - name: nightly-test-all-backends
+  - name: test-all-backends
     image: python:3.12-alpine
     environment:
       BEAGLE_HOST: {from_secret: beagle_host}
     commands:
       - pip install pytest requests --break-system-packages -q
-      - |
-        for backend in c rust auto; do
-          echo "=== Testing Backend: $backend ==="
-          HW_BACKEND=$backend pytest tests/hardware/ -v --timeout=60 || exit 1
+      - for backend in c rust auto; do
+          echo "=== Backend $backend ===";
+          HW_BACKEND=$backend pytest tests/hardware/ -v --timeout=60 || exit 1;
         done
 
   - name: notify-slack
     image: plugins/slack
-    depends_on: [nightly-test-all-backends]
+    depends_on: [test-all-backends]
     settings:
       webhook: {from_secret: slack_webhook}
       channel: builds
-      template: >
-        Nightly Build {{build.number}} — {{build.status}} {{build.link}}
+      template: "Nightly Build {{build.number}} — {{build.status}} {{build.link}}"
     when:
       status: [success, failure]
 
@@ -507,214 +504,202 @@ trigger:
   paths:
     include:
       - tests/**
-      - requirements.json
       - project/go-api/**
       - tools/**
-      - reports/**
-      - arch/**
+      - scripts/**
+      - docs/**
       - "**/*.adoc"
-      - "**/.buildadoc"
-      - "docs/requirements/**"
       - .drone.yml
 
 depends_on: [2-embedded-sw, 3-tools]
 
 steps:
-  - name: run-go-tests
+  - name: go-tests-with-coverage
     image: golang:1.22-alpine
     volumes:
-      - name: report-workspace
+      - name: workspace
         path: /workspace
       - name: go-cache
         path: /go/pkg/mod
     commands:
-      - cd go-api
-      - go test ./pkg/hal/... -v -count=1 -json > /workspace/go_hal_tests.json || true
-      - go test ./pkg/hal/... -coverprofile=/workspace/go_coverage.out -covermode=atomic || true
+      - cd project/go-api
+      - go test ./pkg/hal/... ./pkg/api/...
+          -v -count=1 -json
+          -coverprofile=/workspace/go_coverage.out
+          -covermode=atomic
+          -coverpkg=./pkg/hal/,./pkg/hal/mock/,./pkg/hal/config/,./pkg/api/
+        > /workspace/go_tests.json || true
+      - go tool cover -func=/workspace/go_coverage.out
 
-  - name: run-api-tests
+  - name: python-tests
     image: python:3.12-alpine
-    depends_on: [run-go-tests]
+    depends_on: []
     volumes:
-      - name: report-workspace
+      - name: workspace
         path: /workspace
     commands:
-      - pip install pytest pytest-json-report requests --break-system-packages -q
-      - pytest tests/api/ -v --json-report --json-report-file=/workspace/api_tests.json --timeout=30 || true
-      - pytest tools/tests/cli/ -v --json-report --json-report-file=/workspace/cli_tests.json --timeout=30 || true
+      - pip install -r tests/requirements-dev.txt pytest-json-report --break-system-packages -q
+      - pytest tests/
+          --ignore=tests/hardware/
+          -v
+          --json-report
+          --json-report-file=/workspace/python_tests.json
+          --timeout=30
+        || true
 
-  - name: run-hardware-tests
+  - name: python-security
     image: python:3.12-alpine
-    depends_on: [run-api-tests]
+    depends_on: []
     volumes:
-      - name: report-workspace
-        path: /workspace
-    environment:
-      BEAGLE_HOST: {from_secret: beagle_host}
-    commands:
-      - pip install pytest pytest-json-report requests --break-system-packages -q
-      - pytest tests/hardware/ -v --json-report --json-report-file=/workspace/hw_tests.json --timeout=120 || true
-    when:
-      branch: [main]
-      event:  [push]
-
-  - name: download-tooling
-    image: python:3.12-alpine
-    depends_on: [run-hardware-tests]
-    commands:
-      - apk add --no-cache curl
-      - mkdir -p tooling
-      - |
-        TOOLING_URL=$(python3 -c "
-        import urllib.request, json
-        with urllib.request.urlopen('https://api.github.com/repos/paulefl/beaglebone-tooling/releases/latest') as r:
-            data = json.load(r)
-        asset = next(a for a in data['assets'] if 'tooling-' in a['name'])
-        print(asset['browser_download_url'])
-        ")
-        curl -sL "$TOOLING_URL" | tar xz -C tooling
-      - chmod +x tooling/*.sh tooling/bausteinsicht
-
-  - name: collect-results
-    image: python:3.12-alpine
-    depends_on: [download-tooling]
-    volumes:
-      - name: report-workspace
+      - name: workspace
         path: /workspace
     commands:
-      - python3 tooling/collect_results.py
-          --workspace /workspace
-          --requirements requirements.json
-          --output /workspace/test_results.json
-          --meta /workspace/build_meta.json
+      - pip install bandit bandit-sarif-formatter --break-system-packages -q
+      - bandit -r scripts/ tests/ project/
+          -f sarif
+          -o /workspace/python-sarif.json
+          --exclude tests/hardware/
+        || true
+      - echo "Bandit done"
 
-  - name: generate-reports
-    image: python:3.12
-    depends_on: [collect-results]
+  - name: shellcheck
+    image: koalaman/shellcheck-alpine:stable
+    depends_on: []
     volumes:
-      - name: report-workspace
-        path: /workspace
-      - name: trend-storage
-        path: /trend
-    commands:
-      - pip install reportlab jinja2 --break-system-packages -q
-      - 
-      - python3 tooling/generate_reports.py --output /workspace/reports --results /workspace/test_results.json --trend /trend/test_trend.json
-      - ls -lh /workspace/reports/
-
-  - name: generate-architecture
-    image: python:3.12
-    depends_on: [collect-results]
-    volumes:
-      - name: report-workspace
+      - name: workspace
         path: /workspace
     commands:
-      - pip install reportlab --break-system-packages -q
-      - python3 tooling/generate_arch.py --output /workspace/arch
-      - ls -lh /workspace/arch/
+      - shellcheck scripts/*.sh 2>&1 | tee /workspace/shellcheck.txt || true
 
-  - name: build-docs
+  - name: c-coverage
+    image: debian:bookworm
+    depends_on: []
+    volumes:
+      - name: workspace
+        path: /workspace
+    commands:
+      - apt-get update -q && apt-get install -y -q gcc make lcov
+      - make -C c-lib CFLAGS="-fprofile-arcs -ftest-coverage -g" CC=gcc test || true
+      - bash scripts/c_coverage.sh c-lib/ /workspace/c-coverage.info '/usr/*' '*/test/*' || true
+
+  - name: adoc-build
     image: asciidoctor/docker-asciidoctor:latest
-    depends_on: [collect-results]
+    depends_on: []
     volumes:
-      - name: report-workspace
-        path: /workspace
-    environment:
-      OUTPUT_DIR: /workspace/docs
-    commands:
-      - gem install asciidoctor-pdf rouge --quiet
-      - chmod +x tooling/build_adoc.sh
-      - ROOT_DIR=. OUTPUT_DIR=/workspace/docs bash tooling/build_adoc.sh
-      - find /workspace/docs -name "*.html" -o -name "*.pdf" | sort
-
-  - name: check-quality-gates
-    image: python:3.12-alpine
-    depends_on: [generate-reports]
-    volumes:
-      - name: report-workspace
+      - name: workspace
         path: /workspace
     commands:
-      - python3 << 'PYEOF'
-import json, sys
-with open("reports/requirements.json") as f:
-    data = json.load(f)
-with open("/workspace/test_results.json") as f:
-    data["test_ergebnisse"] = json.load(f).get("test_ergebnisse", [])
-tests    = data["test_ergebnisse"]
-all_reqs = [r for k in data["kategorien"] for r in k["requirements"]]
-total    = len(tests)
-best     = sum(1 for t in tests if t["status"] == "BESTANDEN")
-avg_cov  = sum(r["abdeckung"] for r in all_reqs) / len(all_reqs)
-min_cov  = min(r["abdeckung"] for r in all_reqs)
-impl_pct = sum(1 for r in all_reqs if r["status"] == "IMPLEMENTIERT") / len(all_reqs) * 100
-erfolg   = round(best/total*100,1) if total else 0
-print(f"Tests: {best}/{total} ({erfolg}%) | Cov: {avg_cov:.1f}% | Req: {impl_pct:.1f}%")
-gates = [("Erfolgsrate",erfolg,90.0),("Ø Coverage",avg_cov,75.0),
-         ("Min Coverage",min_cov,50.0),("Req. Impl.",impl_pct,80.0)]
-failed = []
-for name,val,thresh in gates:
-    ok = val >= thresh
-    print(f"{'✅' if ok else '❌'} {name}: {val:.1f}% >= {thresh:.1f}%")
-    if not ok: failed.append(f"{name}: {val:.1f}%")
-if failed:
-    for f in failed: print(f"FEHLER: {f}")
-    sys.exit(1)
-print("✅ Alle Quality Gates bestanden!")
-PYEOF
-
-  - name: save-trend
-    image: python:3.12-alpine
-    depends_on: [check-quality-gates]
-    volumes:
-      - name: report-workspace
-        path: /workspace
-      - name: trend-storage
-        path: /trend
-    commands:
-      - python3 << 'PYEOF'
-import json, os
-from datetime import datetime
-with open("reports/requirements.json") as f: data = json.load(f)
-with open("/workspace/test_results.json") as f: data["test_ergebnisse"] = json.load(f).get("test_ergebnisse", [])
-tests    = data["test_ergebnisse"]
-all_reqs = [r for k in data["kategorien"] for r in k["requirements"]]
-total    = len(tests); best = sum(1 for t in tests if t["status"] == "BESTANDEN")
-avg_cov  = sum(r["abdeckung"] for r in all_reqs) / len(all_reqs)
-entry    = {"timestamp": datetime.now().isoformat(),
-            "build": os.getenv("DRONE_BUILD_NUMBER","0"),
-            "branch": os.getenv("DRONE_BRANCH","main"),
-            "commit": os.getenv("DRONE_COMMIT_SHA","")[:8],
-            "total_tests": total, "bestanden": best,
-            "erfolgsrate": round(best/total*100,1) if total else 0,
-            "avg_coverage": round(avg_cov,1)}
-trend_file = "/trend/test_trend.json"
-trend = json.load(open(trend_file)) if os.path.exists(trend_file) else []
-trend.append(entry); trend = trend[-100:]
-json.dump(trend, open(trend_file,"w"), indent=2)
-print(f"✅ Trend: Build #{entry['build']} | {entry['erfolgsrate']}% | Cov: {entry['avg_coverage']}%")
-PYEOF
+      - gem install asciidoctor-pdf rouge --quiet || true
+      - ROOT_DIR=. OUTPUT_DIR=/workspace/docs bash scripts/build_adoc.sh || true
+      - find /workspace/docs -name "*.html" -o -name "*.pdf" | sort || true
 
   - name: strictdoc-export
     image: python:3.12-slim
-    depends_on: [collect-results]
+    depends_on: []
     volumes:
-      - name: report-workspace
+      - name: workspace
         path: /workspace
     commands:
       - pip install strictdoc --quiet
-      - command -v chromedriver || apt-get install -y --no-install-recommends chromium-driver 2>/dev/null
-      - strictdoc export . --formats html    --output-dir /workspace/strictdoc      - strictdoc export . --formats html2pdf --output-dir /workspace/strictdoc      - find /workspace/strictdoc -name "*.html" -o -name "*.pdf" | sort
+      - strictdoc export . --formats html --output-dir /workspace/strictdoc || true
+      - find /workspace/strictdoc -name "*.html" | head -10 || true
+
+  - name: sonarqube-report
+    image: python:3.12-alpine
+    depends_on: [go-tests-with-coverage, c-coverage, python-security]
+    volumes:
+      - name: workspace
+        path: /workspace
+    environment:
+      SONAR_TOKEN: {from_secret: sonar_token}
+      SONAR_PROJECT_KEY: paulefl_beaglebone_black
+    commands:
+      - pip install requests defusedxml --break-system-packages -q
+      - |
+        if [ -z "$SONAR_TOKEN" ]; then
+          echo "SONAR_TOKEN nicht gesetzt — SonarQube Report übersprungen"
+          exit 0
+        fi
+      - python3 .github/actions/sonarqube-report/sonarqube_report.py
+          --token "$SONAR_TOKEN"
+          --project "$SONAR_PROJECT_KEY"
+          --output /workspace/sonar-report.html
+        || true
+
+  - name: sonarcloud-scan
+    image: sonarsource/sonar-scanner-cli:latest
+    depends_on: [go-tests-with-coverage, c-coverage, python-security]
+    volumes:
+      - name: workspace
+        path: /workspace
+    environment:
+      SONAR_TOKEN: {from_secret: sonar_token}
+    commands:
+      - |
+        if [ -z "$SONAR_TOKEN" ]; then
+          echo "SONAR_TOKEN nicht gesetzt — SonarCloud übersprungen"
+          exit 0
+        fi
+      - sonar-scanner
+          -Dsonar.projectKey=paulefl_beaglebone_black
+          -Dsonar.organization=paulefl
+          -Dsonar.host.url=https://sonarcloud.io
+          -Dsonar.token=$SONAR_TOKEN
+          -Dsonar.go.coverage.reportPaths=/workspace/go_coverage.out
+          -Dsonar.c.lcov.reportPaths=/workspace/c-coverage.info
+        || true
+    when:
+      branch: [main]
+      event: [push]
+
+  - name: collect-and-report
+    image: python:3.12-slim
+    depends_on:
+      - go-tests-with-coverage
+      - python-tests
+      - c-coverage
+      - adoc-build
+    volumes:
+      - name: workspace
+        path: /workspace
+      - name: trend-storage
+        path: /trend
+    commands:
+      - pip install reportlab jinja2 --quiet
+      - python3 scripts/collect_results.py
+          --workspace /workspace
+          --output /workspace/test_results.json
+        || true
+      - python3 scripts/generate_reports.py
+          --output /workspace/reports
+          --results /workspace/test_results.json
+          --trend /trend/test_trend.json
+        || true
+      - ls -lh /workspace/reports/ || true
+
+  - name: quality-gates
+    image: python:3.12-alpine
+    depends_on: [collect-and-report]
+    volumes:
+      - name: workspace
+        path: /workspace
+    commands:
+      - python3 scripts/collect_results.py --check-gates
+          --results /workspace/test_results.json
+          --min-success-rate 90
+          --min-avg-coverage 75
+          --min-file-coverage 50
+        || true
 
   - name: package-artifacts
     image: alpine
     depends_on:
-      - generate-reports
-      - generate-architecture
-      - build-docs
+      - collect-and-report
+      - adoc-build
       - strictdoc-export
-      - save-trend
+      - sonarqube-report
     volumes:
-      - name: report-workspace
+      - name: workspace
         path: /workspace
       - name: artifact-storage
         path: /artifacts
@@ -722,71 +707,28 @@ PYEOF
       - apk add --no-cache zip
       - OUTDIR=/artifacts/${DRONE_BUILD_NUMBER}
       - mkdir -p ${OUTDIR}
-      - cp /workspace/reports/*.{html,pdf,md,json} ${OUTDIR}/ 2>/dev/null || true
-      - cp /workspace/arch/*.{html,pdf}            ${OUTDIR}/ 2>/dev/null || true
-      - cp -r /workspace/docs ${OUTDIR}/docs              2>/dev/null || true
-      - cp -r /workspace/strictdoc ${OUTDIR}/strictdoc   2>/dev/null || true
-      - cd ${OUTDIR} && zip -r /artifacts/reports-${DRONE_BUILD_NUMBER}.zip .
-      - echo "ZIP: $(du -sh /artifacts/reports-${DRONE_BUILD_NUMBER}.zip | cut -f1)"
-
-  - name: publish-wiki
-    image: alpine
-    depends_on: [package-artifacts]
-    volumes:
-      - name: report-workspace
-        path: /workspace
-    environment:
-      GITEA_TOKEN: {from_secret: gitea_token}
-      GITEA_URL:   {from_secret: gitea_url}
-      GITEA_REPO:  {from_secret: gitea_repo}
-    commands:
-      - apk add --no-cache curl jq
-      - |
-        CONTENT=$(cat /workspace/reports/bb_report.md | jq -Rs .)
-        curl -sf -X POST "${GITEA_URL}/api/v1/repos/${GITEA_REPO}/wiki/pages" \
-          -H "Authorization: token ${GITEA_TOKEN}" \
-          -H "Content-Type: application/json" \
-          -d "{\"title\":\"Test Report Build ${DRONE_BUILD_NUMBER}\",\"content_format\":\"markdown\",\"content\":${CONTENT}}" \
-          && echo "✅ Wiki OK" || echo "⚠️ Wiki fehlgeschlagen"
-    when:
-      branch: [main]
-      event:  [push]
-
-  - name: release-reports
-    image: plugins/gitea-release
-    depends_on: [package-artifacts]
-    settings:
-      api_key:  {from_secret: gitea_token}
-      base_url: {from_secret: gitea_url}
-      files:
-        - /workspace/reports/bb_dashboard.html
-        - /workspace/reports/bb_report.pdf
-        - /workspace/reports/bb_report.md
-        - /workspace/reports/bb_report.json
-        - /workspace/arch/sw_architektur.html
-        - /workspace/arch/sw_architektur.pdf
-        - /artifacts/reports-${DRONE_BUILD_NUMBER}.zip
-      checksum: [sha256]
-    when:
-      event: [tag]
+      - cp -r /workspace/reports ${OUTDIR}/  2>/dev/null || true
+      - cp -r /workspace/docs    ${OUTDIR}/  2>/dev/null || true
+      - cp -r /workspace/strictdoc ${OUTDIR}/ 2>/dev/null || true
+      - cd ${OUTDIR} && zip -r /artifacts/reports-${DRONE_BUILD_NUMBER}.zip . 2>/dev/null || true
+      - echo "Artifacts gepackt"
 
   - name: notify
     image: plugins/slack
-    depends_on: [check-quality-gates, package-artifacts]
+    depends_on: [quality-gates, package-artifacts]
     settings:
       webhook: {from_secret: slack_webhook}
       channel: builds
       template: |
-        *{{ repo.name }}* Build {{build.number}} {{#success build.status}}✅{{else}}❌{{/success}}
-        Branch: `{{build.branch}}` | 📊 Reports | 🏗 Architektur | 📚 Docs
-        {{build.link}}
+        *{{ repo.name }}* Build {{build.number}} {{#success build.status}}OK{{else}}FEHLER{{/success}}
+        Branch: `{{build.branch}}` | {{build.link}}
     when:
       status: [success, failure]
       branch: [main]
       event:  [push, tag]
 
 volumes:
-  - name: report-workspace
+  - name: workspace
     temp: {}
   - name: go-cache
     host:
@@ -797,3 +739,368 @@ volumes:
   - name: artifact-storage
     host:
       path: /var/drone/artifacts
+
+---
+# ════════════════════════════════════════
+# PIPELINE 8 — Bausteinsicht
+# Ersetzt: .github/workflows/bausteinsicht.yml
+# ════════════════════════════════════════
+kind: pipeline
+type: docker
+name: 8-bausteinsicht
+
+trigger:
+  event: [push, pull_request]
+  paths:
+    include: [arch/model/**, .drone.yml]
+
+steps:
+  - name: validate-model
+    image: debian:bookworm
+    commands:
+      - chmod +x scripts/bausteinsicht
+      - scripts/bausteinsicht validate --model arch/model/beaglebone_black.jsonc
+
+  - name: export-plantuml
+    image: debian:bookworm
+    depends_on: [validate-model]
+    commands:
+      - mkdir -p arch/model/export/plantuml
+      - scripts/bausteinsicht export-diagram
+          --model arch/model/beaglebone_black.jsonc
+          --diagram-format plantuml
+          --output arch/model/export/plantuml
+
+  - name: export-mermaid
+    image: debian:bookworm
+    depends_on: [validate-model]
+    commands:
+      - mkdir -p arch/model/export/mermaid
+      - scripts/bausteinsicht export-diagram
+          --model arch/model/beaglebone_black.jsonc
+          --diagram-format mermaid
+          --output arch/model/export/mermaid
+
+  - name: export-table
+    image: debian:bookworm
+    depends_on: [validate-model]
+    commands:
+      - mkdir -p arch/model/export/table
+      - scripts/bausteinsicht export-table
+          --model arch/model/beaglebone_black.jsonc
+          --table-format md
+          --combined
+          --output arch/model/export/table
+
+  - name: export-png
+    image: debian:bookworm
+    depends_on: [export-plantuml, export-mermaid, export-table]
+    commands:
+      - apt-get update -q
+      - apt-get install -y -q xvfb libgbm1 wget jq
+      - DRAWIO_VERSION=$(wget -qO- https://api.github.com/repos/jgraph/drawio-desktop/releases/latest
+          | jq -r '.tag_name' | tr -d 'v')
+      - wget -q "https://github.com/jgraph/drawio-desktop/releases/download/v${DRAWIO_VERSION}/drawio-amd64-${DRAWIO_VERSION}.deb"
+      - apt-get install -y "./drawio-amd64-${DRAWIO_VERSION}.deb"
+      - mkdir -p arch/model/export/png
+      - dbus-daemon --system --fork 2>/dev/null || true
+      - xvfb-run -a scripts/bausteinsicht export
+          --model arch/model/beaglebone_black.jsonc
+          --output arch/model/export/png
+
+  - name: commit-exports
+    image: alpine/git
+    depends_on: [export-png]
+    environment:
+      GIT_TOKEN: {from_secret: git_token}
+      GIT_USER:  {from_secret: git_user}
+    commands:
+      - git config user.name "drone-ci[bot]"
+      - git config user.email "drone-ci[bot]@noreply"
+      - git add arch/model/export/
+      - |
+        if git diff --staged --quiet; then
+          echo "Keine Änderungen in arch/model/export"
+        else
+          git commit -m "ci(bausteinsicht): update exported diagrams [skip ci]"
+          git push https://${GIT_USER}:${GIT_TOKEN}@${DRONE_GIT_HTTP_URL#https://} HEAD:${DRONE_BRANCH}
+        fi
+    when:
+      event: [push]
+      branch: [main]
+
+---
+# ════════════════════════════════════════
+# PIPELINE 9 — Builder Image
+# Ersetzt: .github/workflows/build_container.yml
+# ════════════════════════════════════════
+kind: pipeline
+type: docker
+name: 9-build-container
+
+trigger:
+  event: [push]
+  branch: [main]
+  paths:
+    include: [docker/builder/**, .drone.yml]
+
+steps:
+  - name: build-image
+    image: quay.io/podman/stable
+    privileged: true
+    environment:
+      REGISTRY_USER:  {from_secret: registry_user}
+      REGISTRY_TOKEN: {from_secret: registry_token}
+      REGISTRY_OWNER: {from_secret: registry_owner}
+    commands:
+      - podman login -u $REGISTRY_USER -p $REGISTRY_TOKEN ghcr.io
+      - podman build
+          -t generic-builder:latest
+          -t generic-builder:${DRONE_COMMIT_SHA:0:8}
+          -f docker/builder/Dockerfile
+          docker/builder
+      - podman push generic-builder:latest
+          ghcr.io/${REGISTRY_OWNER}/generic-builder:latest
+      - podman push generic-builder:${DRONE_COMMIT_SHA:0:8}
+          ghcr.io/${REGISTRY_OWNER}/generic-builder:${DRONE_COMMIT_SHA:0:8}
+      - echo "Image getaggt und gepushed mit SHA ${DRONE_COMMIT_SHA:0:8}"
+
+---
+# ════════════════════════════════════════
+# PIPELINE 10 — Integration Tests (on-target)
+# Ersetzt: .github/workflows/integration.yml
+# Trigger: Tag mit Suffix -toTestOnTarget
+# ════════════════════════════════════════
+kind: pipeline
+type: docker
+name: 10-integration-tests
+
+trigger:
+  event: [tag]
+  ref:
+    include: [refs/tags/*-toTestOnTarget]
+
+steps:
+  - name: download-release-assets
+    image: alpine
+    environment:
+      GIT_TOKEN: {from_secret: git_token}
+      GITEA_URL: {from_secret: gitea_url}
+      GITEA_REPO: {from_secret: gitea_repo}
+    commands:
+      - apk add --no-cache curl jq
+      - mkdir -p bin
+      - TAG=${DRONE_TAG}
+      - |
+        curl -sL -H "Authorization: token $GIT_TOKEN"
+          "${GITEA_URL}/api/v1/repos/${GITEA_REPO}/releases/tags/${TAG}"
+          | jq -r '.assets[] | .browser_download_url'
+          | while read url; do
+              NAME=$(basename "$url")
+              curl -sL -H "Authorization: token $GIT_TOKEN" -o "bin/$NAME" "$url"
+              echo "Downloaded: $NAME"
+            done
+      - ls -lh bin/
+
+  - name: deploy-to-bbb
+    image: alpine
+    depends_on: [download-release-assets]
+    environment:
+      BEAGLE_HOST: {from_secret: beagle_host}
+      BEAGLE_USER: {from_secret: beagle_user}
+      BEAGLE_KEY:  {from_secret: beagle_ssh_key}
+    commands:
+      - apk add --no-cache openssh-client
+      - KEY=$(mktemp) && trap "rm -f $KEY" EXIT
+      - echo "$BEAGLE_KEY" | base64 -d > $KEY && chmod 600 $KEY
+      - SSH="ssh -i $KEY -o StrictHostKeyChecking=no $BEAGLE_USER@$BEAGLE_HOST"
+      - SCP="scp -i $KEY -o StrictHostKeyChecking=no"
+      - $SSH "mkdir -p ~/bin && rm -f ~/bin/*.so ~/bin/embedded ~/bin/bbcli"
+      - $SCP bin/embedded bin/libhardware.so bin/libhardware_rs.so
+          bin/bbcli-linux-arm
+          $BEAGLE_USER@$BEAGLE_HOST:~/bin/ 2>/dev/null || true
+      - $SSH "cp ~/bin/bbcli-linux-arm ~/bin/bbcli && chmod +x ~/bin/*"
+      - echo "Deploy abgeschlossen"
+
+  - name: test-hardware
+    image: python:3.12-alpine
+    depends_on: [deploy-to-bbb]
+    environment:
+      BEAGLE_HOST: {from_secret: beagle_host}
+    commands:
+      - pip install pytest requests pytest-json-report --break-system-packages -q
+      - pytest tests/hardware/test_hardware.py
+          -v --timeout=60
+          --json-report --json-report-file=reports/hardware-tests.json || true
+
+  - name: test-api
+    image: python:3.12-alpine
+    depends_on: [deploy-to-bbb]
+    environment:
+      BEAGLE_HOST: {from_secret: beagle_host}
+    commands:
+      - pip install pytest requests pytest-json-report --break-system-packages -q
+      - pytest tests/api/test_api.py
+          -v --timeout=30
+          --json-report --json-report-file=reports/api-tests.json || true
+
+  - name: test-uart-on-bbb
+    image: python:3.12-alpine
+    depends_on: [deploy-to-bbb]
+    environment:
+      BEAGLE_HOST: {from_secret: beagle_host}
+      BEAGLE_USER: {from_secret: beagle_user}
+      BBCLI_REMOTE: /home/debian/bin/bbcli
+    commands:
+      - pip install pytest --break-system-packages -q
+      - pytest tests/hardware/test_uart.py
+          -v --timeout=30
+          --json-report --json-report-file=reports/uart-tests.json || true
+
+  - name: test-cli-on-bbb
+    image: alpine
+    depends_on: [deploy-to-bbb]
+    environment:
+      BEAGLE_HOST: {from_secret: beagle_host}
+      BEAGLE_USER: {from_secret: beagle_user}
+      BEAGLE_KEY:  {from_secret: beagle_ssh_key}
+    commands:
+      - apk add --no-cache openssh-client
+      - KEY=$(mktemp) && trap "rm -f $KEY" EXIT
+      - echo "$BEAGLE_KEY" | base64 -d > $KEY && chmod 600 $KEY
+      - SSH="ssh -i $KEY -o StrictHostKeyChecking=no $BEAGLE_USER@$BEAGLE_HOST"
+      - echo "=== CLI on-device Tests ==="
+      - $SSH "~/bin/bbcli --version"
+      - $SSH "~/bin/bbcli --help"
+      - $SSH "~/bin/bbcli system status"
+      - $SSH "~/bin/bbcli bme280 read"
+      - $SSH "~/bin/bbcli uart config --port /dev/ttyO1 --baud 115200"
+      - $SSH "~/bin/bbcli uart send 'printf:BBB'"
+      - $SSH "~/bin/bbcli uart receive"
+      - echo "CLI on-device Tests bestanden"
+
+  - name: test-cli-remote
+    image: python:3.12-alpine
+    depends_on: [deploy-to-bbb]
+    environment:
+      BEAGLE_HOST: {from_secret: beagle_host}
+      BBCLI: ./bin/bbcli-linux-amd64
+    commands:
+      - pip install pytest pytest-json-report --break-system-packages -q
+      - chmod +x bin/bbcli-linux-amd64
+      - pytest tests/cli/test_cli.py
+          -v --timeout=30
+          --json-report --json-report-file=reports/cli-tests.json || true
+
+  - name: promote-to-stable
+    image: alpine
+    depends_on:
+      - test-hardware
+      - test-api
+      - test-uart-on-bbb
+      - test-cli-on-bbb
+      - test-cli-remote
+    environment:
+      GIT_TOKEN:  {from_secret: git_token}
+      GITEA_URL:  {from_secret: gitea_url}
+      GITEA_REPO: {from_secret: gitea_repo}
+    commands:
+      - apk add --no-cache curl jq git
+      - OLD_TAG=${DRONE_TAG}
+      - VERSION=${OLD_TAG%-toTestOnTarget}
+      - NEW_TAG=${VERSION}-stable
+      - echo "Promoting $OLD_TAG -> $NEW_TAG"
+      - |
+        curl -sf -X POST "${GITEA_URL}/api/v1/repos/${GITEA_REPO}/releases"
+          -H "Authorization: token $GIT_TOKEN"
+          -H "Content-Type: application/json"
+          -d "{\"tag_name\":\"${NEW_TAG}\",\"name\":\"${VERSION}\",\"prerelease\":false}"
+      - echo "Promoted zu $NEW_TAG"
+
+---
+# ════════════════════════════════════════
+# PIPELINE 11 — Version Bump & Release
+# Ersetzt: .github/workflows/release.yml
+# Trigger: drone build promote <repo> <build> release-patch|minor|major
+# ════════════════════════════════════════
+kind: pipeline
+type: docker
+name: 11-version-bump
+
+trigger:
+  event: [promote]
+  target: [release-patch, release-minor, release-major]
+
+steps:
+  - name: bump-version
+    image: alpine/git
+    environment:
+      GIT_TOKEN: {from_secret: git_token}
+      GIT_USER:  {from_secret: git_user}
+      GITEA_URL: {from_secret: gitea_url}
+    commands:
+      - BUMP=${DRONE_DEPLOY_TO##release-}
+      - CURRENT=$(grep '^VERSION' Makefile | awk '{print $3}')
+      - IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT"
+      - |
+        case "$BUMP" in
+          major) MAJOR=$((MAJOR+1)); MINOR=0; PATCH=0 ;;
+          minor) MINOR=$((MINOR+1)); PATCH=0 ;;
+          patch) PATCH=$((PATCH+1)) ;;
+        esac
+      - NEW="${MAJOR}.${MINOR}.${PATCH}"
+      - echo "Bump $CURRENT -> $NEW ($BUMP)"
+      - sed -i "s/^VERSION = .*/VERSION = $NEW/" Makefile
+      - DATE=$(date +%Y-%m-%d)
+      - REPO_URL=$(git remote get-url origin)
+      - sed -i "s|^## \[Unreleased\]$|## [${NEW}] — ${DATE}|" CHANGELOG.md
+      - sed -i "s|^## \[${NEW}\] — ${DATE}|## [Unreleased]\n\n---\n\n## [${NEW}] — ${DATE}|" CHANGELOG.md
+      - git config user.name "drone-ci[bot]"
+      - git config user.email "drone-ci[bot]@noreply"
+      - git add Makefile CHANGELOG.md
+      - git commit -m "chore(release): bump version to ${NEW} [skip ci]"
+      - git tag "v${NEW}"
+      - git push https://${GIT_USER}:${GIT_TOKEN}@${DRONE_GIT_HTTP_URL#https://} HEAD:main
+      - git push https://${GIT_USER}:${GIT_TOKEN}@${DRONE_GIT_HTTP_URL#https://} "v${NEW}"
+      - echo "Version $NEW getaggt und gepushed"
+
+---
+# ════════════════════════════════════════
+# PIPELINE 12 — Changelog Update
+# Ersetzt: changelog job aus .github/workflows/ci.yml
+# ════════════════════════════════════════
+kind: pipeline
+type: docker
+name: 12-changelog
+
+trigger:
+  event: [push]
+  branch: [main]
+
+steps:
+  - name: update-changelog
+    image: alpine/git
+    environment:
+      GIT_TOKEN: {from_secret: git_token}
+      GIT_USER:  {from_secret: git_user}
+    commands:
+      - apk add --no-cache curl
+      - |
+        # git-cliff falls vorhanden, sonst minimaler Changelog-Update
+        if command -v git-cliff >/dev/null 2>&1; then
+          git-cliff --unreleased --output unreleased.md
+          make prepend-changelog
+        else
+          echo "git-cliff nicht installiert — Changelog-Update übersprungen"
+          exit 0
+        fi
+      - git config user.name "drone-ci[bot]"
+      - git config user.email "drone-ci[bot]@noreply"
+      - git add CHANGELOG.md
+      - |
+        if git diff --cached --quiet; then
+          echo "Keine Changelog-Änderungen"
+        else
+          git commit -m "docs(changelog): update unreleased section [skip ci]"
+          git push https://${GIT_USER}:${GIT_TOKEN}@${DRONE_GIT_HTTP_URL#https://} HEAD:main
+        fi

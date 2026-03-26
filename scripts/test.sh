@@ -20,8 +20,9 @@ fail()    { echo -e "${RED}[FAIL]${NC}  $*" >&2; return 0; }
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-GO_API="$REPO_ROOT/go-api"
+GO_API="$REPO_ROOT/project/go-api"
 COVERAGE_OUT="$GO_API/coverage.out"
+COVERAGE_PAK="./pkg/hal/,./pkg/hal/mock/,./pkg/hal/config/,./pkg/hal/c/,./pkg/hal/loader/,./pkg/hal/rust/,./pkg/api/"
 COVERAGE_HTML="$GO_API/coverage.html"
 
 # Quality Gates (aus CLAUDE.md)
@@ -53,14 +54,14 @@ parse_args() {
 # ── Tests ausführen ───────────────────────────────────────────────────────────
 run_tests() {
     local args=("-v" "-count=1" "-timeout=60s")
-
+    
     $MODE_RACE  && args+=("-race" "-count=3")
     # -coverpkg misst Coverage auch in importierten Packages (z.B. mock/driver.go
     # wird von hal_test.go aufgerufen — ohne -coverpkg zeigt es 0%)
     $MODE_COVER && args+=(
         "-coverprofile=$COVERAGE_OUT"
         "-covermode=atomic"
-        "-coverpkg=./pkg/hal/,./pkg/hal/mock/,./pkg/hal/config/"
+        "-coverpkg=$COVERAGE_PAK" 
     )
 
     # pkg/hal/c und pkg/hal/rust benötigen native C-Header (bme280.h, hardware_rs.h)
@@ -73,6 +74,10 @@ run_tests() {
         "./pkg/hal/"
         "./pkg/hal/mock/"
         "./pkg/hal/config/"
+        #"./pkg/hal/c/"
+        #"./pkg/hal/loader/"
+        #"./pkg/hal/rust/"
+        "./pkg/api/"
     )
 
     log "Führe Tests aus: go test ${args[*]} ${pkgs[*]}"
