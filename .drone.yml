@@ -1,3 +1,4 @@
+---
 # ════════════════════════════════════════════════════════════════
 # BeagleBone Black — Vollständige Drone CI Pipeline
 # Ready to use
@@ -6,8 +7,6 @@
 #            8-Bausteinsicht, 9-BuildContainer,
 #            10-IntegrationTests, 11-VersionBump, 12-Changelog
 # ════════════════════════════════════════════════════════════════
-
----
 # ════════════════════════════════════════
 # PIPELINE 1 — C & Rust Libraries
 # ════════════════════════════════════════
