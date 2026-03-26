@@ -1,27 +1,70 @@
 ---
+# ════════════════════════════════════════
+# PIPELINE 1 — C & Rust Libraries
+# ════════════════════════════════════════
 kind: pipeline
 type: docker
-name: ci-smoke
+name: 1-libraries
 
 trigger:
-  event: [push, pull_request]
-  branch: [develop, main]
+  event: [push, pull_request, tag]
+  paths:
+    - c-lib/**
+    - project/rust-lib/**
+    - .drone.yml
 
 steps:
-  - name: lint
-    image: golang:1.22
+  - name: build-c-lib
+    image: debian:bookworm
+    volumes:
+      - name: libs-cache
+        path: /build/libs
     commands:
-      - cd scripts/drone-lint && go run check_drone_yml.go ../../.drone.yml
+      - apt-get update -q
+      - apt-get install -y -q gcc-arm-linux-gnueabihf make
+      - make c-lib
+      - cp c-lib/libhardware.so /build/libs/
 
-  - name: test-go
-    image: golang:1.22
-    depends_on: [lint]
+  - name: test-c-lib
+    image: debian:bookworm
+    depends_on: [build-c-lib]
+    volumes:
+      - name: libs-cache
+        path: /build/libs
     commands:
-      - cd project/go-api && go test ./pkg/hal/... -v -count=1
+      - apt-get update -q && apt-get install -y -q gcc make lcov
+      - make -C c-lib CFLAGS="-fprofile-arcs -ftest-coverage -g" CC=gcc test
+      - bash scripts/c_coverage.sh c-lib/ reports/c-coverage.info '/usr/*' '*/test/*'
+      - lcov --summary reports/c-coverage.info
 
-  - name: test-python
-    image: python:3.11
-    depends_on: [lint]
+  - name: build-rust-lib
+    image: rust:1.77
+    depends_on: []
+    volumes:
+      - name: cargo-cache
+        path: /usr/local/cargo/registry
+      - name: libs-cache
+        path: /build/libs
     commands:
-      - pip install pytest requests --quiet
-      - pytest tests/api/ -v --timeout=10
+      - cargo install cross cbindgen
+      - make rust-lib
+      - cp project/rust-lib/target/armv7-unknown-linux-musleabihf/release/libhardware_rs.so /build/libs/
+      - cbindgen --config project/rust-lib/cbindgen.toml --output /build/libs/include/hardware_rs.h
+
+  - name: test-rust-lib
+    image: rust:1.77-alpine
+    depends_on: [build-rust-lib]
+    volumes:
+      - name: cargo-cache
+        path: /usr/local/cargo/registry
+    commands:
+      - apk add --no-cache musl-dev
+      - cargo test --manifest-path project/rust-lib/Cargo.toml
+
+volumes:
+  - name: libs-cache
+    host:
+      path: /tmp/drone-cache/libs
+  - name: cargo-cache
+    host:
+      path: /tmp/drone-cache/cargo
