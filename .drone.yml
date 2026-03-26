@@ -68,6 +68,7 @@ steps:
     depends_on: [test-go]
     settings:
       paths: reports/go-tests-junit.xml
+      report_name: "junit-reports - Pipe 1 - go-tests-junit"
     when:
       status: [
         'success',
@@ -530,6 +531,7 @@ steps:
     depends_on: [go-tests-with-coverage]
     settings:
       paths: reports/go-tests-junit.xml
+      report_name: "junit-reports - Pipe 7 - go-tests-with-coverage"
     when:
       status: [success, failure]
 
@@ -620,11 +622,12 @@ steps:
           --junit-xml reports/go-tests-junit.xml \
           --output-junit reports/req-coverage-junit.xml \
           --min-coverage 70 || true
-  - name: junit-reports - Req coverage
+  - name: junit-reports
     image: ghcr.io/rohit-gohri/drone-junit:v0
     depends_on: [strictdoc-coverage-gate]
     settings:
       paths: reports/reports/req-coverage-junit.xml
+      report_name: "junit-reports - Req coverage"
     when:
       status: [
         'success',
