@@ -611,54 +611,43 @@ trigger:
     - arch/model/**
     - .drone.yml
 
+image_pull_secrets:
+  - dockerconfigjson
+
 steps:
-  - name: build-bausteinsicht
-    image: debian:bookworm
-    commands:
-      - chmod +x scripts/bausteinsicht-container.sh
-      - echo "Build bausteinschicht container"
-      - scripts/bausteinsicht-container.sh build
   - name: validate-model
-    image: debian:bookworm
+    image: ghcr.io/paulefl/bausteinsicht:latest
     commands:
-      - chmod +x scripts/bausteinsicht-container.sh
-      - echo "Build bausteinschicht container"
-      - scripts/bausteinsicht-container.sh validate --model arch/model/beaglebone_black.jsonc
+      - bausteinsicht validate --model arch/model/beaglebone_black.jsonc
 
   - name: export-plantuml
-    image: debian:bookworm
+    image: ghcr.io/paulefl/bausteinsicht:latest
     depends_on: [validate-model]
     commands:
       - mkdir -p arch/model/export/plantuml
-      - scripts/bausteinsicht-container.sh export-diagram --model arch/model/beaglebone_black.jsonc --diagram-format plantuml --output arch/model/export/plantuml
+      - bausteinsicht export-diagram --model arch/model/beaglebone_black.jsonc --diagram-format plantuml --output arch/model/export/plantuml
 
   - name: export-mermaid
-    image: debian:bookworm
+    image: ghcr.io/paulefl/bausteinsicht:latest
     depends_on: [validate-model]
     commands:
       - mkdir -p arch/model/export/mermaid
-      - scripts/bausteinsicht-container.sh export-diagram --model arch/model/beaglebone_black.jsonc --diagram-format mermaid --output arch/model/export/mermaid
+      - bausteinsicht export-diagram --model arch/model/beaglebone_black.jsonc --diagram-format mermaid --output arch/model/export/mermaid
 
   - name: export-table
-    image: debian:bookworm
+    image: ghcr.io/paulefl/bausteinsicht:latest
     depends_on: [validate-model]
     commands:
       - mkdir -p arch/model/export/table
-      - scripts/bausteinsicht-container.sh export-table --model arch/model/beaglebone_black.jsonc --table-format md --combined --output arch/model/export/table
+      - bausteinsicht export-table --model arch/model/beaglebone_black.jsonc --table-format md --combined --output arch/model/export/table
 
   - name: export-png
-    image: debian:bookworm
+    image: ghcr.io/paulefl/bausteinsicht:latest
     depends_on: [export-plantuml, export-mermaid, export-table]
     commands:
-      - apt-get update -q
-      - apt-get install -y -q xvfb libgbm1 wget jq
-      - |
-        DRAWIO_VERSION=$(wget -qO- https://api.github.com/repos/jgraph/drawio-desktop/releases/latest | jq -r '.tag_name' | tr -d 'v')
-      - wget -q "https://github.com/jgraph/drawio-desktop/releases/download/v$DRAWIO_VERSION/drawio-amd64-$DRAWIO_VERSION.deb"
-      - apt-get install -y "./drawio-amd64-$DRAWIO_VERSION.deb"
       - mkdir -p arch/model/export/png
       - dbus-daemon --system --fork 2>/dev/null || true
-      - xvfb-run -a scripts/bausteinsicht-container.sh export --model arch/model/beaglebone_black.jsonc --output arch/model/export/png
+      - xvfb-run -a bausteinsicht export --model arch/model/beaglebone_black.jsonc --output arch/model/export/png
 
   - name: commit-exports
     image: alpine/git
@@ -694,10 +683,11 @@ trigger:
   branch: [main]
   paths:
     - docker/builder/**
+    - docker/bausteinsicht/**
     - .drone.yml
 
 steps:
-  - name: build-image
+  - name: build-generic-builder
     image: quay.io/podman/stable
     privileged: true
     environment:
@@ -711,7 +701,24 @@ steps:
         podman build -t generic-builder:latest -t generic-builder:$SHA8 -f docker/builder/Dockerfile docker/builder
         podman push generic-builder:latest ghcr.io/$REGISTRY_OWNER/generic-builder:latest
         podman push generic-builder:$SHA8 ghcr.io/$REGISTRY_OWNER/generic-builder:$SHA8
-        echo "Image getaggt und gepushed mit SHA $SHA8"
+        echo "generic-builder gepushed mit SHA $SHA8"
+
+  - name: build-bausteinsicht
+    image: quay.io/podman/stable
+    privileged: true
+    depends_on: []
+    environment:
+      REGISTRY_USER:  {from_secret: registry_user}
+      REGISTRY_TOKEN: {from_secret: registry_token}
+      REGISTRY_OWNER: {from_secret: registry_owner}
+    commands:
+      - |
+        echo "$REGISTRY_TOKEN" | podman login -u $REGISTRY_USER --password-stdin ghcr.io
+        SHA8=$(echo "$DRONE_COMMIT_SHA" | head -c8)
+        podman build -t bausteinsicht:latest -t bausteinsicht:$SHA8 -f docker/bausteinsicht/Dockerfile docker/bausteinsicht
+        podman push bausteinsicht:latest ghcr.io/$REGISTRY_OWNER/bausteinsicht:latest
+        podman push bausteinsicht:$SHA8 ghcr.io/$REGISTRY_OWNER/bausteinsicht:$SHA8
+        echo "bausteinsicht gepushed mit SHA $SHA8"
 
 ---
 # ════════════════════════════════════════
