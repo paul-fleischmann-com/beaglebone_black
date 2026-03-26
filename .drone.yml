@@ -167,7 +167,7 @@ steps:
 
 ---
 # ════════════════════════════════════════
-# PIPELINE 3 — Tools (CLI + TUI + GUI)
+# PIPELINE 3 — Tools (CLI + TUI + GUI) 
 # ════════════════════════════════════════
 kind: pipeline
 type: docker
