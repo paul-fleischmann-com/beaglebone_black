@@ -442,3 +442,215 @@ steps:
       template: "Nightly Build {{build.number}} — {{build.status}} {{build.link}}"
     when:
       status: [success, failure]
+
+---
+# ════════════════════════════════════════
+# PIPELINE 7 — Reports & Dokumentation
+# ════════════════════════════════════════
+kind: pipeline
+type: docker
+name: 7-reports
+
+trigger:
+  event: [push, pull_request, tag]
+  paths:
+    - tests/**
+    - project/go-api/**
+    - tools/**
+    - .drone.yml
+
+steps:
+  - name: go-tests-with-coverage
+    image: golang:1.24
+    volumes:
+      - name: workspace
+        path: /workspace
+    commands:
+      - cd project/go-api
+      - |
+        go test ./pkg/hal/ ./pkg/hal/mock/ ./pkg/hal/config/ \
+            -v -count=1 -json \
+            -coverprofile=/workspace/go_coverage.out \
+            -covermode=atomic \
+            -coverpkg=./pkg/hal/,./pkg/hal/mock/,./pkg/hal/config/ \
+            > /workspace/go_tests.json || true
+      - go tool cover -func=/workspace/go_coverage.out
+
+  - name: python-tests
+    image: python:3.12-alpine
+    depends_on: []
+    volumes:
+      - name: workspace
+        path: /workspace
+    commands:
+      - pip install -r tests/requirements-dev.txt pytest-json-report --break-system-packages -q
+      - pytest tests/ --ignore=tests/hardware/ -v --json-report --json-report-file=/workspace/python_tests.json --timeout=30 || true
+
+  - name: python-security
+    image: python:3.12-alpine
+    depends_on: []
+    volumes:
+      - name: workspace
+        path: /workspace
+    commands:
+      - pip install bandit bandit-sarif-formatter --break-system-packages -q
+      - bandit -r scripts/ tests/ project/ -f sarif -o /workspace/python-sarif.json --exclude tests/hardware/ || true
+      - echo "Bandit done"
+
+  - name: shellcheck
+    image: koalaman/shellcheck-alpine:stable
+    depends_on: []
+    volumes:
+      - name: workspace
+        path: /workspace
+    commands:
+      - shellcheck scripts/*.sh 2>&1 | tee /workspace/shellcheck.txt || true
+
+  - name: c-coverage
+    image: debian:bookworm
+    depends_on: []
+    volumes:
+      - name: workspace
+        path: /workspace
+    commands:
+      - apt-get update -q && apt-get install -y -q gcc make lcov
+      - make -C c-lib CFLAGS="-fprofile-arcs -ftest-coverage -g" CC=gcc test || true
+      - bash scripts/c_coverage.sh c-lib/ /workspace/c-coverage.info '/usr/*' '*/test/*' || true
+
+  - name: adoc-build
+    image: asciidoctor/docker-asciidoctor:latest
+    depends_on: []
+    volumes:
+      - name: workspace
+        path: /workspace
+    commands:
+      - gem install asciidoctor-pdf rouge --quiet || true
+      - ROOT_DIR=. OUTPUT_DIR=/workspace/docs bash scripts/build_adoc.sh || true
+      - find /workspace/docs -name "*.html" -o -name "*.pdf" | sort || true
+
+  - name: strictdoc-export
+    image: python:3.12-slim
+    depends_on: []
+    volumes:
+      - name: workspace
+        path: /workspace
+    commands:
+      - pip install strictdoc --quiet
+      - strictdoc export . --formats html --output-dir /workspace/strictdoc || true
+      - find /workspace/strictdoc -name "*.html" | head -10 || true
+
+  - name: sonarqube-report
+    image: python:3.12-alpine
+    depends_on: [go-tests-with-coverage, c-coverage, python-security]
+    volumes:
+      - name: workspace
+        path: /workspace
+    environment:
+      SONAR_TOKEN: {from_secret: sonar_token}
+      SONAR_PROJECT_KEY: paulefl_beaglebone_black
+    commands:
+      - pip install requests defusedxml --break-system-packages -q
+      - |
+        if [ -z "$SONAR_TOKEN" ]; then
+          echo "SONAR_TOKEN nicht gesetzt — SonarQube Report übersprungen"
+          exit 0
+        fi
+      - python3 .github/actions/sonarqube-report/sonarqube_report.py --token "$SONAR_TOKEN" --project "$SONAR_PROJECT_KEY" --output /workspace/sonar-report.html || true
+
+  - name: sonarcloud-scan
+    image: sonarsource/sonar-scanner-cli:latest
+    depends_on: [go-tests-with-coverage, c-coverage, python-security]
+    volumes:
+      - name: workspace
+        path: /workspace
+    environment:
+      SONAR_TOKEN: {from_secret: sonar_token}
+    commands:
+      - |
+        if [ -z "$SONAR_TOKEN" ]; then
+          echo "SONAR_TOKEN nicht gesetzt — SonarCloud übersprungen"
+          exit 0
+        fi
+      - |
+        sonar-scanner \
+            -Dsonar.projectKey=paulefl_beaglebone_black \
+            -Dsonar.organization=paulefl \
+            -Dsonar.host.url=https://sonarcloud.io \
+            -Dsonar.token=$SONAR_TOKEN \
+            -Dsonar.go.coverage.reportPaths=/workspace/go_coverage.out \
+            -Dsonar.c.lcov.reportPaths=/workspace/c-coverage.info \
+            || true
+    when:
+      branch: [main]
+      event: [push]
+
+  - name: collect-and-report
+    image: python:3.12-slim
+    depends_on:
+      - go-tests-with-coverage
+      - python-tests
+      - c-coverage
+      - adoc-build
+    volumes:
+      - name: workspace
+        path: /workspace
+      - name: trend-storage
+        path: /trend
+    commands:
+      - pip install reportlab jinja2 --quiet
+      - python3 scripts/collect_results.py --workspace /workspace --output /workspace/test_results.json || true
+      - python3 scripts/generate_reports.py --output /workspace/reports --results /workspace/test_results.json --trend /trend/test_trend.json || true
+      - ls -lh /workspace/reports/ || true
+
+  - name: quality-gates
+    image: python:3.12-alpine
+    depends_on: [collect-and-report]
+    volumes:
+      - name: workspace
+        path: /workspace
+    commands:
+      - python3 scripts/collect_results.py --check-gates --results /workspace/test_results.json --min-success-rate 90 --min-avg-coverage 75 --min-file-coverage 50 || true
+
+  - name: package-artifacts
+    image: alpine
+    depends_on:
+      - collect-and-report
+      - adoc-build
+      - strictdoc-export
+      - sonarqube-report
+    volumes:
+      - name: workspace
+        path: /workspace
+      - name: artifact-storage
+        path: /artifacts
+    commands:
+      - apk add --no-cache zip
+      - OUTDIR=/artifacts/${DRONE_BUILD_NUMBER}
+      - mkdir -p ${OUTDIR}
+      - cp -r /workspace/reports ${OUTDIR}/  2>/dev/null || true
+      - cp -r /workspace/docs    ${OUTDIR}/  2>/dev/null || true
+      - cp -r /workspace/strictdoc ${OUTDIR}/ 2>/dev/null || true
+      - cd ${OUTDIR} && zip -r /artifacts/reports-${DRONE_BUILD_NUMBER}.zip . 2>/dev/null || true
+      - echo "Artifacts gepackt"
+
+  - name: notify
+    image: plugins/slack
+    depends_on: [quality-gates, package-artifacts]
+    settings:
+      webhook: {from_secret: slack_webhook}
+      channel: builds
+      template: |
+        *{{ repo.name }}* Build {{build.number}} {{#success build.status}}OK{{else}}FEHLER{{/success}}
+        Branch: `{{build.branch}}` | {{build.link}}
+    when:
+      status: [success, failure]
+      branch: [main]
+      event:  [push, tag]
+
+volumes:
+  - name: workspace
+    temp: {}
+  - name: trend-storage
+    temp: {}
+  - name: artifact-storage
+    temp: {}
