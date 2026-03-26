@@ -85,12 +85,12 @@ image_pull_secrets:
 
 steps:
   - name: test-hal-unit
-    image: golang:1.22
+    image: golang:1.23
     commands:
       - cd project/go-api && go test ./pkg/hal/... -v -count=1
 
   - name: lint-go
-    image: golang:1.22
+    image: golang:1.23
     depends_on: []
     commands:
       - make lint
