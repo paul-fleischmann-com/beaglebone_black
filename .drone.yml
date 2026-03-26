@@ -367,20 +367,63 @@ trigger:
   ref:
     exclude: [refs/tags/*-toTestOnTarget, refs/tags/*-stable]
 
+image_pull_secrets:
+  - dockerconfigjson
+
 steps:
+  - name: build-arm
+    image: ghcr.io/paulefl/generic-builder:latest
+    commands:
+      - SRC=/drone/src OUTPUT=/drone/src/bin bash /drone/src/scripts/build-arm.sh
+
+  - name: build-cli
+    image: golang:1.24
+    depends_on: []
+    commands:
+      - cd tools/cli
+      - GOOS=linux  GOARCH=amd64        CGO_ENABLED=0 go build -ldflags="-s -w" -o ../../bin/bbcli-linux-amd64 .
+      - GOOS=linux  GOARCH=arm GOARM=7  CGO_ENABLED=0 go build -ldflags="-s -w" -o ../../bin/bbcli-linux-arm .
+      - GOOS=darwin GOARCH=amd64        CGO_ENABLED=0 go build -ldflags="-s -w" -o ../../bin/bbcli-darwin-amd64 .
+      - GOOS=darwin GOARCH=arm64        CGO_ENABLED=0 go build -ldflags="-s -w" -o ../../bin/bbcli-darwin-arm64 .
+      - GOOS=windows GOARCH=amd64       CGO_ENABLED=0 go build -ldflags="-s -w" -o ../../bin/bbcli-windows-amd64.exe .
+
+  - name: build-tui
+    image: golang:1.24
+    depends_on: []
+    commands:
+      - cd tools/tui
+      - GOOS=linux  GOARCH=amd64       CGO_ENABLED=0 go build -ldflags="-s -w" -o ../../bin/bbtui-linux-amd64 .
+      - GOOS=linux  GOARCH=arm GOARM=7 CGO_ENABLED=0 go build -ldflags="-s -w" -o ../../bin/bbtui-linux-armv7 .
+      - GOOS=darwin GOARCH=amd64       CGO_ENABLED=0 go build -ldflags="-s -w" -o ../../bin/bbtui-darwin-amd64 .
+
+  - name: build-web-gui
+    image: alpine
+    depends_on: []
+    commands:
+      - apk add --no-cache zip
+      - mkdir -p bin/web-gui
+      - cp tools/web-gui/index.html bin/web-gui/
+      - echo "$DRONE_TAG" > bin/web-gui/version.txt
+      - cd bin && zip -r bbweb-gui.zip web-gui/
+
+  - name: checksums
+    image: alpine
+    depends_on: [build-arm, build-cli, build-tui, build-web-gui]
+    commands:
+      - cd bin && sha256sum embedded bbcli-* bbtui-* bbweb-gui.zip > checksums.sha256 && cat checksums.sha256
+
   - name: build-docker-image
     image: quay.io/podman/stable
     privileged: true
+    depends_on: [build-arm]
     environment:
       REGISTRY_USER:  {from_secret: registry_user}
       REGISTRY_TOKEN: {from_secret: registry_token}
     commands:
-      - echo "build-docker-image is started"
       - echo "$REGISTRY_TOKEN" | podman login -u $REGISTRY_USER --password-stdin docker.io
       - podman build --platform linux/arm/v7 -f project/go-api/Dockerfile.embedded -t myuser/embedded-sw:$DRONE_TAG -t myuser/embedded-sw:latest .
       - podman push myuser/embedded-sw:$DRONE_TAG
       - podman push myuser/embedded-sw:latest
-      - echo "build-docker-image is finished"
 
   - name: create-release
     image: plugins/github-release
