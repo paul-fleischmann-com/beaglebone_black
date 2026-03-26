@@ -38,7 +38,7 @@ steps:
       - cargo test --manifest-path project/rust-lib/Cargo.toml
 
   - name: test-go
-    image: ghcr.io/paulefl/generic-builder:latest
+    image: golang:1.24
     depends_on: [build-libraries]
     environment:
       COVERPKG: ./pkg/hal/,./pkg/hal/mock/,./pkg/hal/config/
