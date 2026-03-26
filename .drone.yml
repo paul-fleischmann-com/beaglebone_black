@@ -365,11 +365,10 @@ steps:
       - podman push myuser/embedded-sw:latest
 
   - name: create-release
-    image: plugins/gitea-release
+    image: plugins/github-release
     depends_on: [build-docker-image]
     settings:
-      api_key:  {from_secret: gitea_token}
-      base_url: {from_secret: gitea_url}
+      api_key: {from_secret: github_token}
       files:
         - bin/embedded
         - project/go-api/libs/libhardware.so
@@ -388,11 +387,10 @@ steps:
       title: "Release $DRONE_TAG"
 
   - name: create-toTestOnTarget-release
-    image: plugins/gitea-release
+    image: plugins/github-release
     depends_on: [create-release]
     settings:
-      api_key:  {from_secret: gitea_token}
-      base_url: {from_secret: gitea_url}
+      api_key: {from_secret: github_token}
       files:
         - bin/embedded
         - project/go-api/libs/libhardware.so
@@ -705,16 +703,14 @@ steps:
   - name: download-release-assets
     image: alpine
     environment:
-      GIT_TOKEN:  {from_secret: git_token}
-      GITEA_URL:  {from_secret: gitea_url}
-      GITEA_REPO: {from_secret: gitea_repo}
+      GIT_TOKEN: {from_secret: git_token}
     commands:
       - apk add --no-cache curl jq
       - mkdir -p bin
       - TAG=$DRONE_TAG
       - |
         curl -sL -H "Authorization: token $GIT_TOKEN" \
-          "${GITEA_URL}/api/v1/repos/${GITEA_REPO}/releases/tags/${TAG}" \
+          "https://api.github.com/repos/$DRONE_REPO/releases/tags/$TAG" \
           | jq -r '.assets[] | .browser_download_url' \
           | while read url; do
               NAME=$(basename "$url")
@@ -807,9 +803,7 @@ steps:
       - test-cli-on-bbb
       - test-cli-remote
     environment:
-      GIT_TOKEN:  {from_secret: git_token}
-      GITEA_URL:  {from_secret: gitea_url}
-      GITEA_REPO: {from_secret: gitea_repo}
+      GIT_TOKEN: {from_secret: git_token}
     commands:
       - apk add --no-cache curl jq git
       - |
@@ -817,7 +811,7 @@ steps:
         VERSION=${OLD_TAG%-toTestOnTarget}
         NEW_TAG=$VERSION-stable
         echo "Promoting $OLD_TAG -> $NEW_TAG"
-        curl -sf -X POST "${GITEA_URL}/api/v1/repos/${GITEA_REPO}/releases" \
+        curl -sf -X POST "https://api.github.com/repos/$DRONE_REPO/releases" \
           -H "Authorization: token $GIT_TOKEN" \
           -H "Content-Type: application/json" \
           -d "{\"tag_name\":\"${NEW_TAG}\",\"name\":\"${VERSION}\",\"prerelease\":false}"
@@ -841,7 +835,6 @@ steps:
     environment:
       GIT_TOKEN: {from_secret: git_token}
       GIT_USER:  {from_secret: git_user}
-      GITEA_URL: {from_secret: gitea_url}
     commands:
       - |
         BUMP=${DRONE_DEPLOY_TO##release-}
