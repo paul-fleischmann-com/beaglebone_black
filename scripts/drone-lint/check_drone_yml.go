@@ -226,6 +226,42 @@ func checkPipelineDeps(pipelines []Pipeline) []failure {
 	return out
 }
 
+// checkCurlyVarsInPlainScalars scans sequence items for ${...} in plain scalars.
+// Drone's YAML parser (stricter than yaml.v2) rejects ${VAR} in plain scalars,
+// especially after a colon (e.g. image:${TAG} is parsed as a mapping key/value).
+// Safe alternatives: use $VAR without braces, or wrap the command in a `|` block scalar.
+func checkCurlyVarsInPlainScalars(data []byte) []failure {
+	lines := strings.Split(string(data), "\n")
+	var out []failure
+	for i, line := range lines {
+		trimmed := strings.TrimLeft(line, " \t")
+		if !strings.HasPrefix(trimmed, "- ") {
+			continue
+		}
+		content := strings.TrimSpace(trimmed[2:])
+		if content == "" {
+			continue
+		}
+		// Skip block/flow scalars and quoted strings — those are safe
+		first := content[0]
+		if first == '|' || first == '>' || first == '\'' || first == '"' ||
+			first == '{' || first == '[' || first == '!' || first == '&' || first == '*' {
+			continue
+		}
+		if strings.Contains(content, "${") {
+			out = append(out, failure{
+				pipeline: fmt.Sprintf("line %d", i+1),
+				msg: fmt.Sprintf(
+					"plain scalar contains '${' — Drone's parser rejects this. "+
+						"Fix: use $VAR instead of ${VAR}, or wrap in '|' block scalar.\n"+
+						"          %s",
+					strings.TrimSpace(line)),
+			})
+		}
+	}
+	return out
+}
+
 // ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
@@ -268,8 +304,23 @@ func main() {
 		pipelines = append(pipelines, p)
 	}
 
-	// Pass 2: semantic checks not expressible in the type system.
-	fmt.Println("\n=== Pass 2: semantic checks ===")
+	// Pass 2: raw-text checks — catches patterns yaml.v2 accepts but Drone rejects.
+	fmt.Println("\n=== Pass 2: raw-text checks ===")
+	var rawFails []failure
+	for _, part := range parts {
+		rawFails = append(rawFails, checkMultilinePlainScalars(part)...)
+		rawFails = append(rawFails, checkCurlyVarsInPlainScalars(part)...)
+	}
+	if len(rawFails) == 0 {
+		fmt.Println("OK   no raw-text issues found")
+	}
+	for _, f := range rawFails {
+		fmt.Printf("FAIL [%-20s] %s\n", f.pipeline, f.msg)
+		totalFail++
+	}
+
+	// Pass 3: semantic checks not expressible in the type system.
+	fmt.Println("\n=== Pass 3: semantic checks ===")
 	var semFails []failure
 	for _, p := range pipelines {
 		semFails = append(semFails, checkStepDeps(p)...)

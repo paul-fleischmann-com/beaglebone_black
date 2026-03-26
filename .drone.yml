@@ -334,7 +334,8 @@ steps:
       - apk add --no-cache zip
       - mkdir -p bin/web-gui
       - cp tools/web-gui/index.html bin/web-gui/
-      - echo "${DRONE_TAG:-dev}" > bin/web-gui/version.txt
+      - |
+        echo "${DRONE_TAG:-dev}" > bin/web-gui/version.txt
       - cd bin && zip -r bbweb-gui.zip web-gui/
 
 ---
@@ -563,7 +564,7 @@ steps:
       - sonarqube-report
     commands:
       - apk add --no-cache zip
-      - cd reports && zip -r ../reports-${DRONE_BUILD_NUMBER}.zip . 2>/dev/null || true
+      - cd reports && zip -r ../reports-$DRONE_BUILD_NUMBER.zip . 2>/dev/null || true
       - echo "Artifacts gepackt"
 
   - name: notify
@@ -628,8 +629,8 @@ steps:
       - apt-get install -y -q xvfb libgbm1 wget jq
       - |
         DRAWIO_VERSION=$(wget -qO- https://api.github.com/repos/jgraph/drawio-desktop/releases/latest | jq -r '.tag_name' | tr -d 'v')
-      - wget -q "https://github.com/jgraph/drawio-desktop/releases/download/v${DRAWIO_VERSION}/drawio-amd64-${DRAWIO_VERSION}.deb"
-      - apt-get install -y "./drawio-amd64-${DRAWIO_VERSION}.deb"
+      - wget -q "https://github.com/jgraph/drawio-desktop/releases/download/v$DRAWIO_VERSION/drawio-amd64-$DRAWIO_VERSION.deb"
+      - apt-get install -y "./drawio-amd64-$DRAWIO_VERSION.deb"
       - mkdir -p arch/model/export/png
       - dbus-daemon --system --fork 2>/dev/null || true
       - xvfb-run -a scripts/bausteinsicht export --model arch/model/beaglebone_black.jsonc --output arch/model/export/png
@@ -679,11 +680,13 @@ steps:
       REGISTRY_TOKEN: {from_secret: registry_token}
       REGISTRY_OWNER: {from_secret: registry_owner}
     commands:
-      - podman login -u $REGISTRY_USER -p $REGISTRY_TOKEN ghcr.io
-      - podman build -t generic-builder:latest -t generic-builder:${DRONE_COMMIT_SHA:0:8} -f docker/builder/Dockerfile docker/builder
-      - podman push generic-builder:latest ghcr.io/${REGISTRY_OWNER}/generic-builder:latest
-      - podman push generic-builder:${DRONE_COMMIT_SHA:0:8} ghcr.io/${REGISTRY_OWNER}/generic-builder:${DRONE_COMMIT_SHA:0:8}
-      - echo "Image getaggt und gepushed mit SHA ${DRONE_COMMIT_SHA:0:8}"
+      - |
+        podman login -u $REGISTRY_USER -p $REGISTRY_TOKEN ghcr.io
+        SHA8=$(echo "$DRONE_COMMIT_SHA" | head -c8)
+        podman build -t generic-builder:latest -t generic-builder:$SHA8 -f docker/builder/Dockerfile docker/builder
+        podman push generic-builder:latest ghcr.io/$REGISTRY_OWNER/generic-builder:latest
+        podman push generic-builder:$SHA8 ghcr.io/$REGISTRY_OWNER/generic-builder:$SHA8
+        echo "Image getaggt und gepushed mit SHA $SHA8"
 
 ---
 # ════════════════════════════════════════
@@ -708,7 +711,7 @@ steps:
     commands:
       - apk add --no-cache curl jq
       - mkdir -p bin
-      - TAG=${DRONE_TAG}
+      - TAG=$DRONE_TAG
       - |
         curl -sL -H "Authorization: token $GIT_TOKEN" \
           "${GITEA_URL}/api/v1/repos/${GITEA_REPO}/releases/tags/${TAG}" \
@@ -809,16 +812,16 @@ steps:
       GITEA_REPO: {from_secret: gitea_repo}
     commands:
       - apk add --no-cache curl jq git
-      - OLD_TAG=${DRONE_TAG}
-      - VERSION=${OLD_TAG%-toTestOnTarget}
-      - NEW_TAG=${VERSION}-stable
-      - echo "Promoting $OLD_TAG -> $NEW_TAG"
       - |
+        OLD_TAG=$DRONE_TAG
+        VERSION=${OLD_TAG%-toTestOnTarget}
+        NEW_TAG=$VERSION-stable
+        echo "Promoting $OLD_TAG -> $NEW_TAG"
         curl -sf -X POST "${GITEA_URL}/api/v1/repos/${GITEA_REPO}/releases" \
           -H "Authorization: token $GIT_TOKEN" \
           -H "Content-Type: application/json" \
           -d "{\"tag_name\":\"${NEW_TAG}\",\"name\":\"${VERSION}\",\"prerelease\":false}"
-      - echo "Promoted zu $NEW_TAG"
+        echo "Promoted zu $NEW_TAG"
 
 ---
 # ════════════════════════════════════════
@@ -840,25 +843,24 @@ steps:
       GIT_USER:  {from_secret: git_user}
       GITEA_URL: {from_secret: gitea_url}
     commands:
-      - BUMP=${DRONE_DEPLOY_TO##release-}
-      - CURRENT=$(grep '^VERSION' Makefile | awk '{print $3}')
-      - IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT"
       - |
+        BUMP=${DRONE_DEPLOY_TO##release-}
+        CURRENT=$(grep '^VERSION' Makefile | awk '{print $3}')
+        IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT"
         case "$BUMP" in
           major) MAJOR=$((MAJOR+1)); MINOR=0; PATCH=0 ;;
           minor) MINOR=$((MINOR+1)); PATCH=0 ;;
           patch) PATCH=$((PATCH+1)) ;;
         esac
-      - NEW="${MAJOR}.${MINOR}.${PATCH}"
-      - sed -i "s/^VERSION = .*/VERSION = $NEW/" Makefile
-      - git config user.name "drone-ci[bot]"
-      - git config user.email "drone-ci[bot]@noreply"
-      - git add Makefile CHANGELOG.md
-      - |
+        NEW="${MAJOR}.${MINOR}.${PATCH}"
+        sed -i "s/^VERSION = .*/VERSION = $NEW/" Makefile
+        git config user.name "drone-ci[bot]"
+        git config user.email "drone-ci[bot]@noreply"
+        git add Makefile CHANGELOG.md
         git commit -m "chore(release): bump version to ${NEW} [skip ci]"
-      - git tag "v${NEW}"
-      - git push https://${GIT_USER}:${GIT_TOKEN}@${DRONE_GIT_HTTP_URL#https://} HEAD:main
-      - git push https://${GIT_USER}:${GIT_TOKEN}@${DRONE_GIT_HTTP_URL#https://} "v${NEW}"
+        git tag "v${NEW}"
+        git push https://${GIT_USER}:${GIT_TOKEN}@${DRONE_GIT_HTTP_URL#https://} HEAD:main
+        git push https://${GIT_USER}:${GIT_TOKEN}@${DRONE_GIT_HTTP_URL#https://} "v${NEW}"
 
 ---
 # ════════════════════════════════════════
