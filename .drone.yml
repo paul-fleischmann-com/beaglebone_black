@@ -8,7 +8,7 @@ name: 1-libraries
 
 trigger:
   event: [push, pull_request,custom]
-  branch: [main]
+  branch: [main,develop]
   paths:
     - project/c-lib/**
     - project/rust-lib/**
@@ -85,7 +85,7 @@ name: 2-embedded-sw
 
 trigger:
   event: [push, pull_request,custom]
-  branch: [main]
+  branch: [main,develop]
   paths:
     - project/go-api/**
     - c-lib/**
@@ -133,7 +133,7 @@ steps:
              sleep 3 && \
              systemctl is-active embedded-sw"
     when:
-      branch: [main]
+      branch: [main,develop]
       event:  [push]
 
   - name: test-hardware-c
@@ -146,7 +146,7 @@ steps:
       - pip install pytest requests --break-system-packages -q
       - pytest tests/hardware/ -v --timeout=60
     when:
-      branch: [main]
+      branch: [main,develop]
       event:  [push]
 
   - name: test-hardware-rust
@@ -159,7 +159,7 @@ steps:
       - pip install pytest requests --break-system-packages -q
       - pytest tests/hardware/ -v --timeout=60
     when:
-      branch: [main]
+      branch: [main,develop]
       event:  [push]
 
   - name: test-hardware-auto
@@ -171,7 +171,7 @@ steps:
       - pip install pytest requests --break-system-packages -q
       - pytest tests/hardware/ -v --timeout=60
     when:
-      branch: [main]
+      branch: [main,develop]
       event:  [push]
 
 ---
@@ -184,7 +184,7 @@ name: 3-tools
 
 trigger:
   event: [push, pull_request,custom]
-  branch: [main]
+  branch: [main,develop]
   paths:
     - tools/**
     - .drone.yml
@@ -327,7 +327,7 @@ name: 4-webapp
 
 trigger:
   event: [push, pull_request,custom]
-  branch: [main]
+  branch: [main,develop]
   paths:
     - tools/web-gui/**
     - .drone.yml
@@ -505,7 +505,7 @@ name: 7-reports
 
 trigger:
   event: [push, pull_request,custom]
-  branch: [main]
+  branch: [main,develop]
 
 steps:
   - name: go-tests-with-coverage
@@ -656,7 +656,7 @@ steps:
             -Dsonar.c.lcov.reportPaths=reports/c-coverage.info \
             || true
     when:
-      branch: [main]
+      branch: [main,develop]
       event: [push]
 
   - name: collect-and-report
@@ -699,7 +699,7 @@ steps:
       template: "Build {{build.number}} — {{build.status}} {{build.link}}"
     when:
       status: [success, failure]
-      branch: [main]
+      branch: [main,develop]
       event:  [push, tag]
 
 ---
@@ -712,7 +712,7 @@ name: 8-bausteinsicht
 
 trigger:
   event: [push, pull_request,custom]
-  branch: [main]
+  branch: [main,develop]
   paths:
     - arch/model/**
     - .drone.yml
@@ -774,7 +774,7 @@ steps:
         fi
     when:
       event: [push]
-      branch: [main]
+      branch: [main,develop]
 
 ---
 # ════════════════════════════════════════
@@ -786,7 +786,7 @@ name: 9-build-container
 
 trigger:
   event: [push, pull_request,custom]
-  branch: [main]
+  branch: [main,develop]
   paths:
     - docker/builder/**
     - docker/bausteinsicht/**
@@ -1039,7 +1039,7 @@ name: 12-changelog
 
 trigger:
   event: [push, pull_request,custom]
-  branch: [main]
+  branch: [main,develop]
 
 steps:
   - name: update-changelog
