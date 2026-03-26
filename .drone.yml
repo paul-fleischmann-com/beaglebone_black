@@ -573,11 +573,11 @@ steps:
       - gem install asciidoctor-pdf rouge --quiet || true
       - ROOT_DIR=. OUTPUT_DIR=reports/docs bash scripts/build_adoc.sh || true
       - find reports/docs -name "*.html" -o -name "*.pdf" | sort || true
-    #ghcr.io/paulefl/strictdoc:latest
+      
+  #ghcr.io/paulefl/strictdoc:latest
   - name: strictdoc-export
     image: python:3.11
     depends_on: [go-tests-with-coverage]
-    entrypoint: [""]
     commands:
       - pip install strictdoc
       - mkdir -p reports/strictdoc
