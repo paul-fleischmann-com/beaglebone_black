@@ -591,8 +591,18 @@ steps:
         python3 scripts/check_req_coverage.py \
           --sdoc-dir docs/requirements \
           --junit-xml reports/go-tests-junit.xml \
+          --output-junit reports/req-coverage-junit.xml \
           --min-coverage 70 || true
-
+  - name: junit-reports - Req coverage
+    image: ghcr.io/rohit-gohri/drone-junit:v0
+    depends_on: [strictdoc-coverage-gate]
+    settings:
+      paths: reports/reports/req-coverage-junit.xml
+    when:
+      status: [
+        'success',
+        'failure',
+      ]
   - name: sonarqube-report
     image: python:3.12-alpine
     depends_on: [go-tests-with-coverage, c-coverage, python-security]

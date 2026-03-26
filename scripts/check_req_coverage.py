@@ -22,6 +22,7 @@ import sys
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass, field
 from pathlib import Path
+from xml.dom import minidom
 
 
 TEST_FILE_RE = re.compile(
@@ -128,10 +129,49 @@ def junit_status_for(test_files: list, junit_results: dict) -> str:
     return '?'
 
 
+def write_junit_xml(active: list, covered_set: set, junit_failures_set: set, output_path: Path) -> None:
+    """Write requirements coverage results as JUnit XML for Drone plugin cards."""
+    testsuites = ET.Element('testsuites')
+    testsuite = ET.SubElement(testsuites, 'testsuite')
+    testsuite.set('name', 'Requirements Coverage')
+    testsuite.set('tests', str(len(active)))
+
+    failures = 0
+    for req in active:
+        tc = ET.SubElement(testsuite, 'testcase')
+        # classname = requirement type prefix (SYS, SWR, HW-DRV, …)
+        prefix = req.uid.split('-')[0]
+        tc.set('classname', prefix)
+        tc.set('name', f'{req.uid}: {req.title}')
+
+        if req.uid in junit_failures_set:
+            failures += 1
+            f = ET.SubElement(tc, 'failure')
+            f.set('message', 'Linked test(s) are FAILING')
+            f.text = f'Requirement {req.uid} has failing tests in JUnit results'
+        elif req.uid not in covered_set:
+            failures += 1
+            f = ET.SubElement(tc, 'failure')
+            f.set('message', 'No test file relation')
+            f.text = f'Requirement {req.uid} has no linked test file (TYPE: File → *_test.*)'
+
+    testsuite.set('failures', str(failures))
+    testsuite.set('errors', '0')
+    testsuite.set('skipped', '0')
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    xml_str = minidom.parseString(ET.tostring(testsuites, encoding='unicode')).toprettyxml(indent='  ')
+    # minidom adds an XML declaration — keep it
+    output_path.write_text(xml_str, encoding='utf-8')
+    print(f'JUnit XML written to {output_path}')
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description='Requirements coverage gate')
     parser.add_argument('--sdoc-dir', default='docs/requirements')
     parser.add_argument('--junit-xml', default='reports/go-tests-junit.xml')
+    parser.add_argument('--output-junit', default='reports/req-coverage-junit.xml',
+                        help='Output JUnit XML for Drone plugin cards')
     parser.add_argument('--min-coverage', type=int, default=70,
                         help='Minimum test-file coverage %% (default: 70)')
     args = parser.parse_args()
@@ -169,8 +209,10 @@ def main() -> None:
     print('─' * 72)
 
     covered = 0
+    covered_set = set()
     uncovered_reqs = []
     junit_failures = []
+    junit_failures_set = set()
 
     for req in active:
         test_files = [f for f in req.file_relations if is_test_file(f)]
@@ -183,11 +225,16 @@ def main() -> None:
 
         if has_test:
             covered += 1
+            covered_set.add(req.uid)
         else:
             uncovered_reqs.append(req)
 
         if j_status == 'FAIL':
             junit_failures.append(req)
+            junit_failures_set.add(req.uid)
+
+    # ── JUnit XML output for Drone plugin cards ───────────────────────────────
+    write_junit_xml(active, covered_set, junit_failures_set, Path(args.output_junit))
 
     # ── Summary ──────────────────────────────────────────────────────────────
     coverage_pct = int(covered / len(active) * 100) if active else 0
