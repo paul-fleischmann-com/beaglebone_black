@@ -224,7 +224,8 @@ steps:
         path: /go/pkg/mod
     commands:
       - cd tools/cli && go mod tidy && go vet ./...
-      - test -z "$(gofmt -l tools/cli/)" || (echo "gofmt: tools/cli/" && exit 1)
+      - |
+        test -z "$(gofmt -l tools/cli/)" || (echo "gofmt: tools/cli/" && exit 1)
 
   - name: lint-tui
     image: golang:1.22-alpine
@@ -1063,7 +1064,8 @@ steps:
       - git config user.name "drone-ci[bot]"
       - git config user.email "drone-ci[bot]@noreply"
       - git add Makefile CHANGELOG.md
-      - git commit -m "chore(release): bump version to ${NEW} [skip ci]"
+      - |
+        git commit -m "chore(release): bump version to ${NEW} [skip ci]"
       - git tag "v${NEW}"
       - git push https://${GIT_USER}:${GIT_TOKEN}@${DRONE_GIT_HTTP_URL#https://} HEAD:main
       - git push https://${GIT_USER}:${GIT_TOKEN}@${DRONE_GIT_HTTP_URL#https://} "v${NEW}"
