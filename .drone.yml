@@ -306,3 +306,39 @@ steps:
       - build-tui-darwin-amd64
     commands:
       - cd bin && sha256sum bbcli-* bbtui-* > checksums.sha256 && cat checksums.sha256
+
+---
+# ════════════════════════════════════════
+# PIPELINE 4 — WebApp Frontend
+# ════════════════════════════════════════
+kind: pipeline
+type: docker
+name: 4-webapp
+
+trigger:
+  event: [push, pull_request, tag]
+  paths:
+    - tools/web-gui/**
+    - .drone.yml
+
+steps:
+  - name: validate-html
+    image: python:3.12-alpine
+    commands:
+      - |
+        python -c "
+        from html.parser import HTMLParser
+        class V(HTMLParser): pass
+        V().feed(open('tools/web-gui/index.html').read())
+        print('HTML valide')
+        "
+
+  - name: package-web-gui
+    image: alpine
+    depends_on: [validate-html]
+    commands:
+      - apk add --no-cache zip
+      - mkdir -p bin/web-gui
+      - cp tools/web-gui/index.html bin/web-gui/
+      - echo "${DRONE_TAG:-dev}" > bin/web-gui/version.txt
+      - cd bin && zip -r bbweb-gui.zip web-gui/
