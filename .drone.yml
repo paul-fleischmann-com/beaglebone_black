@@ -356,7 +356,8 @@ steps:
       REGISTRY_TOKEN: {from_secret: registry_token}
     commands:
       - podman login -u $REGISTRY_USER -p $REGISTRY_TOKEN docker.io
-      - echo "login ok"
+      - podman build --platform linux/arm/v7 -f project/go-api/Dockerfile.embedded -t myuser/embedded-sw:${DRONE_TAG} -t myuser/embedded-sw:latest .
+      - echo "build ok"
 
 ---
 # ════════════════════════════════════════
