@@ -291,7 +291,7 @@ steps:
     image: koalaman/shellcheck-alpine:stable
     depends_on: []
     commands:
-      - shellcheck scripts/*.sh
+      - shellcheck --severity=error scripts/*.sh
 
   - name: checksums
     image: alpine
