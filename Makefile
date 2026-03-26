@@ -41,6 +41,9 @@ test-ci:
 test-cover:
 	./scripts/test.sh -cover -html
 
+check-drone-yml:
+	cd scripts/drone-lint && go run check_drone_yml.go ../../.drone.yml
+
 lint:
 	cd project/go-api && go vet ./pkg/hal/ ./pkg/hal/mock/ ./pkg/hal/config/
 	cd tools/cli && go mod tidy && go vet ./...

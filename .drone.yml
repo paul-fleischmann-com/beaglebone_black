@@ -93,8 +93,6 @@ trigger:
     - project/rust-lib/**
     - .drone.yml
 
-depends_on: [1-libraries]
-
 steps:
   - name: test-hal-unit
     image: golang:1.22-alpine
@@ -404,8 +402,6 @@ trigger:
   ref:
     exclude: [refs/tags/*-toTestOnTarget, refs/tags/*-stable]
 
-depends_on: [1-libraries, 2-embedded-sw, 3-tools, 4-webapp, 7-reports]
-
 steps:
   - name: build-docker-image
     image: quay.io/podman/stable
@@ -514,8 +510,6 @@ trigger:
     - project/go-api/**
     - tools/**
     - .drone.yml
-
-depends_on: [2-embedded-sw, 3-tools]
 
 steps:
   - name: go-tests-with-coverage
