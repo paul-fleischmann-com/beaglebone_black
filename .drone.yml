@@ -803,7 +803,7 @@ steps:
       REGISTRY_OWNER: {from_secret: registry_owner}
     commands:
       - |
-        echo "$REGISTRY_TOKEN" | podman login -u $REGISTRY_USER --password-stdin ghcr.io
+        podman login ghcr.io -u "$REGISTRY_USER" -p "$REGISTRY_TOKEN"
         SHA8=$(echo "$DRONE_COMMIT_SHA" | head -c8)
         podman build -t generic-builder:latest -t generic-builder:$SHA8 -f docker/builder/Dockerfile docker/builder
         podman push generic-builder:latest ghcr.io/$REGISTRY_OWNER/generic-builder:latest
@@ -828,7 +828,7 @@ steps:
       REGISTRY_OWNER: {from_secret: registry_owner}
     commands:
       - |
-        echo "$REGISTRY_TOKEN" | podman login -u $REGISTRY_USER --password-stdin ghcr.io
+        podman login ghcr.io -u "$REGISTRY_USER" -p "$REGISTRY_TOKEN"
         SHA8=$(echo "$DRONE_COMMIT_SHA" | head -c8)
         podman build -t bausteinsicht-base:latest \
           -f docker/bausteinsicht/repo/.devcontainer/Dockerfile \
@@ -851,7 +851,7 @@ steps:
       REGISTRY_OWNER: {from_secret: registry_owner}
     commands:
       - |
-        echo "$REGISTRY_TOKEN" | podman login -u $REGISTRY_USER --password-stdin ghcr.io
+        podman login ghcr.io -u "$REGISTRY_USER" -p "$REGISTRY_TOKEN"
         SHA8=$(echo "$DRONE_COMMIT_SHA" | head -c8)
         podman build -t strictdoc:latest -t strictdoc:$SHA8 \
           -f docker/strictdoc/Dockerfile \
