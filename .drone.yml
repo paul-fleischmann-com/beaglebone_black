@@ -573,15 +573,42 @@ steps:
       - gem install asciidoctor-pdf rouge --quiet || true
       - ROOT_DIR=. OUTPUT_DIR=reports/docs bash scripts/build_adoc.sh || true
       - find reports/docs -name "*.html" -o -name "*.pdf" | sort || true
-
+    #ghcr.io/paulefl/strictdoc:latest
   - name: strictdoc-export
-    image: ghcr.io/paulefl/strictdoc:latest
+    image: python:3.11
     depends_on: [go-tests-with-coverage]
     entrypoint: [""]
     commands:
+      - pip install strictdoc
       - mkdir -p reports/strictdoc
       - strictdoc export . --formats html --output-dir reports/strictdoc || true
       - find reports/strictdoc -name "*.html" | head -10 || true
+      - zip -r strictdoc-output.zip build/
+      
+ - name: prepare
+    image: alpine
+    commands:
+      - SHA8=$(echo "$DRONE_COMMIT_SHA" | head -c8)
+      - FILE=strictdoc-$SHA8.zip
+      - mv strictdoc-output.zip $FILE
+      - echo $FILE > artifact_name.txt
+
+  - name: upload
+    image: appleboy/drone-scp
+    settings:
+      host: 192.168.2.55
+      username: deploy
+      key:
+        from_secret: ssh_key
+      source: strictdoc-*.zip
+      target: /var/www/downloads/
+
+  - name: print-url
+    image: alpine
+    commands:
+      - SHA8=$(echo "$DRONE_COMMIT_SHA" | head -c8)
+      - echo "Download URL:"
+      - echo "http://192.168.2.55/downloads/strictdoc-$SHA8.zip"
 
   - name: strictdoc-coverage-gate
     image: python:3.12-slim
