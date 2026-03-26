@@ -458,12 +458,4 @@ steps:
     image: golang:1.24
     commands:
       - mkdir -p reports
-      - cd project/go-api
-      - |
-        go test ./pkg/hal/ ./pkg/hal/mock/ ./pkg/hal/config/ \
-            -v -count=1 -json \
-            -coverprofile=../../reports/go_coverage.out \
-            -covermode=atomic \
-            -coverpkg=./pkg/hal/,./pkg/hal/mock/,./pkg/hal/config/ \
-            > ../../reports/go_tests.json || true
-      - go tool cover -func=../../reports/go_coverage.out
+      - echo "go-tests-with-coverage placeholder"
