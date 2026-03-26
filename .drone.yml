@@ -63,8 +63,6 @@ steps:
 
 volumes:
   - name: libs-cache
-    host:
-      path: /tmp/drone-cache/libs
+    temp: {}
   - name: cargo-cache
-    host:
-      path: /tmp/drone-cache/cargo
+    temp: {}
