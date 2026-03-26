@@ -344,6 +344,8 @@ name: 5-release
 
 trigger:
   event: [tag]
+  ref:
+    exclude: [refs/tags/*-toTestOnTarget, refs/tags/*-stable]
 
 steps:
   - name: smoke
