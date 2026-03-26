@@ -366,7 +366,7 @@ steps:
       REGISTRY_TOKEN: {from_secret: registry_token}
     commands:
       - echo "build-docker-image is started"
-      - podman login -u $REGISTRY_USER -p $REGISTRY_TOKEN docker.io
+      - echo "$REGISTRY_TOKEN" | podman login -u $REGISTRY_USER --password-stdin docker.io
       - podman build --platform linux/arm/v7 -f project/go-api/Dockerfile.embedded -t myuser/embedded-sw:$DRONE_TAG -t myuser/embedded-sw:latest .
       - podman push myuser/embedded-sw:$DRONE_TAG
       - podman push myuser/embedded-sw:latest
@@ -689,7 +689,7 @@ steps:
       REGISTRY_OWNER: {from_secret: registry_owner}
     commands:
       - |
-        podman login -u $REGISTRY_USER -p $REGISTRY_TOKEN ghcr.io
+        echo "$REGISTRY_TOKEN" | podman login -u $REGISTRY_USER --password-stdin ghcr.io
         SHA8=$(echo "$DRONE_COMMIT_SHA" | head -c8)
         podman build -t generic-builder:latest -t generic-builder:$SHA8 -f docker/builder/Dockerfile docker/builder
         podman push generic-builder:latest ghcr.io/$REGISTRY_OWNER/generic-builder:latest
