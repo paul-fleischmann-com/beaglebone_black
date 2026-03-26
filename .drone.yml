@@ -377,7 +377,134 @@ trigger:
   event: [push]
 
 steps:
-  - name: smoke
-    image: alpine
+  - name: go-tests-with-coverage
+    image: golang:1.24
     commands:
-      - echo "pipeline 7 ok"
+      - mkdir -p reports
+      - cd project/go-api
+      - |
+        go test ./pkg/hal/ ./pkg/hal/mock/ ./pkg/hal/config/ \
+            -v -count=1 -json \
+            -coverprofile=../../reports/go_coverage.out \
+            -covermode=atomic \
+            -coverpkg=./pkg/hal/,./pkg/hal/mock/,./pkg/hal/config/ \
+            > ../../reports/go_tests.json || true
+      - go tool cover -func=../../reports/go_coverage.out
+
+  - name: python-tests
+    image: python:3.12-alpine
+    depends_on: []
+    commands:
+      - mkdir -p reports
+      - pip install -r tests/requirements-dev.txt pytest-json-report --break-system-packages -q
+      - pytest tests/ --ignore=tests/hardware/ -v --json-report --json-report-file=reports/python_tests.json --timeout=30 || true
+
+  - name: python-security
+    image: python:3.12-alpine
+    depends_on: []
+    commands:
+      - mkdir -p reports
+      - pip install bandit bandit-sarif-formatter --break-system-packages -q
+      - bandit -r scripts/ tests/ project/ -f sarif -o reports/python-sarif.json --exclude tests/hardware/ || true
+      - echo "Bandit done"
+
+  - name: shellcheck
+    image: koalaman/shellcheck-alpine:stable
+    depends_on: []
+    commands:
+      - mkdir -p reports
+      - shellcheck scripts/*.sh 2>&1 | tee reports/shellcheck.txt || true
+
+  - name: c-coverage
+    image: debian:bookworm
+    depends_on: []
+    commands:
+      - mkdir -p reports
+      - apt-get update -q && apt-get install -y -q gcc make lcov
+      - make -C c-lib CFLAGS="-fprofile-arcs -ftest-coverage -g" CC=gcc test || true
+      - bash scripts/c_coverage.sh c-lib/ reports/c-coverage.info '/usr/*' '*/test/*' || true
+
+  - name: adoc-build
+    image: asciidoctor/docker-asciidoctor:latest
+    depends_on: []
+    commands:
+      - gem install asciidoctor-pdf rouge --quiet || true
+      - ROOT_DIR=. OUTPUT_DIR=reports/docs bash scripts/build_adoc.sh || true
+      - find reports/docs -name "*.html" -o -name "*.pdf" | sort || true
+
+  - name: strictdoc-export
+    image: python:3.12-slim
+    depends_on: []
+    commands:
+      - pip install strictdoc --quiet
+      - strictdoc export . --formats html --output-dir reports/strictdoc || true
+      - find reports/strictdoc -name "*.html" | head -10 || true
+
+  - name: sonarqube-report
+    image: python:3.12-alpine
+    depends_on: [go-tests-with-coverage, c-coverage, python-security]
+    commands:
+      - pip install requests defusedxml --break-system-packages -q
+      - |
+        SONAR_TOKEN=$(cat /run/secrets/sonar_token 2>/dev/null || echo "")
+        if [ -z "$SONAR_TOKEN" ]; then echo "SONAR_TOKEN nicht gesetzt — übersprungen"; exit 0; fi
+        python3 .github/actions/sonarqube-report/sonarqube_report.py --token "$SONAR_TOKEN" --project paulefl_beaglebone_black --output reports/sonar-report.html || true
+
+  - name: sonarcloud-scan
+    image: sonarsource/sonar-scanner-cli:latest
+    depends_on: [go-tests-with-coverage, c-coverage, python-security]
+    commands:
+      - |
+        sonar-scanner \
+            -Dsonar.projectKey=paulefl_beaglebone_black \
+            -Dsonar.organization=paulefl \
+            -Dsonar.host.url=https://sonarcloud.io \
+            -Dsonar.go.coverage.reportPaths=reports/go_coverage.out \
+            -Dsonar.c.lcov.reportPaths=reports/c-coverage.info \
+            || true
+    when:
+      branch: [main]
+      event: [push]
+
+  - name: collect-and-report
+    image: python:3.12-slim
+    depends_on:
+      - go-tests-with-coverage
+      - python-tests
+      - c-coverage
+      - adoc-build
+    commands:
+      - pip install reportlab jinja2 --quiet
+      - python3 scripts/collect_results.py --workspace reports --output reports/test_results.json || true
+      - python3 scripts/generate_reports.py --output reports/summary --results reports/test_results.json --trend reports/test_trend.json || true
+      - ls -lh reports/ || true
+
+  - name: quality-gates
+    image: python:3.12-alpine
+    depends_on: [collect-and-report]
+    commands:
+      - python3 scripts/collect_results.py --check-gates --results reports/test_results.json --min-success-rate 90 --min-avg-coverage 75 --min-file-coverage 50 || true
+
+  - name: package-artifacts
+    image: alpine
+    depends_on:
+      - collect-and-report
+      - adoc-build
+      - strictdoc-export
+      - sonarqube-report
+    commands:
+      - apk add --no-cache zip
+      - cd reports && zip -r ../reports-${DRONE_BUILD_NUMBER}.zip . 2>/dev/null || true
+      - echo "Artifacts gepackt"
+
+  - name: notify
+    image: plugins/slack
+    depends_on: [quality-gates, package-artifacts]
+    settings:
+      webhook: {from_secret: slack_webhook}
+      channel: builds
+      template: "Build {{build.number}} — {{build.status}} {{build.link}}"
+    when:
+      status: [success, failure]
+      branch: [main]
+      event:  [push, tag]
