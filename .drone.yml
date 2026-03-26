@@ -438,24 +438,15 @@ steps:
       status: [success, failure]
 
 ---
-# ════════════════════════════════════════
-# PIPELINE 7 — Reports & Dokumentation
-# ════════════════════════════════════════
 kind: pipeline
 type: docker
 name: 7-reports
 
 trigger:
-  event: [push, pull_request, tag]
-  paths:
-    - tests/**
-    - project/go-api/**
-    - tools/**
-    - .drone.yml
+  event: [push]
 
 steps:
-  - name: go-tests-with-coverage
-    image: golang:1.24
+  - name: smoke
+    image: alpine
     commands:
-      - mkdir -p reports
-      - echo "go-tests-with-coverage placeholder"
+      - echo "pipeline 7 ok"
