@@ -30,9 +30,9 @@ UNITY_SRC      = $(UNITY_DIR)/unity.c
 UNITY_HDR      = $(UNITY_DIR)/unity.h $(UNITY_DIR)/unity_internals.h
 
 $(UNITY_SRC):
-	wget -q "$(UNITY_BASE_URL)/unity.c"         -O $(UNITY_DIR)/unity.c
-	wget -q "$(UNITY_BASE_URL)/unity.h"         -O $(UNITY_DIR)/unity.h
-	wget -q "$(UNITY_BASE_URL)/unity_internals.h" -O $(UNITY_DIR)/unity_internals.h
+	curl -fsSL "$(UNITY_BASE_URL)/unity.c"          -o $(UNITY_DIR)/unity.c
+	curl -fsSL "$(UNITY_BASE_URL)/unity.h"          -o $(UNITY_DIR)/unity.h
+	curl -fsSL "$(UNITY_BASE_URL)/unity_internals.h" -o $(UNITY_DIR)/unity_internals.h
 
 # ── Coverage (nativer gcc, kein ARM-Cross-Compiler) ──────────────────────────
 COV_CC      = gcc
