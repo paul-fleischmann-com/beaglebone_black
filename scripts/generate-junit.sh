@@ -12,6 +12,22 @@ mkdir -p reports .step-status
 PASS=0; FAIL=0
 XML_CASES=""
 
+TEST_CASE_PROP="
+ <properties>
+                <property name="priority" value="high" />
+                <property name="language" value="english" />
+                <property name="author" value="Adrian" />
+                <property name="attachment" value="screenshots/dashboard.png" />
+                <property name="attachment" value="screenshots/users.png" />
+
+                <!-- Optional support for properties with text values -->
+                <property name="description">
+                    This text describes the purpose of this test case and provides
+                    an overview of what the test does and how it works.
+                </property>
+            </properties>
+"
+
 for step in "$@"; do
   if [ -f ".step-status/$step" ]; then
     duration=$(cat ".step-status/$step" 2>/dev/null || echo 0)
@@ -22,7 +38,7 @@ for step in "$@"; do
     XML_CASES="${XML_CASES}    <testcase name=\"${step}\" classname=\"${PIPELINE}\" time=\"${duration}\">\n      <system-out>Step passed in ${duration}s</system-out>\n    </testcase>\n"
     PASS=$((PASS + 1))
   else
-    XML_CASES="${XML_CASES}    <testcase name=\"${step}\" classname=\"${PIPELINE}\" time=\"0\">\n      <failure message=\"Step failed or was skipped\"/>\n    </testcase>\n"
+    XML_CASES="${XML_CASES}    <testcase name=\"${step}\" classname=\"${PIPELINE}\" time=\"0\">\n    ${TEST_CASE_PROP}\n <system-out>\"${step}\"</system-out> \n <failure message=\"Step failed or was skipped\"/>\n    </testcase>\n"
     FAIL=$((FAIL + 1))
   fi
 done
