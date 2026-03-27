@@ -13,10 +13,11 @@ FULL_IMAGE="ghcr.io/$REGISTRY_USER/$IMAGE"
 
 podman login ghcr.io -u "$REGISTRY_USER" -p "$REGISTRY_TOKEN"
 
-if podman manifest inspect "$FULL_IMAGE:$VERSION" > /dev/null 2>&1; then
-  echo "$IMAGE:$VERSION already exists — skipping build"
+if skopeo inspect --creds "$REGISTRY_USER:$REGISTRY_TOKEN" "docker://$FULL_IMAGE:$VERSION" > /dev/null 2>&1; then
+  echo "$IMAGE:$VERSION already exists in ghcr.io — skipping build"
   exit 0
 fi
+echo "$IMAGE:$VERSION not found in ghcr.io — building ..."
 
 echo "Building $IMAGE:$VERSION ..."
 podman build --build-arg VERSION="$VERSION" \
