@@ -802,13 +802,14 @@ steps:
       REGISTRY_TOKEN: {from_secret: Bau_token}
     commands:
       - |
+        VERSION=$(cat docker/builder/VERSION | tr -d '[:space:]')
         podman login ghcr.io -u "$REGISTRY_USER" -p "$REGISTRY_TOKEN"
-        podman build --build-arg VERSION=1.0.0 \
-          -t ghcr.io/$REGISTRY_USER/generic-builder:1.0.0 \
+        podman build --build-arg VERSION=$VERSION \
+          -t ghcr.io/$REGISTRY_USER/generic-builder:$VERSION \
           -t ghcr.io/$REGISTRY_USER/generic-builder:latest \
           -f docker/builder/Dockerfile \
           docker/builder
-        podman push ghcr.io/$REGISTRY_USER/generic-builder:1.0.0
+        podman push ghcr.io/$REGISTRY_USER/generic-builder:$VERSION
         podman push ghcr.io/$REGISTRY_USER/generic-builder:latest
 
   - name: clone-bausteinsicht-repo
@@ -854,13 +855,14 @@ steps:
       REGISTRY_TOKEN: {from_secret: Bau_token}
     commands:
       - |
+        VERSION=$(cat docker/strictdoc/VERSION | tr -d '[:space:]')
         podman login ghcr.io -u "$REGISTRY_USER" -p "$REGISTRY_TOKEN"
-        podman build --build-arg VERSION=1.0.0 \
-          -t ghcr.io/$REGISTRY_USER/strictdoc:1.0.0 \
+        podman build --build-arg VERSION=$VERSION \
+          -t ghcr.io/$REGISTRY_USER/strictdoc:$VERSION \
           -t ghcr.io/$REGISTRY_USER/strictdoc:latest \
           -f docker/strictdoc/Dockerfile \
           docker/strictdoc
-        podman push ghcr.io/$REGISTRY_USER/strictdoc:1.0.0
+        podman push ghcr.io/$REGISTRY_USER/strictdoc:$VERSION
         podman push ghcr.io/$REGISTRY_USER/strictdoc:latest
 
 ---
