@@ -8,7 +8,7 @@ name: 1-libraries
 
 trigger:
   event: [push, pull_request, custom]
-  branch: [main, develop]
+  branch: [main]
   paths:
     - project/c-lib/**
     - project/rust-lib/**
@@ -104,7 +104,7 @@ name: 2-embedded-sw
 
 trigger:
   event: [push, pull_request, custom]
-  branch: [main, develop]
+  branch: [main]
   paths:
     - project/go-api/**
     - project/c-lib/**
@@ -219,7 +219,7 @@ name: 3-tools
 
 trigger:
   event: [push, pull_request, custom]
-  branch: [main, develop]
+  branch: [main]
   paths:
     - tools/**
 
@@ -382,7 +382,7 @@ name: 4-webapp
 
 trigger:
   event: [push, pull_request, custom]
-  branch: [main, develop]
+  branch: [main]
   paths:
     - tools/web-gui/**
 
@@ -626,7 +626,7 @@ name: 7-reports
 
 trigger:
   event: [push, pull_request, custom]
-  branch: [main, develop]
+  branch: [main]
   paths:
     - project/**
     - tests/**
@@ -858,7 +858,7 @@ name: 8-bausteinsicht
 
 trigger:
   event: [push, pull_request, custom]
-  branch: [main, develop]
+  branch: [main]
   paths:
     - arch/model/**
 
@@ -952,7 +952,7 @@ name: 9-build-container
 
 trigger:
   event: [push, pull_request, custom]
-  branch: [main, develop, container_build]
+  branch: [main, container_build]
   paths:
     - docker/builder/**
     - docker/bausteinsicht/**
@@ -1244,7 +1244,7 @@ name: 12-changelog
 
 trigger:
   event: [push, pull_request, custom]
-  branch: [main, develop]
+  branch: [main]
   paths:
     - project/**
     - tools/**
