@@ -72,6 +72,27 @@ steps:
     when:
       status: [success, failure]
 
+  - name: allure-generate
+    image: openjdk:17-slim
+    depends_on: [junit-reports-pipe1]
+    commands:
+      - bash scripts/allure-generate.sh 1-libraries
+    when:
+      status: [success, failure]
+
+  - name: upload-allure
+    image: appleboy/drone-scp
+    depends_on: [allure-generate]
+    settings:
+      host: 192.168.2.55
+      username: deploy
+      key:
+        from_secret: ssh_key
+      source: allure-report.zip
+      target: /var/www/downloads/1-libraries/
+    when:
+      status: [success, failure]
+
 ---
 # ════════════════════════════════════════
 # PIPELINE 2 — Embedded SW (Go API + HAL)
@@ -171,9 +192,30 @@ steps:
       branch: [main,develop]
       event:  [push]
 
+  - name: allure-generate
+    image: openjdk:17-slim
+    depends_on: [test-hardware-auto, build-go-api]
+    commands:
+      - bash scripts/allure-generate.sh 2-embedded-sw
+    when:
+      status: [success, failure]
+
+  - name: upload-allure
+    image: appleboy/drone-scp
+    depends_on: [allure-generate]
+    settings:
+      host: 192.168.2.55
+      username: deploy
+      key:
+        from_secret: ssh_key
+      source: allure-report.zip
+      target: /var/www/downloads/2-embedded-sw/
+    when:
+      status: [success, failure]
+
 ---
 # ════════════════════════════════════════
-# PIPELINE 3 — Tools (CLI + TUI + GUI) 
+# PIPELINE 3 — Tools (CLI + TUI + GUI)
 # ════════════════════════════════════════
 kind: pipeline
 type: docker
@@ -314,6 +356,27 @@ steps:
     commands:
       - cd bin && sha256sum bbcli-* bbtui-* > checksums.sha256 && cat checksums.sha256
 
+  - name: allure-generate
+    image: openjdk:17-slim
+    depends_on: [checksums, shellcheck, validate-web-gui]
+    commands:
+      - bash scripts/allure-generate.sh 3-tools
+    when:
+      status: [success, failure]
+
+  - name: upload-allure
+    image: appleboy/drone-scp
+    depends_on: [allure-generate]
+    settings:
+      host: 192.168.2.55
+      username: deploy
+      key:
+        from_secret: ssh_key
+      source: allure-report.zip
+      target: /var/www/downloads/3-tools/
+    when:
+      status: [success, failure]
+
 ---
 # ════════════════════════════════════════
 # PIPELINE 4 — WebApp Frontend
@@ -351,6 +414,27 @@ steps:
       - |
         echo "${DRONE_TAG:-dev}" > bin/web-gui/version.txt
       - cd bin && zip -r bbweb-gui.zip web-gui/
+
+  - name: allure-generate
+    image: openjdk:17-slim
+    depends_on: [package-web-gui]
+    commands:
+      - bash scripts/allure-generate.sh 4-webapp
+    when:
+      status: [success, failure]
+
+  - name: upload-allure
+    image: appleboy/drone-scp
+    depends_on: [allure-generate]
+    settings:
+      host: 192.168.2.55
+      username: deploy
+      key:
+        from_secret: ssh_key
+      source: allure-report.zip
+      target: /var/www/downloads/4-webapp/
+    when:
+      status: [success, failure]
 
 ---
 # ════════════════════════════════════════
@@ -464,6 +548,27 @@ steps:
       tag: "$DRONE_TAG-toTestOnTarget"
       prerelease: true
 
+  - name: allure-generate
+    image: openjdk:17-slim
+    depends_on: [create-toTestOnTarget-release]
+    commands:
+      - bash scripts/allure-generate.sh 5-release
+    when:
+      status: [success, failure]
+
+  - name: upload-allure
+    image: appleboy/drone-scp
+    depends_on: [allure-generate]
+    settings:
+      host: 192.168.2.55
+      username: deploy
+      key:
+        from_secret: ssh_key
+      source: allure-report.zip
+      target: /var/www/downloads/5-release/
+    when:
+      status: [success, failure]
+
 ---
 # ════════════════════════════════════════
 # PIPELINE 6 — Nightly (täglich 02:00)
@@ -492,6 +597,27 @@ steps:
       webhook: {from_secret: slack_webhook}
       channel: builds
       template: "Nightly Build {{build.number}} — {{build.status}} {{build.link}}"
+    when:
+      status: [success, failure]
+
+  - name: allure-generate
+    image: openjdk:17-slim
+    depends_on: [notify-slack]
+    commands:
+      - bash scripts/allure-generate.sh 6-nightly
+    when:
+      status: [success, failure]
+
+  - name: upload-allure
+    image: appleboy/drone-scp
+    depends_on: [allure-generate]
+    settings:
+      host: 192.168.2.55
+      username: deploy
+      key:
+        from_secret: ssh_key
+      source: allure-report.zip
+      target: /var/www/downloads/6-nightly/
     when:
       status: [success, failure]
 
@@ -656,30 +782,24 @@ steps:
       branch: [main,develop]
       event: [push]
 
-  - name: allure-report
+  - name: allure-generate
     image: openjdk:17-slim
-    depends_on: [go-tests-with-coverage, strictdoc-coverage-gate]
+    depends_on: [collect-and-report, strictdoc-coverage-gate]
     commands:
-      - apt-get update -q && apt-get install -y -q wget zip
-      - wget -q https://github.com/allure-framework/allure2/releases/download/2.27.0/allure-2.27.0.tgz -O allure.tgz
-      - tar -xzf allure.tgz
-      - mkdir -p allure-results
-      - cp reports/*.xml allure-results/ 2>/dev/null || true
-      - ./allure-2.27.0/bin/allure generate allure-results/ -o reports/allure-report --clean
-      - SHA8=$(echo "$DRONE_COMMIT_SHA" | head -c8)
-      - zip -r allure-$SHA8.zip reports/allure-report/
-      - echo "allure-$SHA8.zip" > allure_artifact.txt
+      - bash scripts/allure-generate.sh 7-reports
+    when:
+      status: [success, failure]
 
   - name: upload-allure
     image: appleboy/drone-scp
-    depends_on: [allure-report]
+    depends_on: [allure-generate]
     settings:
       host: 192.168.2.55
       username: deploy
       key:
         from_secret: ssh_key
-      source: allure-*.zip
-      target: /var/www/downloads/
+      source: allure-report.zip
+      target: /var/www/downloads/7-reports/
     when:
       status: [success, failure]
 
@@ -709,7 +829,7 @@ steps:
       - adoc-build
       - strictdoc-coverage-gate
       - sonarqube-report
-      - allure-report
+      - allure-generate
     commands:
       - apk add --no-cache zip
       - cd reports && zip -r ../reports-$DRONE_BUILD_NUMBER.zip . 2>/dev/null || true
@@ -801,6 +921,27 @@ steps:
       event: [push]
       branch: [main,develop]
 
+  - name: allure-generate
+    image: openjdk:17-slim
+    depends_on: [commit-exports]
+    commands:
+      - bash scripts/allure-generate.sh 8-bausteinsicht
+    when:
+      status: [success, failure]
+
+  - name: upload-allure
+    image: appleboy/drone-scp
+    depends_on: [allure-generate]
+    settings:
+      host: 192.168.2.55
+      username: deploy
+      key:
+        from_secret: ssh_key
+      source: allure-report.zip
+      target: /var/www/downloads/8-bausteinsicht/
+    when:
+      status: [success, failure]
+
 ---
 # ════════════════════════════════════════
 # PIPELINE 9 — Builder Image
@@ -859,6 +1000,27 @@ steps:
       REGISTRY_TOKEN: {from_secret: Bau_token}
     commands:
       - scripts/build-container.sh strictdoc docker/strictdoc/Dockerfile docker/strictdoc docker/strictdoc/VERSION
+
+  - name: allure-generate
+    image: openjdk:17-slim
+    depends_on: [build-bausteinsicht, build-strictdoc]
+    commands:
+      - bash scripts/allure-generate.sh 9-build-container
+    when:
+      status: [success, failure]
+
+  - name: upload-allure
+    image: appleboy/drone-scp
+    depends_on: [allure-generate]
+    settings:
+      host: 192.168.2.55
+      username: deploy
+      key:
+        from_secret: ssh_key
+      source: allure-report.zip
+      target: /var/www/downloads/9-build-container/
+    when:
+      status: [success, failure]
 
 ---
 # ════════════════════════════════════════
@@ -991,6 +1153,27 @@ steps:
           -d "{\"tag_name\":\"${NEW_TAG}\",\"name\":\"${VERSION}\",\"prerelease\":false}"
         echo "Promoted zu $NEW_TAG"
 
+  - name: allure-generate
+    image: openjdk:17-slim
+    depends_on: [promote-to-stable]
+    commands:
+      - bash scripts/allure-generate.sh 10-integration-tests
+    when:
+      status: [success, failure]
+
+  - name: upload-allure
+    image: appleboy/drone-scp
+    depends_on: [allure-generate]
+    settings:
+      host: 192.168.2.55
+      username: deploy
+      key:
+        from_secret: ssh_key
+      source: allure-report.zip
+      target: /var/www/downloads/10-integration-tests/
+    when:
+      status: [success, failure]
+
 ---
 # ════════════════════════════════════════
 # PIPELINE 11 — Version Bump & Release
@@ -1029,6 +1212,27 @@ steps:
         git push https://${GIT_USER}:${GIT_TOKEN}@${DRONE_GIT_HTTP_URL#https://} HEAD:main
         git push https://${GIT_USER}:${GIT_TOKEN}@${DRONE_GIT_HTTP_URL#https://} "v${NEW}"
 
+  - name: allure-generate
+    image: openjdk:17-slim
+    depends_on: [bump-version]
+    commands:
+      - bash scripts/allure-generate.sh 11-version-bump
+    when:
+      status: [success, failure]
+
+  - name: upload-allure
+    image: appleboy/drone-scp
+    depends_on: [allure-generate]
+    settings:
+      host: 192.168.2.55
+      username: deploy
+      key:
+        from_secret: ssh_key
+      source: allure-report.zip
+      target: /var/www/downloads/11-version-bump/
+    when:
+      status: [success, failure]
+
 ---
 # ════════════════════════════════════════
 # PIPELINE 12 — Changelog Update
@@ -1064,3 +1268,24 @@ steps:
           git commit -m "docs(changelog): update unreleased section [skip ci]"
           git push https://${GIT_USER}:${GIT_TOKEN}@${DRONE_GIT_HTTP_URL#https://} HEAD:main
         fi
+
+  - name: allure-generate
+    image: openjdk:17-slim
+    depends_on: [update-changelog]
+    commands:
+      - bash scripts/allure-generate.sh 12-changelog
+    when:
+      status: [success, failure]
+
+  - name: upload-allure
+    image: appleboy/drone-scp
+    depends_on: [allure-generate]
+    settings:
+      host: 192.168.2.55
+      username: deploy
+      key:
+        from_secret: ssh_key
+      source: allure-report.zip
+      target: /var/www/downloads/12-changelog/
+    when:
+      status: [success, failure]
