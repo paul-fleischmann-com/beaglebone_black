@@ -46,7 +46,6 @@ steps:
       TEST_PACKAGES: ./pkg/hal/ ./pkg/hal/mock/ ./pkg/hal/config/
     commands:
       - cd project/go-api
-      - go install github.com/boumenot/gocover-cobertura@latest
       - mkdir -p ../../reports
       - >-
         gotestsum

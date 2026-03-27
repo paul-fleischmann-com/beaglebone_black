@@ -44,8 +44,9 @@ RUN curl -fsSL https://go.dev/dl/go1.24.1.linux-amd64.tar.gz \
 
 ENV PATH="/usr/local/go/bin:${PATH}"
 
-# Install gotestsum for JUnit XML test output
-RUN GOPATH=/usr/local go install gotest.tools/gotestsum@latest
+# Install gotestsum for JUnit XML test output + gocover-cobertura for coverage reports
+RUN GOPATH=/usr/local go install gotest.tools/gotestsum@latest && \
+    GOPATH=/usr/local go install github.com/boumenot/gocover-cobertura@latest
 # ----------------------------
 # Install Rust + ARM Target
 # ----------------------------
