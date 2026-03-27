@@ -801,20 +801,7 @@ steps:
       REGISTRY_USER:  {from_secret: registry_user}
       REGISTRY_TOKEN: {from_secret: Bau_token}
     commands:
-      - |
-        VERSION=$(cat docker/builder/VERSION | tr -d '[:space:]')
-        podman login ghcr.io -u "$REGISTRY_USER" -p "$REGISTRY_TOKEN"
-        if podman manifest inspect ghcr.io/$REGISTRY_USER/generic-builder:$VERSION > /dev/null 2>&1; then
-          echo "generic-builder:$VERSION already exists — skipping build"
-          exit 0
-        fi
-        podman build --build-arg VERSION=$VERSION \
-          -t ghcr.io/$REGISTRY_USER/generic-builder:$VERSION \
-          -t ghcr.io/$REGISTRY_USER/generic-builder:latest \
-          -f docker/builder/Dockerfile \
-          docker/builder
-        podman push ghcr.io/$REGISTRY_USER/generic-builder:$VERSION
-        podman push ghcr.io/$REGISTRY_USER/generic-builder:latest
+      - scripts/build-container.sh generic-builder docker/builder/Dockerfile docker/builder docker/builder/VERSION
 
   - name: clone-bausteinsicht-repo
     image: alpine/git
@@ -833,26 +820,10 @@ steps:
       REGISTRY_TOKEN: {from_secret: Bau_token}
     commands:
       - |
-        podman login ghcr.io -u "$REGISTRY_USER" -p "$REGISTRY_TOKEN"
-        VERSION=$(cat docker/bausteinsicht/VERSION | tr -d '[:space:]')
-        if podman manifest inspect ghcr.io/$REGISTRY_USER/bausteinsicht:$VERSION > /dev/null 2>&1; then
-          echo "bausteinsicht:$VERSION already exists — skipping build"
-          exit 0
-        fi
-        SHA8=$(echo "$DRONE_COMMIT_SHA" | head -c8)
-        echo "Building bausteinsicht version $VERSION (commit $SHA8)"
-        # Copy cloned repo and drawio-export script into build context
-        cp -r docker/bausteinsicht/repo          docker/bausteinsicht/repo-src
+        # Prepare build context: copy cloned repo + drawio-export wrapper
+        cp -r docker/bausteinsicht/repo         docker/bausteinsicht/repo-src
         cp    docker/bausteinsicht/repo/.devcontainer/drawio-export docker/bausteinsicht/
-        # Single-stage build from our own Dockerfile
-        podman build --build-arg VERSION=$VERSION \
-          -t ghcr.io/$REGISTRY_USER/bausteinsicht:$VERSION \
-          -t ghcr.io/$REGISTRY_USER/bausteinsicht:latest \
-          -f docker/bausteinsicht/Dockerfile \
-          docker/bausteinsicht
-        podman push ghcr.io/$REGISTRY_USER/bausteinsicht:$VERSION
-        podman push ghcr.io/$REGISTRY_USER/bausteinsicht:latest
-        echo "bausteinsicht $VERSION gepushed"
+        scripts/build-container.sh bausteinsicht docker/bausteinsicht/Dockerfile docker/bausteinsicht docker/bausteinsicht/VERSION
 
   - name: build-strictdoc
     image: quay.io/podman/stable
@@ -862,20 +833,7 @@ steps:
       REGISTRY_USER:  {from_secret: registry_user}
       REGISTRY_TOKEN: {from_secret: Bau_token}
     commands:
-      - |
-        VERSION=$(cat docker/strictdoc/VERSION | tr -d '[:space:]')
-        podman login ghcr.io -u "$REGISTRY_USER" -p "$REGISTRY_TOKEN"
-        if podman manifest inspect ghcr.io/$REGISTRY_USER/strictdoc:$VERSION > /dev/null 2>&1; then
-          echo "strictdoc:$VERSION already exists — skipping build"
-          exit 0
-        fi
-        podman build --build-arg VERSION=$VERSION \
-          -t ghcr.io/$REGISTRY_USER/strictdoc:$VERSION \
-          -t ghcr.io/$REGISTRY_USER/strictdoc:latest \
-          -f docker/strictdoc/Dockerfile \
-          docker/strictdoc
-        podman push ghcr.io/$REGISTRY_USER/strictdoc:$VERSION
-        podman push ghcr.io/$REGISTRY_USER/strictdoc:latest
+      - scripts/build-container.sh strictdoc docker/strictdoc/Dockerfile docker/strictdoc docker/strictdoc/VERSION
 
 ---
 # ════════════════════════════════════════
