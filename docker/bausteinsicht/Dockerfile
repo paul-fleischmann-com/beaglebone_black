@@ -24,8 +24,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Install bausteinsicht from cloned repo source
 COPY repo-src/ /opt/bausteinsicht/
-RUN pip install --no-cache-dir /opt/bausteinsicht/ \
-    && rm -rf /opt/bausteinsicht/
+RUN echo "=== Repo root ===" && ls -la /opt/bausteinsicht/ \
+    && echo "=== Hidden files ===" && ls -la /opt/bausteinsicht/.* 2>/dev/null || true \
+    && echo "=== package files ===" && find /opt/bausteinsicht -maxdepth 2 \
+       \( -name "*.toml" -o -name "*.cfg" -o -name "setup.py" \
+          -o -name "Makefile" -o -name "*.json" -o -name "requirements*.txt" \
+          -o -name "install.sh" -o -name "gradlew" \) | sort
 
 # drawio-export wrapper script from upstream repo
 COPY drawio-export /usr/local/bin/drawio-export
