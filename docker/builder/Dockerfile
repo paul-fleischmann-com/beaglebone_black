@@ -21,6 +21,7 @@ RUN apt-get update && apt-get install -y \
     python3 \
     python3-pip \
     python3-setuptools \
+    python3-venv \
     unzip \
     gcc-arm-linux-gnueabihf \
     g++-arm-linux-gnueabihf \
@@ -55,9 +56,6 @@ RUN mkdir -p /root/.cargo && \
     echo 'linker = "arm-linux-gnueabihf-gcc"' >> /root/.cargo/config.toml
 
 # --- Python Test Tools ---
-# Installiere venv falls noch nicht vorhanden
-RUN apt-get update && apt-get install -y python3-venv python3-pip
-
 # Erstelle venv
 RUN python3 -m venv /opt/venv
 
