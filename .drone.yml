@@ -138,32 +138,44 @@ steps:
     commands:
       - bash scripts/build-arm.sh
 
-  - name: deploy-beaglebone
-    image: alpine
+  - name: deploy-beaglebone-scp
+    image: appleboy/drone-scp
     depends_on: [build-go-api]
-    environment:
-      BEAGLE_HOST: {from_secret: beagle_host}
-      BEAGLE_USER: {from_secret: beagle_user}
-      BEAGLE_KEY:  {from_secret: beagle_ssh_key}
-    commands:
-      - apk add --no-cache openssh-client
-      - mkdir -p ~/.ssh
-      - echo "$BEAGLE_KEY" | base64 -d > ~/.ssh/id_rsa && chmod 600 ~/.ssh/id_rsa
-      - ssh-keyscan -H $BEAGLE_HOST >> ~/.ssh/known_hosts
-      - scp bin/embedded project/go-api/libs/libhardware.so project/go-api/libs/libhardware_rs.so bin/bbcli-linux-arm $BEAGLE_USER@$BEAGLE_HOST:/app/
-      - |
-        ssh $BEAGLE_USER@$BEAGLE_HOST \
-            "cp /app/bbcli-linux-arm /app/bbcli && \
-             systemctl restart embedded-sw && \
-             sleep 3 && \
-             systemctl is-active embedded-sw"
+    settings:
+      host: {from_secret: beagle_host}
+      username: {from_secret: beagle_user}
+      key:
+        from_secret: ssh_key
+      source:
+        - bin/embedded
+        - project/go-api/libs/libhardware.so
+        - project/go-api/libs/libhardware_rs.so
+        - bin/bbcli-linux-arm
+      target: /app/
+    when:
+      branch: [main,develop]
+      event:  [push]
+
+  - name: deploy-beaglebone-ssh
+    image: appleboy/drone-ssh
+    depends_on: [deploy-beaglebone-scp]
+    settings:
+      host: {from_secret: beagle_host}
+      username: {from_secret: beagle_user}
+      key:
+        from_secret: ssh_key
+      script:
+        - cp /app/bbcli-linux-arm /app/bbcli
+        - systemctl restart embedded-sw
+        - sleep 3
+        - systemctl is-active embedded-sw
     when:
       branch: [main,develop]
       event:  [push]
 
   - name: test-hardware-all-backends
     image: python:3.12-alpine
-    depends_on: [deploy-beaglebone]
+    depends_on: [deploy-beaglebone-ssh]
     environment:
       BEAGLE_HOST: {from_secret: beagle_host}
     commands:
