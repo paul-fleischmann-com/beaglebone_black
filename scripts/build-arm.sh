@@ -8,7 +8,8 @@ OUTPUT=${OUTPUT:-/output}
 PROJECT=${PROJECT:-$SRC/project}
 JUNIT=${JUNIT:-$SRC/reports/build-libraries-junit.xml}
 
-mkdir -p "$OUTPUT" "$(dirname "$JUNIT")"
+mkdir -p "$OUTPUT"
+[ -n "$JUNIT" ] && mkdir -p "$(dirname "$JUNIT")"
 
 # --- helpers -------------------------------------------------------
 FAILURES=0
@@ -64,6 +65,7 @@ run_step "Build Go API" \
     go build -o "$OUTPUT/go_app" "$PROJECT/go/main.go"
 
 # --- write JUnit XML -----------------------------------------------
+[ -z "$JUNIT" ] && { echo "=== JUnit XML disabled ==="; [ $FAILURES -eq 0 ] || exit 1; exit 0; }
 echo "=== Writing JUnit XML → $JUNIT ==="
 {
   echo '<?xml version="1.0" encoding="UTF-8"?>'

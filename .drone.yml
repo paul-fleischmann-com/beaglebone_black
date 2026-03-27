@@ -128,6 +128,8 @@ steps:
   - name: build-go-api
     image: ghcr.io/paulefl/generic-builder:latest
     depends_on: [test-hal-unit]
+    environment:
+      JUNIT: ""
     commands:
       - SRC=/drone/src OUTPUT=/drone/src/bin bash /drone/src/scripts/build-arm.sh
 
@@ -432,6 +434,8 @@ image_pull_secrets:
 steps:
   - name: build-arm
     image: ghcr.io/paulefl/generic-builder:latest
+    environment:
+      JUNIT: ""
     commands:
       - SRC=/drone/src OUTPUT=/drone/src/bin bash /drone/src/scripts/build-arm.sh
 
