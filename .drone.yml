@@ -27,10 +27,9 @@ steps:
       - bash scripts/build-arm.sh
 
   - name: test-c-lib
-    image: debian:bookworm
+    image: ghcr.io/paulefl/generic-builder:latest
     depends_on: [build-libraries]
     commands:
-      - apt-get update -q && apt-get install -y -q gcc make
       - make -C c-lib test
 
   - name: test-rust-lib
