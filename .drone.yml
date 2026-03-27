@@ -83,7 +83,7 @@ steps:
       status: [success, failure]
 
   - name: generate-junit
-    image:alpine
+    image: alpine
     depends_on: [build-libraries, test-c-lib, test-rust-lib, test-go]
     commands:
       - apk add --no-cache bash
@@ -229,7 +229,7 @@ steps:
       event: [push]
 
   - name: generate-junit
-    image:alpine
+    image: alpine
     depends_on: [test-hal-unit, lint-go, build-go-api, test-hardware-all-backends]
     commands:
       - apk add --no-cache bash
@@ -439,7 +439,7 @@ steps:
       - echo $(($(date +%s) - $(cat .step-status/checksums.start 2>/dev/null || date +%s))) > .step-status/checksums
 
   - name: generate-junit
-    image:alpine
+    image: alpine
     depends_on: [lint-cli, lint-tui, build-cli-linux-amd64, build-cli-linux-arm, build-cli-darwin-amd64, build-cli-darwin-arm64, build-cli-windows-amd64, build-tui-linux-amd64, build-tui-linux-armv7, build-tui-darwin-amd64, validate-web-gui, shellcheck, checksums]
     commands:
       - apk add --no-cache bash
