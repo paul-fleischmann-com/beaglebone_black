@@ -13,10 +13,8 @@ FULL_IMAGE="ghcr.io/$REGISTRY_USER/$IMAGE"
 
 podman login ghcr.io -u "$REGISTRY_USER" -p "$REGISTRY_TOKEN"
 
-echo "--- podman manifest inspect debug ---"
-podman manifest inspect "$FULL_IMAGE:$VERSION" || true
-echo "--- end debug ---"
-if podman pull "$FULL_IMAGE:$VERSION" > /dev/null 2>&1; then
+INSPECT=$(podman manifest inspect "$FULL_IMAGE:$VERSION" 2>&1 || true)
+if echo "$INSPECT" | grep -q '"schemaVersion"'; then
   echo "$IMAGE:$VERSION already exists in ghcr.io — skipping build"
   exit 0
 fi
