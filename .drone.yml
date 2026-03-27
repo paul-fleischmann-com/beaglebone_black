@@ -70,10 +70,16 @@ steps:
       paths: reports/go-tests-junit.xml
       report_name: "junit-reports - Pipe 1 - go-tests-junit"
     when:
-      status: [
-        'success',
-        'failure',
-      ]
+      status: [success, failure]
+
+  - name: junit-reports-pipe1-build
+    image: ghcr.io/rohit-gohri/drone-junit:v0
+    depends_on: [build-libraries]
+    settings:
+      paths: reports/build-libraries-junit.xml
+      report_name: "junit-reports - Pipe 1 - build-libraries"
+    when:
+      status: [success, failure]
 
 ---
 # ════════════════════════════════════════
