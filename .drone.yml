@@ -1486,11 +1486,66 @@ steps:
 
 ---
 # ════════════════════════════════════════
-# PIPELINE 13 — Runner Cleanup
+# PIPELINE 13 — Allure Dashboard
 # ════════════════════════════════════════
 kind: pipeline
 type: docker
-name: 13-cleanup
+name: 13-dashboard
+
+depends_on:
+  - 1-libraries
+  - 2-embedded-sw
+  - 3-tools
+  - 4-webapp
+  - 7-reports
+  - 8-bausteinsicht
+  - 9-build-container
+  - 12-changelog
+
+trigger:
+  event: [push, pull_request, custom]
+  branch: [main]
+
+steps:
+  - name: generate-dashboard
+    image: eclipse-temurin:17-jre
+    commands:
+      - bash scripts/allure-dashboard.sh
+
+  - name: upload-dashboard
+    image: appleboy/drone-scp
+    depends_on: [generate-dashboard]
+    settings:
+      host: 192.168.2.55
+      username: deploy
+      key:
+        from_secret: ssh_key
+      source: allure-dashboard.zip
+      target: /var/www/downloads/dashboard/
+      mkdir: true
+    when:
+      status: [success, failure]
+
+  - name: unzip-dashboard
+    image: appleboy/drone-ssh
+    depends_on: [upload-dashboard]
+    settings:
+      host: 192.168.2.55
+      username: deploy
+      key:
+        from_secret: ssh_key
+      script:
+        - cd /var/www/downloads/dashboard && unzip -o allure-dashboard.zip
+    when:
+      status: [success, failure]
+
+---
+# ════════════════════════════════════════
+# PIPELINE 14 — Runner Cleanup
+# ════════════════════════════════════════
+kind: pipeline
+type: docker
+name: 14-cleanup
 
 trigger:
   event: [cron]
