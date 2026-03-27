@@ -72,7 +72,7 @@ steps:
       status: [success, failure]
 
   - name: allure-generate
-    image: eclipse-temurin:17-jre-alpine
+    image: eclipse-temurin:17-jre
     depends_on: [junit-reports-pipe1]
     commands:
       - bash scripts/allure-generate.sh 1-libraries
@@ -173,7 +173,7 @@ steps:
       event:  [push]
 
   - name: allure-generate
-    image: eclipse-temurin:17-jre-alpine
+    image: eclipse-temurin:17-jre
     depends_on: [test-hardware-all-backends, build-go-api]
     commands:
       - bash scripts/allure-generate.sh 2-embedded-sw
@@ -337,7 +337,7 @@ steps:
       - cd bin && sha256sum bbcli-* bbtui-* > checksums.sha256 && cat checksums.sha256
 
   - name: allure-generate
-    image: eclipse-temurin:17-jre-alpine
+    image: eclipse-temurin:17-jre
     depends_on: [checksums, shellcheck, validate-web-gui]
     commands:
       - bash scripts/allure-generate.sh 3-tools
@@ -396,7 +396,7 @@ steps:
       - cd bin && zip -r bbweb-gui.zip web-gui/
 
   - name: allure-generate
-    image: eclipse-temurin:17-jre-alpine
+    image: eclipse-temurin:17-jre
     depends_on: [package-web-gui]
     commands:
       - bash scripts/allure-generate.sh 4-webapp
@@ -533,7 +533,7 @@ steps:
       prerelease: true
 
   - name: allure-generate
-    image: eclipse-temurin:17-jre-alpine
+    image: eclipse-temurin:17-jre
     depends_on: [create-toTestOnTarget-release]
     commands:
       - bash scripts/allure-generate.sh 5-release
@@ -585,7 +585,7 @@ steps:
       status: [success, failure]
 
   - name: allure-generate
-    image: eclipse-temurin:17-jre-alpine
+    image: eclipse-temurin:17-jre
     depends_on: [notify-slack]
     commands:
       - bash scripts/allure-generate.sh 6-nightly
@@ -765,7 +765,7 @@ steps:
       event: [push]
 
   - name: allure-generate
-    image: eclipse-temurin:17-jre-alpine
+    image: eclipse-temurin:17-jre
     depends_on: [collect-and-report, strictdoc-coverage-gate]
     commands:
       - bash scripts/allure-generate.sh 7-reports
@@ -904,7 +904,7 @@ steps:
       branch: [main,develop]
 
   - name: allure-generate
-    image: eclipse-temurin:17-jre-alpine
+    image: eclipse-temurin:17-jre
     depends_on: [commit-exports]
     commands:
       - bash scripts/allure-generate.sh 8-bausteinsicht
@@ -984,7 +984,7 @@ steps:
       - scripts/build-container.sh strictdoc docker/strictdoc/Dockerfile docker/strictdoc docker/strictdoc/VERSION
 
   - name: allure-generate
-    image: eclipse-temurin:17-jre-alpine
+    image: eclipse-temurin:17-jre
     depends_on: [build-bausteinsicht, build-strictdoc]
     commands:
       - bash scripts/allure-generate.sh 9-build-container
@@ -1136,7 +1136,7 @@ steps:
         echo "Promoted zu $NEW_TAG"
 
   - name: allure-generate
-    image: eclipse-temurin:17-jre-alpine
+    image: eclipse-temurin:17-jre
     depends_on: [promote-to-stable]
     commands:
       - bash scripts/allure-generate.sh 10-integration-tests
@@ -1195,7 +1195,7 @@ steps:
         git push https://${GIT_USER}:${GIT_TOKEN}@${DRONE_GIT_HTTP_URL#https://} "v${NEW}"
 
   - name: allure-generate
-    image: eclipse-temurin:17-jre-alpine
+    image: eclipse-temurin:17-jre
     depends_on: [bump-version]
     commands:
       - bash scripts/allure-generate.sh 11-version-bump
@@ -1252,7 +1252,7 @@ steps:
         fi
 
   - name: allure-generate
-    image: eclipse-temurin:17-jre-alpine
+    image: eclipse-temurin:17-jre
     depends_on: [update-changelog]
     commands:
       - bash scripts/allure-generate.sh 12-changelog
