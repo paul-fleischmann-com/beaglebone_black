@@ -33,21 +33,19 @@ steps:
       - make -C c-lib test
 
   - name: test-rust-lib
-    image: rust:alpine
+    image: ghcr.io/paulefl/generic-builder:latest
     depends_on: [build-libraries]
     commands:
-      - apk add --no-cache musl-dev
       - cargo test --manifest-path project/rust-lib/Cargo.toml
 
   - name: test-go
-    image: golang:1.24
+    image: ghcr.io/paulefl/generic-builder:latest
     depends_on: [build-libraries]
     environment:
       COVERPKG: ./pkg/hal/,./pkg/hal/mock/,./pkg/hal/config/
       TEST_PACKAGES: ./pkg/hal/ ./pkg/hal/mock/ ./pkg/hal/config/
     commands:
       - cd project/go-api
-      - go install gotest.tools/gotestsum@v1.12.0
       - go install github.com/boumenot/gocover-cobertura@latest
       - mkdir -p ../../reports
       - >-
@@ -628,7 +626,6 @@ steps:
     depends_on: [prepare-reports]
     commands:
       - cd project/go-api
-      - go install gotest.tools/gotestsum@v1.12.0
       - |
         gotestsum \
           --junitfile ../../reports/go-tests-junit.xml \
