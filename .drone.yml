@@ -79,7 +79,7 @@ steps:
     depends_on: [junit-reports-pipe1]
     commands:
       - bash scripts/allure-generate.sh 1-libraries
-      - echo "Report: http://192.168.2.55/downloads/1-libraries/allure-report.zip"
+      - echo "Report: http://192.168.2.55/downloads/1-libraries/allure-report/index.html"
     when:
       status: [success, failure]
 
@@ -94,6 +94,19 @@ steps:
       source: allure-report.zip
       target: /var/www/downloads/1-libraries/
       mkdir: true
+    when:
+      status: [success, failure]
+
+  - name: unzip-allure
+    image: appleboy/drone-ssh
+    depends_on: [upload-allure]
+    settings:
+      host: 192.168.2.55
+      username: deploy
+      key:
+        from_secret: ssh_key
+      script:
+        - cd /var/www/downloads/1-libraries && unzip -o allure-report.zip
     when:
       status: [success, failure]
 
@@ -195,7 +208,7 @@ steps:
     depends_on: [test-hardware-all-backends, build-go-api]
     commands:
       - bash scripts/allure-generate.sh 2-embedded-sw
-      - echo "Report: http://192.168.2.55/downloads/2-embedded-sw/allure-report.zip"
+      - echo "Report: http://192.168.2.55/downloads/2-embedded-sw/allure-report/index.html"
     when:
       status: [success, failure]
 
@@ -210,6 +223,19 @@ steps:
       source: allure-report.zip
       target: /var/www/downloads/2-embedded-sw/
       mkdir: true
+    when:
+      status: [success, failure]
+
+  - name: unzip-allure
+    image: appleboy/drone-ssh
+    depends_on: [upload-allure]
+    settings:
+      host: 192.168.2.55
+      username: deploy
+      key:
+        from_secret: ssh_key
+      script:
+        - cd /var/www/downloads/2-embedded-sw && unzip -o allure-report.zip
     when:
       status: [success, failure]
 
@@ -357,7 +383,7 @@ steps:
     depends_on: [checksums, shellcheck, validate-web-gui]
     commands:
       - bash scripts/allure-generate.sh 3-tools
-      - echo "Report: http://192.168.2.55/downloads/3-tools/allure-report.zip"
+      - echo "Report: http://192.168.2.55/downloads/3-tools/allure-report/index.html"
     when:
       status: [success, failure]
 
@@ -372,6 +398,19 @@ steps:
       source: allure-report.zip
       target: /var/www/downloads/3-tools/
       mkdir: true
+    when:
+      status: [success, failure]
+
+  - name: unzip-allure
+    image: appleboy/drone-ssh
+    depends_on: [upload-allure]
+    settings:
+      host: 192.168.2.55
+      username: deploy
+      key:
+        from_secret: ssh_key
+      script:
+        - cd /var/www/downloads/3-tools && unzip -o allure-report.zip
     when:
       status: [success, failure]
 
@@ -417,7 +456,7 @@ steps:
     depends_on: [package-web-gui]
     commands:
       - bash scripts/allure-generate.sh 4-webapp
-      - echo "Report: http://192.168.2.55/downloads/4-webapp/allure-report.zip"
+      - echo "Report: http://192.168.2.55/downloads/4-webapp/allure-report/index.html"
     when:
       status: [success, failure]
 
@@ -432,6 +471,19 @@ steps:
       source: allure-report.zip
       target: /var/www/downloads/4-webapp/
       mkdir: true
+    when:
+      status: [success, failure]
+
+  - name: unzip-allure
+    image: appleboy/drone-ssh
+    depends_on: [upload-allure]
+    settings:
+      host: 192.168.2.55
+      username: deploy
+      key:
+        from_secret: ssh_key
+      script:
+        - cd /var/www/downloads/4-webapp && unzip -o allure-report.zip
     when:
       status: [success, failure]
 
@@ -553,7 +605,7 @@ steps:
     depends_on: [create-toTestOnTarget-release]
     commands:
       - bash scripts/allure-generate.sh 5-release
-      - echo "Report: http://192.168.2.55/downloads/5-release/allure-report.zip"
+      - echo "Report: http://192.168.2.55/downloads/5-release/allure-report/index.html"
     when:
       status: [success, failure]
 
@@ -568,6 +620,19 @@ steps:
       source: allure-report.zip
       target: /var/www/downloads/5-release/
       mkdir: true
+    when:
+      status: [success, failure]
+
+  - name: unzip-allure
+    image: appleboy/drone-ssh
+    depends_on: [upload-allure]
+    settings:
+      host: 192.168.2.55
+      username: deploy
+      key:
+        from_secret: ssh_key
+      script:
+        - cd /var/www/downloads/5-release && unzip -o allure-report.zip
     when:
       status: [success, failure]
 
@@ -607,7 +672,7 @@ steps:
     depends_on: [notify-slack]
     commands:
       - bash scripts/allure-generate.sh 6-nightly
-      - echo "Report: http://192.168.2.55/downloads/6-nightly/allure-report.zip"
+      - echo "Report: http://192.168.2.55/downloads/6-nightly/allure-report/index.html"
     when:
       status: [success, failure]
 
@@ -622,6 +687,19 @@ steps:
       source: allure-report.zip
       target: /var/www/downloads/6-nightly/
       mkdir: true
+    when:
+      status: [success, failure]
+
+  - name: unzip-allure
+    image: appleboy/drone-ssh
+    depends_on: [upload-allure]
+    settings:
+      host: 192.168.2.55
+      username: deploy
+      key:
+        from_secret: ssh_key
+      script:
+        - cd /var/www/downloads/6-nightly && unzip -o allure-report.zip
     when:
       status: [success, failure]
 
@@ -838,7 +916,7 @@ steps:
     depends_on: [notify]
     commands:
       - bash scripts/allure-generate.sh 7-reports
-      - echo "Report: http://192.168.2.55/downloads/7-reports/allure-report.zip"
+      - echo "Report: http://192.168.2.55/downloads/7-reports/allure-report/index.html"
     when:
       status: [success, failure]
 
@@ -853,6 +931,19 @@ steps:
       source: allure-report.zip
       target: /var/www/downloads/7-reports/
       mkdir: true
+    when:
+      status: [success, failure]
+
+  - name: unzip-allure
+    image: appleboy/drone-ssh
+    depends_on: [upload-allure]
+    settings:
+      host: 192.168.2.55
+      username: deploy
+      key:
+        from_secret: ssh_key
+      script:
+        - cd /var/www/downloads/7-reports && unzip -o allure-report.zip
     when:
       status: [success, failure]
 
@@ -934,7 +1025,7 @@ steps:
     depends_on: [commit-exports]
     commands:
       - bash scripts/allure-generate.sh 8-bausteinsicht
-      - echo "Report: http://192.168.2.55/downloads/8-bausteinsicht/allure-report.zip"
+      - echo "Report: http://192.168.2.55/downloads/8-bausteinsicht/allure-report/index.html"
     when:
       status: [success, failure]
 
@@ -949,6 +1040,19 @@ steps:
       source: allure-report.zip
       target: /var/www/downloads/8-bausteinsicht/
       mkdir: true
+    when:
+      status: [success, failure]
+
+  - name: unzip-allure
+    image: appleboy/drone-ssh
+    depends_on: [upload-allure]
+    settings:
+      host: 192.168.2.55
+      username: deploy
+      key:
+        from_secret: ssh_key
+      script:
+        - cd /var/www/downloads/8-bausteinsicht && unzip -o allure-report.zip
     when:
       status: [success, failure]
 
@@ -1012,7 +1116,7 @@ steps:
     depends_on: [build-bausteinsicht, build-strictdoc,build-generic-builder]
     commands:
       - bash scripts/allure-generate.sh 9-build-container
-      - echo "Report: http://192.168.2.55/downloads/9-build-container/allure-report.zip"
+      - echo "Report: http://192.168.2.55/downloads/9-build-container/allure-report/index.html"
     when:
       status: [success, failure]
 
@@ -1027,6 +1131,19 @@ steps:
       source: allure-report.zip
       target: /var/www/downloads/9-build-container/
       mkdir: true
+    when:
+      status: [success, failure]
+
+  - name: unzip-allure
+    image: appleboy/drone-ssh
+    depends_on: [upload-allure]
+    settings:
+      host: 192.168.2.55
+      username: deploy
+      key:
+        from_secret: ssh_key
+      script:
+        - cd /var/www/downloads/9-build-container && unzip -o allure-report.zip
     when:
       status: [success, failure]
 
@@ -1184,7 +1301,7 @@ steps:
     depends_on: [promote-to-stable]
     commands:
       - bash scripts/allure-generate.sh 10-integration-tests
-      - echo "Report: http://192.168.2.55/downloads/10-integration-tests/allure-report.zip"
+      - echo "Report: http://192.168.2.55/downloads/10-integration-tests/allure-report/index.html"
     when:
       status: [success, failure]
 
@@ -1199,6 +1316,19 @@ steps:
       source: allure-report.zip
       target: /var/www/downloads/10-integration-tests/
       mkdir: true
+    when:
+      status: [success, failure]
+
+  - name: unzip-allure
+    image: appleboy/drone-ssh
+    depends_on: [upload-allure]
+    settings:
+      host: 192.168.2.55
+      username: deploy
+      key:
+        from_secret: ssh_key
+      script:
+        - cd /var/www/downloads/10-integration-tests && unzip -o allure-report.zip
     when:
       status: [success, failure]
 
@@ -1245,7 +1375,7 @@ steps:
     depends_on: [bump-version]
     commands:
       - bash scripts/allure-generate.sh 11-version-bump
-      - echo "Report: http://192.168.2.55/downloads/11-version-bump/allure-report.zip"
+      - echo "Report: http://192.168.2.55/downloads/11-version-bump/allure-report/index.html"
     when:
       status: [success, failure]
 
@@ -1260,6 +1390,19 @@ steps:
       source: allure-report.zip
       target: /var/www/downloads/11-version-bump/
       mkdir: true
+    when:
+      status: [success, failure]
+
+  - name: unzip-allure
+    image: appleboy/drone-ssh
+    depends_on: [upload-allure]
+    settings:
+      host: 192.168.2.55
+      username: deploy
+      key:
+        from_secret: ssh_key
+      script:
+        - cd /var/www/downloads/11-version-bump && unzip -o allure-report.zip
     when:
       status: [success, failure]
 
@@ -1310,7 +1453,7 @@ steps:
     depends_on: [update-changelog]
     commands:
       - bash scripts/allure-generate.sh 12-changelog
-      - echo "Report: http://192.168.2.55/downloads/12-changelog/allure-report.zip"
+      - echo "Report: http://192.168.2.55/downloads/12-changelog/allure-report/index.html"
     when:
       status: [success, failure]
 
@@ -1325,6 +1468,19 @@ steps:
       source: allure-report.zip
       target: /var/www/downloads/12-changelog/
       mkdir: true
+    when:
+      status: [success, failure]
+
+  - name: unzip-allure
+    image: appleboy/drone-ssh
+    depends_on: [upload-allure]
+    settings:
+      host: 192.168.2.55
+      username: deploy
+      key:
+        from_secret: ssh_key
+      script:
+        - cd /var/www/downloads/12-changelog && unzip -o allure-report.zip
     when:
       status: [success, failure]
 
