@@ -121,7 +121,7 @@ steps:
 
   - name: lint-go
     image: golang:1.24
-    depends_on: []
+
     commands:
       - make lint
 
@@ -154,47 +154,24 @@ steps:
       branch: [main,develop]
       event:  [push]
 
-  - name: test-hardware-c
+  - name: test-hardware-all-backends
     image: python:3.12-alpine
     depends_on: [deploy-beaglebone]
     environment:
       BEAGLE_HOST: {from_secret: beagle_host}
-      HW_BACKEND: c
     commands:
       - pip install pytest requests --break-system-packages -q
-      - pytest tests/hardware/ -v --timeout=60
-    when:
-      branch: [main,develop]
-      event:  [push]
-
-  - name: test-hardware-rust
-    image: python:3.12-alpine
-    depends_on: [deploy-beaglebone]
-    environment:
-      BEAGLE_HOST: {from_secret: beagle_host}
-      HW_BACKEND: rust
-    commands:
-      - pip install pytest requests --break-system-packages -q
-      - pytest tests/hardware/ -v --timeout=60
-    when:
-      branch: [main,develop]
-      event:  [push]
-
-  - name: test-hardware-auto
-    image: python:3.12-alpine
-    depends_on: [test-hardware-c, test-hardware-rust]
-    environment:
-      BEAGLE_HOST: {from_secret: beagle_host}
-    commands:
-      - pip install pytest requests --break-system-packages -q
-      - pytest tests/hardware/ -v --timeout=60
+      - for backend in c rust auto; do
+          echo "=== Backend $backend ===";
+          HW_BACKEND=$backend pytest tests/hardware/ -v --timeout=60 || exit 1;
+        done
     when:
       branch: [main,develop]
       event:  [push]
 
   - name: allure-generate
     image: openjdk:17-slim
-    depends_on: [test-hardware-auto, build-go-api]
+    depends_on: [test-hardware-all-backends, build-go-api]
     commands:
       - bash scripts/allure-generate.sh 2-embedded-sw
     when:
@@ -238,7 +215,7 @@ steps:
 
   - name: lint-tui
     image: golang:1.24
-    depends_on: []
+
     commands:
       - cd tools/tui && go mod tidy && go vet ./...
 
@@ -326,7 +303,7 @@ steps:
 
   - name: validate-web-gui
     image: python:3.12-alpine
-    depends_on: []
+
     commands:
       - |
         python -c "
@@ -338,7 +315,7 @@ steps:
 
   - name: shellcheck
     image: koalaman/shellcheck-alpine:stable
-    depends_on: []
+
     commands:
       - shellcheck --severity=error scripts/*.sh
 
@@ -460,7 +437,7 @@ steps:
 
   - name: build-cli
     image: golang:1.24
-    depends_on: []
+
     commands:
       - cd tools/cli
       - GOOS=linux  GOARCH=amd64        CGO_ENABLED=0 go build -ldflags="-s -w" -o ../../bin/bbcli-linux-amd64 .
@@ -471,7 +448,7 @@ steps:
 
   - name: build-tui
     image: golang:1.24
-    depends_on: []
+
     commands:
       - cd tools/tui
       - GOOS=linux  GOARCH=amd64       CGO_ENABLED=0 go build -ldflags="-s -w" -o ../../bin/bbtui-linux-amd64 .
@@ -480,7 +457,7 @@ steps:
 
   - name: build-web-gui
     image: alpine
-    depends_on: []
+
     commands:
       - apk add --no-cache zip
       - mkdir -p bin/web-gui
@@ -631,10 +608,15 @@ trigger:
   branch: [main,develop]
 
 steps:
+  - name: prepare-reports
+    image: alpine
+    commands:
+      - mkdir -p reports reports/strictdoc
+
   - name: go-tests-with-coverage
     image: golang:1.24
+    depends_on: [prepare-reports]
     commands:
-      - mkdir -p reports
       - cd project/go-api
       - go install gotest.tools/gotestsum@v1.12.0
       - |
@@ -660,40 +642,36 @@ steps:
 
   - name: python-tests
     image: python:3.12-alpine
-    depends_on: []
+    depends_on: [prepare-reports]
     commands:
-      - mkdir -p reports
       - pip install -r tests/requirements-dev.txt pytest-json-report --break-system-packages -q
       - pytest tests/ --ignore=tests/hardware/ -v --json-report --json-report-file=reports/python_tests.json --timeout=30 || true
 
   - name: python-security
     image: python:3.12-alpine
-    depends_on: []
+    depends_on: [prepare-reports]
     commands:
-      - mkdir -p reports
       - pip install bandit bandit-sarif-formatter --break-system-packages -q
       - bandit -r scripts/ tests/ project/ -f sarif -o reports/python-sarif.json --exclude tests/hardware/ || true
       - echo "Bandit done"
 
   - name: shellcheck
     image: koalaman/shellcheck-alpine:stable
-    depends_on: []
+    depends_on: [prepare-reports]
     commands:
-      - mkdir -p reports
       - shellcheck scripts/*.sh 2>&1 | tee reports/shellcheck.txt || true
 
   - name: c-coverage
     image: debian:bookworm
-    depends_on: []
+    depends_on: [prepare-reports]
     commands:
-      - mkdir -p reports
       - apt-get update -q && apt-get install -y -q gcc make lcov
       - make -C c-lib CFLAGS="-fprofile-arcs -ftest-coverage -g" CC=gcc test || true
       - bash scripts/c_coverage.sh c-lib/ reports/c-coverage.info '/usr/*' '*/test/*' || true
 
   - name: adoc-build
     image: asciidoctor/docker-asciidoctor:latest
-    depends_on: []
+    depends_on: [prepare-reports]
     commands:
       - gem install asciidoctor-pdf rouge --quiet || true
       - ROOT_DIR=. OUTPUT_DIR=reports/docs bash scripts/build_adoc.sh || true
@@ -701,11 +679,10 @@ steps:
       
   #ghcr.io/paulefl/strictdoc:latest
   - name: strictdoc-export
-    image: python:3.11
-    depends_on: [go-tests-with-coverage]
+    image: python:3.12-slim
+    depends_on: [prepare-reports]
     commands:
       - pip install strictdoc
-      - mkdir -p reports/strictdoc
       - strictdoc export . --formats html --output-dir reports/strictdoc || true
       - find reports/strictdoc -name "*.html" | head -10 || true
       - zip -r strictdoc-output.zip build/
@@ -716,7 +693,6 @@ steps:
       - SHA8=$(echo "$DRONE_COMMIT_SHA" | head -c8)
       - FILE=strictdoc-$SHA8.zip
       - mv strictdoc-output.zip $FILE
-      - echo $FILE > artifact_name.txt
 
   - name: upload
     image: appleboy/drone-scp
@@ -971,7 +947,7 @@ steps:
 
   - name: clone-bausteinsicht-repo
     image: alpine/git
-    depends_on: []
+
     environment:
       GIT_TOKEN: {from_secret: Bau_token}
     commands:
@@ -994,7 +970,7 @@ steps:
   - name: build-strictdoc
     image: quay.io/podman/stable
     privileged: true
-    depends_on: []
+
     environment:
       REGISTRY_USER:  {from_secret: registry_user}
       REGISTRY_TOKEN: {from_secret: Bau_token}
