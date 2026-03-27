@@ -1504,7 +1504,7 @@ depends_on:
 
 trigger:
   event: [push, pull_request, custom]
-  branch: [main]
+  branch: [main,container_build]
 
 steps:
   - name: generate-dashboard
