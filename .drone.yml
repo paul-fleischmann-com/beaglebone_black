@@ -421,10 +421,10 @@ steps:
       REGISTRY_USER:  {from_secret: registry_user}
       REGISTRY_TOKEN: {from_secret: Bau_token}
     commands:
-      - echo "$REGISTRY_TOKEN" | podman login -u $REGISTRY_USER --password-stdin docker.io
-      - podman build --platform linux/arm/v7 -f project/go-api/Dockerfile.embedded -t myuser/embedded-sw:$DRONE_TAG -t myuser/embedded-sw:latest .
-      - podman push myuser/embedded-sw:$DRONE_TAG
-      - podman push myuser/embedded-sw:latest
+      - podman login ghcr.io -u "$REGISTRY_USER" -p "$REGISTRY_TOKEN"
+      - podman build --platform linux/arm/v7 -f project/go-api/Dockerfile.embedded -t ghcr.io/$REGISTRY_USER/embedded-sw:$DRONE_TAG -t ghcr.io/$REGISTRY_USER/embedded-sw:latest .
+      - podman push ghcr.io/$REGISTRY_USER/embedded-sw:$DRONE_TAG
+      - podman push ghcr.io/$REGISTRY_USER/embedded-sw:latest
 
   - name: create-release
     image: plugins/github-release
@@ -795,21 +795,18 @@ trigger:
 
 steps:
   - name: build-generic-builder
-    image: quay.io/podman/stable
+    image: plugins/buildah
     privileged: true
-    environment:
-      REGISTRY_USER:  {from_secret: registry_user}
-      REGISTRY_TOKEN: {from_secret: Bau_token}
-    commands:
-      - |
-        podman login ghcr.io -u "$REGISTRY_USER" -p "$REGISTRY_TOKEN"
-        VERSION=$(cat docker/builder/VERSION | tr -d '[:space:]')
-        SHA8=$(echo "$DRONE_COMMIT_SHA" | head -c8)
-        echo "Building generic-builder version $VERSION (commit $SHA8)"
-        podman build --build-arg VERSION=$VERSION -t generic-builder:$VERSION -t generic-builder:latest -f docker/builder/Dockerfile docker/builder
-        podman push ghcr.io/$REGISTRY_USER/generic-builder:$VERSION
-        podman push ghcr.io/$REGISTRY_USER/generic-builder:latest
-        echo "generic-builder $VERSION gepushed"
+    settings:
+      registry: ghcr.io
+      repo: ghcr.io/$DRONE_REPO_OWNER/generic-builder
+      username: {from_secret: registry_user}
+      password: {from_secret: registry_token}
+      dockerfile: docker/builder/Dockerfile
+      context: docker/builder
+      # version must match docker/builder/VERSION
+      tags: [latest, "1.0.0"]
+      args: [VERSION=1.0.0]
 
   - name: clone-bausteinsicht-repo
     image: alpine/git
@@ -836,7 +833,9 @@ steps:
         cp -r docker/bausteinsicht/repo          docker/bausteinsicht/repo-src
         cp    docker/bausteinsicht/repo/.devcontainer/drawio-export docker/bausteinsicht/
         # Single-stage build from our own Dockerfile
-        podman build --build-arg VERSION=$VERSION -t bausteinsicht:$VERSION -t bausteinsicht:latest \
+        podman build --build-arg VERSION=$VERSION \
+          -t ghcr.io/$REGISTRY_USER/bausteinsicht:$VERSION \
+          -t ghcr.io/$REGISTRY_USER/bausteinsicht:latest \
           -f docker/bausteinsicht/Dockerfile \
           docker/bausteinsicht
         podman push ghcr.io/$REGISTRY_USER/bausteinsicht:$VERSION
@@ -844,24 +843,19 @@ steps:
         echo "bausteinsicht $VERSION gepushed"
 
   - name: build-strictdoc
-    image: quay.io/podman/stable
+    image: plugins/buildah
     privileged: true
     depends_on: []
-    environment:
-      REGISTRY_USER:  {from_secret: registry_user}
-      REGISTRY_TOKEN: {from_secret: Bau_token}
-    commands:
-      - |
-        podman login ghcr.io -u "$REGISTRY_USER" -p "$REGISTRY_TOKEN"
-        VERSION=$(cat docker/strictdoc/VERSION | tr -d '[:space:]')
-        SHA8=$(echo "$DRONE_COMMIT_SHA" | head -c8)
-        echo "Building strictdoc version $VERSION (commit $SHA8)"
-        podman build --build-arg VERSION=$VERSION -t strictdoc:$VERSION -t strictdoc:latest \
-          -f docker/strictdoc/Dockerfile \
-          docker/strictdoc
-        podman push ghcr.io/$REGISTRY_USER/strictdoc:$VERSION
-        podman push ghcr.io/$REGISTRY_USER/strictdoc:latest
-        echo "strictdoc $VERSION gepushed"
+    settings:
+      registry: ghcr.io
+      repo: ghcr.io/$DRONE_REPO_OWNER/strictdoc
+      username: {from_secret: registry_user}
+      password: {from_secret: registry_token}
+      dockerfile: docker/strictdoc/Dockerfile
+      context: docker/strictdoc
+      # version must match docker/strictdoc/VERSION
+      tags: [latest, "1.0.0"]
+      args: [VERSION=1.0.0]
 
 ---
 # ════════════════════════════════════════
