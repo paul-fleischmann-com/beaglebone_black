@@ -26,25 +26,25 @@ steps:
       SRC: /drone/src
       OUTPUT: /drone/src/bin
     commands:
-      - mkdir -p .step-status
+      - mkdir -p .step-status && date +%s > .step-status/build-libraries.start
       - bash scripts/build-arm.sh
-      - echo pass > .step-status/build-libraries
+      - echo $(($(date +%s) - $(cat .step-status/build-libraries.start 2>/dev/null || date +%s))) > .step-status/build-libraries
 
   - name: test-c-lib
     image: ghcr.io/paulefl/generic-builder:latest
     depends_on: [build-libraries]
     commands:
-      - mkdir -p .step-status
+      - mkdir -p .step-status && date +%s > .step-status/test-c-lib.start
       - make -C c-lib test
-      - echo pass > .step-status/test-c-lib
+      - echo $(($(date +%s) - $(cat .step-status/test-c-lib.start 2>/dev/null || date +%s))) > .step-status/test-c-lib
 
   - name: test-rust-lib
     image: ghcr.io/paulefl/generic-builder:latest
     depends_on: [build-libraries]
     commands:
-      - mkdir -p .step-status
+      - mkdir -p .step-status && date +%s > .step-status/test-rust-lib.start
       - cargo test --manifest-path project/rust-lib/Cargo.toml
-      - echo pass > .step-status/test-rust-lib
+      - echo $(($(date +%s) - $(cat .step-status/test-rust-lib.start 2>/dev/null || date +%s))) > .step-status/test-rust-lib
 
   - name: test-go
     image: ghcr.io/paulefl/generic-builder:latest
@@ -53,7 +53,7 @@ steps:
       COVERPKG: ./pkg/hal/,./pkg/hal/mock/,./pkg/hal/config/
       TEST_PACKAGES: ./pkg/hal/ ./pkg/hal/mock/ ./pkg/hal/config/
     commands:
-      - mkdir -p .step-status
+      - mkdir -p .step-status && date +%s > .step-status/test-go.start
       - cd project/go-api
       - mkdir -p ../../reports
       - >-
@@ -71,7 +71,7 @@ steps:
         echo "Coverage: ${total}%"
         awk "BEGIN{exit !($total >= 75)}" || (echo "Coverage gate: ${total}% < 75%" && exit 1)
         echo "Coverage gate: ${total}% >= 75%"
-      - echo pass > .step-status/test-go
+      - echo $(($(date +%s) - $(cat .step-status/test-go.start 2>/dev/null || date +%s))) > .step-status/test-go
 
   - name: junit-reports-pipe1
     image: ghcr.io/rohit-gohri/drone-junit:v0
@@ -83,9 +83,10 @@ steps:
       status: [success, failure]
 
   - name: generate-junit
-    image: alpine
+    image:alpine
     depends_on: [build-libraries, test-c-lib, test-rust-lib, test-go]
     commands:
+      - apk add --no-cache bash
       - bash scripts/generate-junit.sh 1-libraries build-libraries test-c-lib test-rust-lib test-go
     when:
       status: [success, failure]
@@ -150,16 +151,16 @@ steps:
   - name: test-hal-unit
     image: golang:1.24
     commands:
-      - mkdir -p .step-status
+      - mkdir -p .step-status && date +%s > .step-status/test-hal-unit.start
       - cd project/go-api && go test ./pkg/hal/ ./pkg/hal/mock/ ./pkg/hal/config/ -v -count=1
-      - echo pass > .step-status/test-hal-unit
+      - echo $(($(date +%s) - $(cat .step-status/test-hal-unit.start 2>/dev/null || date +%s))) > .step-status/test-hal-unit
 
   - name: lint-go
     image: golang:1.24
     commands:
-      - mkdir -p .step-status
+      - mkdir -p .step-status && date +%s > .step-status/lint-go.start
       - make lint
-      - echo pass > .step-status/lint-go
+      - echo $(($(date +%s) - $(cat .step-status/lint-go.start 2>/dev/null || date +%s))) > .step-status/lint-go
 
   - name: build-go-api
     image: ghcr.io/paulefl/generic-builder:latest
@@ -169,9 +170,9 @@ steps:
       OUTPUT: /drone/src/bin
       JUNIT: ""
     commands:
-      - mkdir -p .step-status
+      - mkdir -p .step-status && date +%s > .step-status/build-go-api.start
       - bash scripts/build-arm.sh
-      - echo pass > .step-status/build-go-api
+      - echo $(($(date +%s) - $(cat .step-status/build-go-api.start 2>/dev/null || date +%s))) > .step-status/build-go-api
 
   - name: deploy-beaglebone
     image: appleboy/drone-scp
@@ -219,18 +220,19 @@ steps:
       BEAGLE_HOST:
         from_secret: beagle_host
     commands:
-      - mkdir -p .step-status
+      - mkdir -p .step-status && date +%s > .step-status/test-hardware-all-backends.start
       - pip install pytest requests --break-system-packages -q
       - for backend in c rust auto; do echo "=== Backend $backend ==="; HW_BACKEND=$backend pytest tests/hardware/ -v --timeout=60 || exit 1; done
-      - echo pass > .step-status/test-hardware-all-backends
+      - echo $(($(date +%s) - $(cat .step-status/test-hardware-all-backends.start 2>/dev/null || date +%s))) > .step-status/test-hardware-all-backends
     when:
       branch: [main, develop]
       event: [push]
 
   - name: generate-junit
-    image: alpine
+    image:alpine
     depends_on: [test-hal-unit, lint-go, build-go-api, test-hardware-all-backends]
     commands:
+      - apk add --no-cache bash
       - bash scripts/generate-junit.sh 2-embedded-sw test-hal-unit lint-go build-go-api test-hardware-all-backends
     when:
       status: [success, failure]
@@ -289,18 +291,18 @@ steps:
   - name: lint-cli
     image: golang:1.24
     commands:
-      - mkdir -p .step-status
+      - mkdir -p .step-status && date +%s > .step-status/lint-cli.start
       - cd tools/cli && go mod tidy && go vet ./...
       - |
         test -z "$(gofmt -l tools/cli/)" || (echo "gofmt: tools/cli/" && exit 1)
-      - echo pass > .step-status/lint-cli
+      - echo $(($(date +%s) - $(cat .step-status/lint-cli.start 2>/dev/null || date +%s))) > .step-status/lint-cli
 
   - name: lint-tui
     image: golang:1.24
     commands:
-      - mkdir -p .step-status
+      - mkdir -p .step-status && date +%s > .step-status/lint-tui.start
       - cd tools/tui && go mod tidy && go vet ./...
-      - echo pass > .step-status/lint-tui
+      - echo $(($(date +%s) - $(cat .step-status/lint-tui.start 2>/dev/null || date +%s))) > .step-status/lint-tui
 
   - name: build-cli-linux-amd64
     image: golang:1.24
@@ -310,9 +312,9 @@ steps:
       GOARCH: amd64
       CGO_ENABLED: "0"
     commands:
-      - mkdir -p .step-status
+      - mkdir -p .step-status && date +%s > .step-status/build-cli-linux-amd64.start
       - cd tools/cli && go build -ldflags="-s -w" -o ../../bin/bbcli-linux-amd64 .
-      - echo pass > .step-status/build-cli-linux-amd64
+      - echo $(($(date +%s) - $(cat .step-status/build-cli-linux-amd64.start 2>/dev/null || date +%s))) > .step-status/build-cli-linux-amd64
 
   - name: build-cli-linux-arm
     image: golang:1.24
@@ -323,9 +325,9 @@ steps:
       GOARM: "7"
       CGO_ENABLED: "0"
     commands:
-      - mkdir -p .step-status
+      - mkdir -p .step-status && date +%s > .step-status/build-cli-linux-arm.start
       - cd tools/cli && go build -ldflags="-s -w" -o ../../bin/bbcli-linux-arm .
-      - echo pass > .step-status/build-cli-linux-arm
+      - echo $(($(date +%s) - $(cat .step-status/build-cli-linux-arm.start 2>/dev/null || date +%s))) > .step-status/build-cli-linux-arm
 
   - name: build-cli-darwin-amd64
     image: golang:1.24
@@ -335,9 +337,9 @@ steps:
       GOARCH: amd64
       CGO_ENABLED: "0"
     commands:
-      - mkdir -p .step-status
+      - mkdir -p .step-status && date +%s > .step-status/build-cli-darwin-amd64.start
       - cd tools/cli && go build -ldflags="-s -w" -o ../../bin/bbcli-darwin-amd64 .
-      - echo pass > .step-status/build-cli-darwin-amd64
+      - echo $(($(date +%s) - $(cat .step-status/build-cli-darwin-amd64.start 2>/dev/null || date +%s))) > .step-status/build-cli-darwin-amd64
 
   - name: build-cli-darwin-arm64
     image: golang:1.24
@@ -347,9 +349,9 @@ steps:
       GOARCH: arm64
       CGO_ENABLED: "0"
     commands:
-      - mkdir -p .step-status
+      - mkdir -p .step-status && date +%s > .step-status/build-cli-darwin-arm64.start
       - cd tools/cli && go build -ldflags="-s -w" -o ../../bin/bbcli-darwin-arm64 .
-      - echo pass > .step-status/build-cli-darwin-arm64
+      - echo $(($(date +%s) - $(cat .step-status/build-cli-darwin-arm64.start 2>/dev/null || date +%s))) > .step-status/build-cli-darwin-arm64
 
   - name: build-cli-windows-amd64
     image: golang:1.24
@@ -359,9 +361,9 @@ steps:
       GOARCH: amd64
       CGO_ENABLED: "0"
     commands:
-      - mkdir -p .step-status
+      - mkdir -p .step-status && date +%s > .step-status/build-cli-windows-amd64.start
       - cd tools/cli && go build -ldflags="-s -w" -o ../../bin/bbcli-windows-amd64.exe .
-      - echo pass > .step-status/build-cli-windows-amd64
+      - echo $(($(date +%s) - $(cat .step-status/build-cli-windows-amd64.start 2>/dev/null || date +%s))) > .step-status/build-cli-windows-amd64
 
   - name: build-tui-linux-amd64
     image: golang:1.24
@@ -371,9 +373,9 @@ steps:
       GOARCH: amd64
       CGO_ENABLED: "0"
     commands:
-      - mkdir -p .step-status
+      - mkdir -p .step-status && date +%s > .step-status/build-tui-linux-amd64.start
       - cd tools/tui && go build -ldflags="-s -w" -o ../../bin/bbtui-linux-amd64 .
-      - echo pass > .step-status/build-tui-linux-amd64
+      - echo $(($(date +%s) - $(cat .step-status/build-tui-linux-amd64.start 2>/dev/null || date +%s))) > .step-status/build-tui-linux-amd64
 
   - name: build-tui-linux-armv7
     image: golang:1.24
@@ -384,9 +386,9 @@ steps:
       GOARM: "7"
       CGO_ENABLED: "0"
     commands:
-      - mkdir -p .step-status
+      - mkdir -p .step-status && date +%s > .step-status/build-tui-linux-armv7.start
       - cd tools/tui && go build -ldflags="-s -w" -o ../../bin/bbtui-linux-armv7 .
-      - echo pass > .step-status/build-tui-linux-armv7
+      - echo $(($(date +%s) - $(cat .step-status/build-tui-linux-armv7.start 2>/dev/null || date +%s))) > .step-status/build-tui-linux-armv7
 
   - name: build-tui-darwin-amd64
     image: golang:1.24
@@ -396,14 +398,14 @@ steps:
       GOARCH: amd64
       CGO_ENABLED: "0"
     commands:
-      - mkdir -p .step-status
+      - mkdir -p .step-status && date +%s > .step-status/build-tui-darwin-amd64.start
       - cd tools/tui && go build -ldflags="-s -w" -o ../../bin/bbtui-darwin-amd64 .
-      - echo pass > .step-status/build-tui-darwin-amd64
+      - echo $(($(date +%s) - $(cat .step-status/build-tui-darwin-amd64.start 2>/dev/null || date +%s))) > .step-status/build-tui-darwin-amd64
 
   - name: validate-web-gui
     image: python:3.12-alpine
     commands:
-      - mkdir -p .step-status
+      - mkdir -p .step-status && date +%s > .step-status/validate-web-gui.start
       - |
         python -c "
         from html.parser import HTMLParser
@@ -411,14 +413,14 @@ steps:
         V().feed(open('tools/web-gui/index.html').read())
         print('HTML valide')
         "
-      - echo pass > .step-status/validate-web-gui
+      - echo $(($(date +%s) - $(cat .step-status/validate-web-gui.start 2>/dev/null || date +%s))) > .step-status/validate-web-gui
 
   - name: shellcheck
     image: koalaman/shellcheck-alpine:stable
     commands:
-      - mkdir -p .step-status
+      - mkdir -p .step-status && date +%s > .step-status/shellcheck.start
       - shellcheck --severity=error scripts/*.sh
-      - echo pass > .step-status/shellcheck
+      - echo $(($(date +%s) - $(cat .step-status/shellcheck.start 2>/dev/null || date +%s))) > .step-status/shellcheck
 
   - name: checksums
     image: alpine
@@ -432,14 +434,15 @@ steps:
       - build-tui-linux-armv7
       - build-tui-darwin-amd64
     commands:
-      - mkdir -p .step-status
+      - mkdir -p .step-status && date +%s > .step-status/checksums.start
       - cd bin && sha256sum bbcli-* bbtui-* > checksums.sha256 && cat checksums.sha256
-      - echo pass > .step-status/checksums
+      - echo $(($(date +%s) - $(cat .step-status/checksums.start 2>/dev/null || date +%s))) > .step-status/checksums
 
   - name: generate-junit
-    image: alpine
+    image:alpine
     depends_on: [lint-cli, lint-tui, build-cli-linux-amd64, build-cli-linux-arm, build-cli-darwin-amd64, build-cli-darwin-arm64, build-cli-windows-amd64, build-tui-linux-amd64, build-tui-linux-armv7, build-tui-darwin-amd64, validate-web-gui, shellcheck, checksums]
     commands:
+      - apk add --no-cache bash
       - bash scripts/generate-junit.sh 3-tools lint-cli lint-tui build-cli-linux-amd64 build-cli-linux-arm build-cli-darwin-amd64 build-cli-darwin-arm64 build-cli-windows-amd64 build-tui-linux-amd64 build-tui-linux-armv7 build-tui-darwin-amd64 validate-web-gui shellcheck checksums
     when:
       status: [success, failure]
@@ -498,7 +501,7 @@ steps:
   - name: validate-html
     image: python:3.12-alpine
     commands:
-      - mkdir -p .step-status
+      - mkdir -p .step-status && date +%s > .step-status/validate-html.start
       - |
         python -c "
         from html.parser import HTMLParser
@@ -506,25 +509,26 @@ steps:
         V().feed(open('tools/web-gui/index.html').read())
         print('HTML valide')
         "
-      - echo pass > .step-status/validate-html
+      - echo $(($(date +%s) - $(cat .step-status/validate-html.start 2>/dev/null || date +%s))) > .step-status/validate-html
 
   - name: package-web-gui
     image: alpine
     depends_on: [validate-html]
     commands:
-      - mkdir -p .step-status
+      - mkdir -p .step-status && date +%s > .step-status/package-web-gui.start
       - apk add --no-cache zip
       - mkdir -p bin/web-gui
       - cp tools/web-gui/index.html bin/web-gui/
       - |
         echo "${DRONE_TAG:-dev}" > bin/web-gui/version.txt
       - cd bin && zip -r bbweb-gui.zip web-gui/
-      - echo pass > .step-status/package-web-gui
+      - echo $(($(date +%s) - $(cat .step-status/package-web-gui.start 2>/dev/null || date +%s))) > .step-status/package-web-gui
 
   - name: generate-junit
     image: alpine
     depends_on: [validate-html, package-web-gui]
     commands:
+      - apk add --no-cache bash
       - bash scripts/generate-junit.sh 4-webapp validate-html package-web-gui
     when:
       status: [success, failure]
@@ -589,50 +593,50 @@ steps:
       OUTPUT: /drone/src/bin
       JUNIT: ""
     commands:
-      - mkdir -p .step-status
+      - mkdir -p .step-status && date +%s > .step-status/build-arm.start
       - bash scripts/build-arm.sh
-      - echo pass > .step-status/build-arm
+      - echo $(($(date +%s) - $(cat .step-status/build-arm.start 2>/dev/null || date +%s))) > .step-status/build-arm
 
   - name: build-cli
     image: golang:1.24
     commands:
-      - mkdir -p .step-status
+      - mkdir -p .step-status && date +%s > .step-status/build-cli.start
       - cd tools/cli
       - GOOS=linux  GOARCH=amd64        CGO_ENABLED=0 go build -ldflags="-s -w" -o ../../bin/bbcli-linux-amd64 .
       - GOOS=linux  GOARCH=arm GOARM=7  CGO_ENABLED=0 go build -ldflags="-s -w" -o ../../bin/bbcli-linux-arm .
       - GOOS=darwin GOARCH=amd64        CGO_ENABLED=0 go build -ldflags="-s -w" -o ../../bin/bbcli-darwin-amd64 .
       - GOOS=darwin GOARCH=arm64        CGO_ENABLED=0 go build -ldflags="-s -w" -o ../../bin/bbcli-darwin-arm64 .
       - GOOS=windows GOARCH=amd64       CGO_ENABLED=0 go build -ldflags="-s -w" -o ../../bin/bbcli-windows-amd64.exe .
-      - echo pass > .step-status/build-cli
+      - echo $(($(date +%s) - $(cat .step-status/build-cli.start 2>/dev/null || date +%s))) > .step-status/build-cli
 
   - name: build-tui
     image: golang:1.24
     commands:
-      - mkdir -p .step-status
+      - mkdir -p .step-status && date +%s > .step-status/build-tui.start
       - cd tools/tui
       - GOOS=linux  GOARCH=amd64       CGO_ENABLED=0 go build -ldflags="-s -w" -o ../../bin/bbtui-linux-amd64 .
       - GOOS=linux  GOARCH=arm GOARM=7 CGO_ENABLED=0 go build -ldflags="-s -w" -o ../../bin/bbtui-linux-armv7 .
       - GOOS=darwin GOARCH=amd64       CGO_ENABLED=0 go build -ldflags="-s -w" -o ../../bin/bbtui-darwin-amd64 .
-      - echo pass > .step-status/build-tui
+      - echo $(($(date +%s) - $(cat .step-status/build-tui.start 2>/dev/null || date +%s))) > .step-status/build-tui
 
   - name: build-web-gui
     image: alpine
     commands:
-      - mkdir -p .step-status
+      - mkdir -p .step-status && date +%s > .step-status/build-web-gui.start
       - apk add --no-cache zip
       - mkdir -p bin/web-gui
       - cp tools/web-gui/index.html bin/web-gui/
       - echo "$DRONE_TAG" > bin/web-gui/version.txt
       - cd bin && zip -r bbweb-gui.zip web-gui/
-      - echo pass > .step-status/build-web-gui
+      - echo $(($(date +%s) - $(cat .step-status/build-web-gui.start 2>/dev/null || date +%s))) > .step-status/build-web-gui
 
   - name: checksums
     image: alpine
     depends_on: [build-arm, build-cli, build-tui, build-web-gui]
     commands:
-      - mkdir -p .step-status
+      - mkdir -p .step-status && date +%s > .step-status/checksums.start
       - cd bin && sha256sum embedded bbcli-* bbtui-* bbweb-gui.zip > checksums.sha256 && cat checksums.sha256
-      - echo pass > .step-status/checksums
+      - echo $(($(date +%s) - $(cat .step-status/checksums.start 2>/dev/null || date +%s))) > .step-status/checksums
 
   - name: build-docker-image
     image: quay.io/podman/stable
@@ -642,12 +646,12 @@ steps:
       REGISTRY_USER:  {from_secret: registry_user}
       REGISTRY_TOKEN: {from_secret: Bau_token}
     commands:
-      - mkdir -p .step-status
+      - mkdir -p .step-status && date +%s > .step-status/build-docker-image.start
       - podman login ghcr.io -u "$REGISTRY_USER" -p "$REGISTRY_TOKEN"
       - podman build --platform linux/arm/v7 -f project/go-api/Dockerfile.embedded -t ghcr.io/$REGISTRY_USER/embedded-sw:$DRONE_TAG -t ghcr.io/$REGISTRY_USER/embedded-sw:latest .
       - podman push ghcr.io/$REGISTRY_USER/embedded-sw:$DRONE_TAG
       - podman push ghcr.io/$REGISTRY_USER/embedded-sw:latest
-      - echo pass > .step-status/build-docker-image
+      - echo $(($(date +%s) - $(cat .step-status/build-docker-image.start 2>/dev/null || date +%s))) > .step-status/build-docker-image
 
   - name: create-release
     image: plugins/github-release
@@ -694,6 +698,7 @@ steps:
     image: alpine
     depends_on: [build-arm, build-cli, build-tui, build-web-gui, checksums, build-docker-image]
     commands:
+      - apk add --no-cache bash
       - bash scripts/generate-junit.sh 5-release build-arm build-cli build-tui build-web-gui checksums build-docker-image
     when:
       status: [success, failure]
@@ -752,10 +757,10 @@ steps:
     environment:
       BEAGLE_HOST: {from_secret: beagle_host}
     commands:
-      - mkdir -p .step-status
+      - mkdir -p .step-status && date +%s > .step-status/test-all-backends.start
       - pip install pytest requests --break-system-packages -q
       - for backend in c rust auto; do echo "=== Backend $backend ==="; HW_BACKEND=$backend pytest tests/hardware/ -v --timeout=60 || exit 1; done
-      - echo pass > .step-status/test-all-backends
+      - echo $(($(date +%s) - $(cat .step-status/test-all-backends.start 2>/dev/null || date +%s))) > .step-status/test-all-backends
 
   - name: notify-slack
     image: plugins/slack
@@ -771,6 +776,7 @@ steps:
     image: alpine
     depends_on: [test-all-backends]
     commands:
+      - apk add --no-cache bash
       - bash scripts/generate-junit.sh 6-nightly test-all-backends
     when:
       status: [success, failure]
@@ -832,7 +838,7 @@ steps:
   - name: go-tests-with-coverage
     image: golang:1.24
     commands:
-      - mkdir -p .step-status
+      - mkdir -p .step-status && date +%s > .step-status/go-tests-with-coverage.start
       - mkdir -p reports
       - cd project/go-api
       - go install gotest.tools/gotestsum@v1.12.0
@@ -847,7 +853,7 @@ steps:
           -coverpkg=./pkg/hal/,./pkg/hal/mock/,./pkg/hal/config/ \
           ./pkg/hal/ ./pkg/hal/mock/ ./pkg/hal/config/ || true
       - go tool cover -func=../../reports/go_coverage.out || true
-      - echo pass > .step-status/go-tests-with-coverage
+      - echo $(($(date +%s) - $(cat .step-status/go-tests-with-coverage.start 2>/dev/null || date +%s))) > .step-status/go-tests-with-coverage
 
   - name: junit-reports-pipe-7
     image: ghcr.io/rohit-gohri/drone-junit:v0
@@ -861,71 +867,71 @@ steps:
   - name: python-tests
     image: python:3.12-alpine
     commands:
-      - mkdir -p .step-status
+      - mkdir -p .step-status && date +%s > .step-status/python-tests.start
       - mkdir -p reports
       - pip install -r tests/requirements-dev.txt pytest-json-report --break-system-packages -q
       - pytest tests/ --ignore=tests/hardware/ -v --json-report --json-report-file=reports/python_tests.json --timeout=30 || true
-      - echo pass > .step-status/python-tests
+      - echo $(($(date +%s) - $(cat .step-status/python-tests.start 2>/dev/null || date +%s))) > .step-status/python-tests
 
   - name: python-security
     image: python:3.12-alpine
     commands:
-      - mkdir -p .step-status
+      - mkdir -p .step-status && date +%s > .step-status/python-security.start
       - mkdir -p reports
       - pip install bandit bandit-sarif-formatter --break-system-packages -q
       - bandit -r scripts/ tests/ project/ -f sarif -o reports/python-sarif.json --exclude tests/hardware/ || true
       - echo "Bandit done"
-      - echo pass > .step-status/python-security
+      - echo $(($(date +%s) - $(cat .step-status/python-security.start 2>/dev/null || date +%s))) > .step-status/python-security
 
   - name: shellcheck
     image: koalaman/shellcheck-alpine:stable
     commands:
-      - mkdir -p .step-status
+      - mkdir -p .step-status && date +%s > .step-status/shellcheck.start
       - mkdir -p reports
       - shellcheck scripts/*.sh 2>&1 | tee reports/shellcheck.txt || true
-      - echo pass > .step-status/shellcheck
+      - echo $(($(date +%s) - $(cat .step-status/shellcheck.start 2>/dev/null || date +%s))) > .step-status/shellcheck
 
   - name: c-coverage
     image: debian:bookworm
     commands:
-      - mkdir -p .step-status
+      - mkdir -p .step-status && date +%s > .step-status/c-coverage.start
       - mkdir -p reports
       - apt-get update -q && apt-get install -y -q gcc make lcov
       - make -C c-lib CFLAGS="-fprofile-arcs -ftest-coverage -g" CC=gcc test || true
       - bash scripts/c_coverage.sh c-lib/ reports/c-coverage.info '/usr/*' '*/test/*' || true
-      - echo pass > .step-status/c-coverage
+      - echo $(($(date +%s) - $(cat .step-status/c-coverage.start 2>/dev/null || date +%s))) > .step-status/c-coverage
 
   - name: adoc-build
     image: asciidoctor/docker-asciidoctor:latest
     commands:
-      - mkdir -p .step-status
+      - mkdir -p .step-status && date +%s > .step-status/adoc-build.start
       - gem install asciidoctor-pdf rouge --quiet || true
       - ROOT_DIR=. OUTPUT_DIR=reports/docs bash scripts/build_adoc.sh || true
       - find reports/docs -name "*.html" -o -name "*.pdf" | sort || true
-      - echo pass > .step-status/adoc-build
+      - echo $(($(date +%s) - $(cat .step-status/adoc-build.start 2>/dev/null || date +%s))) > .step-status/adoc-build
 
   - name: strictdoc-export
     image: python:3.12-slim
     depends_on: [go-tests-with-coverage]
     commands:
-      - mkdir -p .step-status
+      - mkdir -p .step-status && date +%s > .step-status/strictdoc-export.start
       - pip install strictdoc
       - mkdir -p reports/strictdoc
       - strictdoc export . --formats html --output-dir reports/strictdoc || true
       - find reports/strictdoc -name "*.html" | head -10 || true
       - zip -r strictdoc-output.zip build/
-      - echo pass > .step-status/strictdoc-export
+      - echo $(($(date +%s) - $(cat .step-status/strictdoc-export.start 2>/dev/null || date +%s))) > .step-status/strictdoc-export
 
   - name: prepare-reports
     image: alpine
     depends_on: [strictdoc-export]
     commands:
-      - mkdir -p .step-status
+      - mkdir -p .step-status && date +%s > .step-status/prepare-reports.start
       - SHA8=$(echo "$DRONE_COMMIT_SHA" | head -c8)
       - FILE=strictdoc-$SHA8.zip
       - mv strictdoc-output.zip $FILE
       - echo $FILE > artifact_name.txt
-      - echo pass > .step-status/prepare-reports
+      - echo $(($(date +%s) - $(cat .step-status/prepare-reports.start 2>/dev/null || date +%s))) > .step-status/prepare-reports
 
   - name: upload
     image: appleboy/drone-scp
@@ -942,24 +948,24 @@ steps:
     image: alpine
     depends_on: [upload]
     commands:
-      - mkdir -p .step-status
+      - mkdir -p .step-status && date +%s > .step-status/print-url.start
       - SHA8=$(echo "$DRONE_COMMIT_SHA" | head -c8)
       - echo "Download URL:"
       - echo "http://192.168.2.55/downloads/strictdoc-$SHA8.zip"
-      - echo pass > .step-status/print-url
+      - echo $(($(date +%s) - $(cat .step-status/print-url.start 2>/dev/null || date +%s))) > .step-status/print-url
 
   - name: strictdoc-coverage-gate
     image: python:3.12-slim
     depends_on: [strictdoc-export]
     commands:
-      - mkdir -p .step-status
+      - mkdir -p .step-status && date +%s > .step-status/strictdoc-coverage-gate.start
       - |
         python3 scripts/check_req_coverage.py \
           --sdoc-dir docs/requirements \
           --junit-xml reports/go-tests-junit.xml \
           --output-junit reports/req-coverage-junit.xml \
           --min-coverage 70 || true
-      - echo pass > .step-status/strictdoc-coverage-gate
+      - echo $(($(date +%s) - $(cat .step-status/strictdoc-coverage-gate.start 2>/dev/null || date +%s))) > .step-status/strictdoc-coverage-gate
 
   - name: junit-reports-req-coverage
     image: ghcr.io/rohit-gohri/drone-junit:v0
@@ -974,19 +980,19 @@ steps:
     image: python:3.12-alpine
     depends_on: [go-tests-with-coverage, c-coverage, python-security]
     commands:
-      - mkdir -p .step-status
+      - mkdir -p .step-status && date +%s > .step-status/sonarqube-report.start
       - pip install requests defusedxml --break-system-packages -q
       - |
         SONAR_TOKEN=$(cat /run/secrets/sonar_token 2>/dev/null || echo "")
         if [ -z "$SONAR_TOKEN" ]; then echo "SONAR_TOKEN nicht gesetzt — übersprungen"; exit 0; fi
         python3 .github/actions/sonarqube-report/sonarqube_report.py --token "$SONAR_TOKEN" --project paulefl_beaglebone_black --output reports/sonar-report.html || true
-      - echo pass > .step-status/sonarqube-report
+      - echo $(($(date +%s) - $(cat .step-status/sonarqube-report.start 2>/dev/null || date +%s))) > .step-status/sonarqube-report
 
   - name: sonarcloud-scan
     image: sonarsource/sonar-scanner-cli:latest
     depends_on: [go-tests-with-coverage, c-coverage, python-security]
     commands:
-      - mkdir -p .step-status
+      - mkdir -p .step-status && date +%s > .step-status/sonarcloud-scan.start
       - |
         sonar-scanner \
             -Dsonar.projectKey=paulefl_beaglebone_black \
@@ -995,7 +1001,7 @@ steps:
             -Dsonar.go.coverage.reportPaths=reports/go_coverage.out \
             -Dsonar.c.lcov.reportPaths=reports/c-coverage.info \
             || true
-      - echo pass > .step-status/sonarcloud-scan
+      - echo $(($(date +%s) - $(cat .step-status/sonarcloud-scan.start 2>/dev/null || date +%s))) > .step-status/sonarcloud-scan
     when:
       branch: [main, develop]
       event: [push]
@@ -1008,20 +1014,20 @@ steps:
       - c-coverage
       - adoc-build
     commands:
-      - mkdir -p .step-status
+      - mkdir -p .step-status && date +%s > .step-status/collect-and-report.start
       - pip install reportlab jinja2 --quiet
       - python3 scripts/collect_results.py --workspace reports --output reports/test_results.json || true
       - python3 scripts/generate_reports.py --output reports/summary --results reports/test_results.json --trend reports/test_trend.json || true
       - ls -lh reports/ || true
-      - echo pass > .step-status/collect-and-report
+      - echo $(($(date +%s) - $(cat .step-status/collect-and-report.start 2>/dev/null || date +%s))) > .step-status/collect-and-report
 
   - name: quality-gates
     image: python:3.12-alpine
     depends_on: [collect-and-report]
     commands:
-      - mkdir -p .step-status
+      - mkdir -p .step-status && date +%s > .step-status/quality-gates.start
       - python3 scripts/collect_results.py --check-gates --results reports/test_results.json --min-success-rate 90 --min-avg-coverage 75 --min-file-coverage 50 || true
-      - echo pass > .step-status/quality-gates
+      - echo $(($(date +%s) - $(cat .step-status/quality-gates.start 2>/dev/null || date +%s))) > .step-status/quality-gates
 
   - name: package-artifacts
     image: alpine
@@ -1031,11 +1037,11 @@ steps:
       - strictdoc-coverage-gate
       - sonarqube-report
     commands:
-      - mkdir -p .step-status
+      - mkdir -p .step-status && date +%s > .step-status/package-artifacts.start
       - apk add --no-cache zip
       - cd reports && zip -r ../reports-$DRONE_BUILD_NUMBER.zip . 2>/dev/null || true
       - echo "Artifacts gepackt"
-      - echo pass > .step-status/package-artifacts
+      - echo $(($(date +%s) - $(cat .step-status/package-artifacts.start 2>/dev/null || date +%s))) > .step-status/package-artifacts
 
   - name: notify
     image: plugins/slack
@@ -1053,6 +1059,7 @@ steps:
     image: alpine
     depends_on: [go-tests-with-coverage, python-tests, python-security, shellcheck, c-coverage, adoc-build, strictdoc-export, prepare-reports, print-url, strictdoc-coverage-gate, sonarqube-report, sonarcloud-scan, collect-and-report, quality-gates, package-artifacts]
     commands:
+      - apk add --no-cache bash
       - bash scripts/generate-junit.sh 7-reports go-tests-with-coverage python-tests python-security shellcheck c-coverage adoc-build strictdoc-export prepare-reports print-url strictdoc-coverage-gate sonarqube-report sonarcloud-scan collect-and-report quality-gates package-artifacts
     when:
       status: [success, failure]
@@ -1114,9 +1121,9 @@ steps:
   - name: validate-model
     image: ghcr.io/paulefl/bausteinsicht:latest
     commands:
-      - mkdir -p .step-status
+      - mkdir -p .step-status && date +%s > .step-status/validate-model.start
       - bausteinsicht validate --model arch/model/beaglebone_black.jsonc
-      - echo pass > .step-status/validate-model
+      - echo $(($(date +%s) - $(cat .step-status/validate-model.start 2>/dev/null || date +%s))) > .step-status/validate-model
 
   - name: export-plantuml
     image: ghcr.io/paulefl/bausteinsicht:latest
@@ -1182,6 +1189,7 @@ steps:
     image: alpine
     depends_on: [validate-model, export-plantuml, export-mermaid, export-table, export-png, commit-exports]
     commands:
+      - apk add --no-cache bash
       - bash scripts/generate-junit.sh 8-bausteinsicht validate-model export-plantuml export-mermaid export-table export-png commit-exports
     when:
       status: [success, failure]
@@ -1231,7 +1239,7 @@ type: docker
 name: 9-build-container
 
 trigger:
-  event: [push, pull_request, custom]
+  event: [push, custom]
   branch: [main, container_build]
   paths:
     - docker/builder/**
@@ -1246,6 +1254,7 @@ steps:
     environment:
       REGISTRY_USER:  {from_secret: registry_user}
       REGISTRY_TOKEN: {from_secret: Bau_token}
+      FORCE_REBUILD: ${DRONE_BUILD_PARAM_FORCE}
     commands:
       - mkdir -p .step-status
       - bash scripts/build-container.sh generic-builder docker/builder/Dockerfile docker/builder docker/builder/VERSION
@@ -1289,6 +1298,7 @@ steps:
     image: alpine
     depends_on: [build-generic-builder, build-bausteinsicht, build-strictdoc, clone-bausteinsicht-repo]
     commands:
+      - apk add --no-cache bash
       - bash scripts/generate-junit.sh 9-build-container build-generic-builder clone-bausteinsicht-repo build-bausteinsicht build-strictdoc
     when:
       status: [success, failure]
@@ -1491,9 +1501,10 @@ steps:
       - echo pass > .step-status/promote-to-stable
 
   - name: generate-junit
-    image: alpine
+    image:alpine
     depends_on: [download-release-assets, test-hardware, test-api, test-uart-on-bbb, test-cli-remote, promote-to-stable]
     commands:
+      - apk add --no-cache bash
       - bash scripts/generate-junit.sh 10-integration-tests download-release-assets test-hardware test-api test-uart-on-bbb test-cli-remote promote-to-stable
     when:
       status: [success, failure]
@@ -1578,6 +1589,7 @@ steps:
     image: alpine
     depends_on: [bump-version]
     commands:
+      - apk add --no-cache bash
       - bash scripts/generate-junit.sh 11-version-bump bump-version
     when:
       status: [success, failure]
@@ -1663,9 +1675,10 @@ steps:
       - echo pass > .step-status/update-changelog
 
   - name: generate-junit
-    image: alpine
+    image:alpine
     depends_on: [update-changelog]
     commands:
+      - apk add --no-cache bash
       - bash scripts/generate-junit.sh 12-changelog update-changelog
     when:
       status: [success, failure]

@@ -20,6 +20,7 @@ if echo "$INSPECT" | grep -q 'schemaVersion'; then
 fi
 echo "$IMAGE:$VERSION not found in ghcr.io — building ..."
 
+
 echo "Building $IMAGE:$VERSION ..."
 podman build --build-arg VERSION="$VERSION" \
   -t "$FULL_IMAGE:$VERSION" \

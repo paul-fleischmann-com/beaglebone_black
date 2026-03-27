@@ -2,6 +2,9 @@
 # Generates JUnit XML from .step-status/ files written by each pipeline step.
 # Usage: generate-junit.sh <pipeline-name> <step1> [step2 ...]
 # Output: reports/pipeline-steps-junit.xml
+#
+# Status file format: contains duration in seconds (written by each step)
+# Start file format:  .step-status/STEPNAME.start contains epoch timestamp
 
 PIPELINE=$1; shift
 mkdir -p reports .step-status
@@ -11,10 +14,15 @@ XML_CASES=""
 
 for step in "$@"; do
   if [ -f ".step-status/$step" ]; then
-    XML_CASES="${XML_CASES}    <testcase name=\"${step}\" classname=\"${PIPELINE}\"/>\n"
+    duration=$(cat ".step-status/$step" 2>/dev/null || echo 0)
+    # Validate duration is a number
+    case "$duration" in
+      ''|*[!0-9]*) duration=0 ;;
+    esac
+    XML_CASES="${XML_CASES}    <testcase name=\"${step}\" classname=\"${PIPELINE}\" time=\"${duration}\">\n      <system-out>Step passed in ${duration}s</system-out>\n    </testcase>\n"
     PASS=$((PASS + 1))
   else
-    XML_CASES="${XML_CASES}    <testcase name=\"${step}\" classname=\"${PIPELINE}\">\n      <failure message=\"Step failed or was skipped\"/>\n    </testcase>\n"
+    XML_CASES="${XML_CASES}    <testcase name=\"${step}\" classname=\"${PIPELINE}\" time=\"0\">\n      <failure message=\"Step failed or was skipped\"/>\n    </testcase>\n"
     FAIL=$((FAIL + 1))
   fi
 done
