@@ -26,19 +26,25 @@ steps:
       SRC: /drone/src
       OUTPUT: /drone/src/bin
     commands:
+      - mkdir -p .step-status
       - bash scripts/build-arm.sh
+      - echo pass > .step-status/build-libraries
 
   - name: test-c-lib
     image: ghcr.io/paulefl/generic-builder:latest
     depends_on: [build-libraries]
     commands:
+      - mkdir -p .step-status
       - make -C c-lib test
+      - echo pass > .step-status/test-c-lib
 
   - name: test-rust-lib
     image: ghcr.io/paulefl/generic-builder:latest
     depends_on: [build-libraries]
     commands:
+      - mkdir -p .step-status
       - cargo test --manifest-path project/rust-lib/Cargo.toml
+      - echo pass > .step-status/test-rust-lib
 
   - name: test-go
     image: ghcr.io/paulefl/generic-builder:latest
@@ -47,6 +53,7 @@ steps:
       COVERPKG: ./pkg/hal/,./pkg/hal/mock/,./pkg/hal/config/
       TEST_PACKAGES: ./pkg/hal/ ./pkg/hal/mock/ ./pkg/hal/config/
     commands:
+      - mkdir -p .step-status
       - cd project/go-api
       - mkdir -p ../../reports
       - >-
@@ -64,6 +71,7 @@ steps:
         echo "Coverage: ${total}%"
         awk "BEGIN{exit !($total >= 75)}" || (echo "Coverage gate: ${total}% < 75%" && exit 1)
         echo "Coverage gate: ${total}% >= 75%"
+      - echo pass > .step-status/test-go
 
   - name: junit-reports-pipe1
     image: ghcr.io/rohit-gohri/drone-junit:v0
@@ -74,9 +82,17 @@ steps:
     when:
       status: [success, failure]
 
+  - name: generate-junit
+    image: alpine
+    depends_on: [build-libraries, test-c-lib, test-rust-lib, test-go]
+    commands:
+      - bash scripts/generate-junit.sh 1-libraries build-libraries test-c-lib test-rust-lib test-go
+    when:
+      status: [success, failure]
+
   - name: allure-generate
     image: eclipse-temurin:17-jre
-    depends_on: [junit-reports-pipe1]
+    depends_on: [generate-junit]
     commands:
       - bash scripts/allure-generate.sh 1-libraries
       - echo "Allure Report http://192.168.2.55/downloads/1-libraries/allure-report/index.html"
@@ -134,12 +150,16 @@ steps:
   - name: test-hal-unit
     image: golang:1.24
     commands:
+      - mkdir -p .step-status
       - cd project/go-api && go test ./pkg/hal/ ./pkg/hal/mock/ ./pkg/hal/config/ -v -count=1
+      - echo pass > .step-status/test-hal-unit
 
   - name: lint-go
     image: golang:1.24
     commands:
+      - mkdir -p .step-status
       - make lint
+      - echo pass > .step-status/lint-go
 
   - name: build-go-api
     image: ghcr.io/paulefl/generic-builder:latest
@@ -149,7 +169,9 @@ steps:
       OUTPUT: /drone/src/bin
       JUNIT: ""
     commands:
+      - mkdir -p .step-status
       - bash scripts/build-arm.sh
+      - echo pass > .step-status/build-go-api
 
   - name: deploy-beaglebone
     image: appleboy/drone-scp
@@ -197,15 +219,25 @@ steps:
       BEAGLE_HOST:
         from_secret: beagle_host
     commands:
+      - mkdir -p .step-status
       - pip install pytest requests --break-system-packages -q
       - for backend in c rust auto; do echo "=== Backend $backend ==="; HW_BACKEND=$backend pytest tests/hardware/ -v --timeout=60 || exit 1; done
+      - echo pass > .step-status/test-hardware-all-backends
     when:
       branch: [main, develop]
       event: [push]
 
+  - name: generate-junit
+    image: alpine
+    depends_on: [test-hal-unit, lint-go, build-go-api, test-hardware-all-backends]
+    commands:
+      - bash scripts/generate-junit.sh 2-embedded-sw test-hal-unit lint-go build-go-api test-hardware-all-backends
+    when:
+      status: [success, failure]
+
   - name: allure-generate
     image: eclipse-temurin:17-jre
-    depends_on: [test-hardware-all-backends, build-go-api]
+    depends_on: [generate-junit]
     commands:
       - bash scripts/allure-generate.sh 2-embedded-sw
       - echo "Allure Report http://192.168.2.55/downloads/2-embedded-sw/allure-report/index.html"
@@ -257,14 +289,18 @@ steps:
   - name: lint-cli
     image: golang:1.24
     commands:
+      - mkdir -p .step-status
       - cd tools/cli && go mod tidy && go vet ./...
       - |
         test -z "$(gofmt -l tools/cli/)" || (echo "gofmt: tools/cli/" && exit 1)
+      - echo pass > .step-status/lint-cli
 
   - name: lint-tui
     image: golang:1.24
     commands:
+      - mkdir -p .step-status
       - cd tools/tui && go mod tidy && go vet ./...
+      - echo pass > .step-status/lint-tui
 
   - name: build-cli-linux-amd64
     image: golang:1.24
@@ -274,7 +310,9 @@ steps:
       GOARCH: amd64
       CGO_ENABLED: "0"
     commands:
+      - mkdir -p .step-status
       - cd tools/cli && go build -ldflags="-s -w" -o ../../bin/bbcli-linux-amd64 .
+      - echo pass > .step-status/build-cli-linux-amd64
 
   - name: build-cli-linux-arm
     image: golang:1.24
@@ -285,7 +323,9 @@ steps:
       GOARM: "7"
       CGO_ENABLED: "0"
     commands:
+      - mkdir -p .step-status
       - cd tools/cli && go build -ldflags="-s -w" -o ../../bin/bbcli-linux-arm .
+      - echo pass > .step-status/build-cli-linux-arm
 
   - name: build-cli-darwin-amd64
     image: golang:1.24
@@ -295,7 +335,9 @@ steps:
       GOARCH: amd64
       CGO_ENABLED: "0"
     commands:
+      - mkdir -p .step-status
       - cd tools/cli && go build -ldflags="-s -w" -o ../../bin/bbcli-darwin-amd64 .
+      - echo pass > .step-status/build-cli-darwin-amd64
 
   - name: build-cli-darwin-arm64
     image: golang:1.24
@@ -305,7 +347,9 @@ steps:
       GOARCH: arm64
       CGO_ENABLED: "0"
     commands:
+      - mkdir -p .step-status
       - cd tools/cli && go build -ldflags="-s -w" -o ../../bin/bbcli-darwin-arm64 .
+      - echo pass > .step-status/build-cli-darwin-arm64
 
   - name: build-cli-windows-amd64
     image: golang:1.24
@@ -315,7 +359,9 @@ steps:
       GOARCH: amd64
       CGO_ENABLED: "0"
     commands:
+      - mkdir -p .step-status
       - cd tools/cli && go build -ldflags="-s -w" -o ../../bin/bbcli-windows-amd64.exe .
+      - echo pass > .step-status/build-cli-windows-amd64
 
   - name: build-tui-linux-amd64
     image: golang:1.24
@@ -325,7 +371,9 @@ steps:
       GOARCH: amd64
       CGO_ENABLED: "0"
     commands:
+      - mkdir -p .step-status
       - cd tools/tui && go build -ldflags="-s -w" -o ../../bin/bbtui-linux-amd64 .
+      - echo pass > .step-status/build-tui-linux-amd64
 
   - name: build-tui-linux-armv7
     image: golang:1.24
@@ -336,7 +384,9 @@ steps:
       GOARM: "7"
       CGO_ENABLED: "0"
     commands:
+      - mkdir -p .step-status
       - cd tools/tui && go build -ldflags="-s -w" -o ../../bin/bbtui-linux-armv7 .
+      - echo pass > .step-status/build-tui-linux-armv7
 
   - name: build-tui-darwin-amd64
     image: golang:1.24
@@ -346,11 +396,14 @@ steps:
       GOARCH: amd64
       CGO_ENABLED: "0"
     commands:
+      - mkdir -p .step-status
       - cd tools/tui && go build -ldflags="-s -w" -o ../../bin/bbtui-darwin-amd64 .
+      - echo pass > .step-status/build-tui-darwin-amd64
 
   - name: validate-web-gui
     image: python:3.12-alpine
     commands:
+      - mkdir -p .step-status
       - |
         python -c "
         from html.parser import HTMLParser
@@ -358,11 +411,14 @@ steps:
         V().feed(open('tools/web-gui/index.html').read())
         print('HTML valide')
         "
+      - echo pass > .step-status/validate-web-gui
 
   - name: shellcheck
     image: koalaman/shellcheck-alpine:stable
     commands:
+      - mkdir -p .step-status
       - shellcheck --severity=error scripts/*.sh
+      - echo pass > .step-status/shellcheck
 
   - name: checksums
     image: alpine
@@ -376,11 +432,21 @@ steps:
       - build-tui-linux-armv7
       - build-tui-darwin-amd64
     commands:
+      - mkdir -p .step-status
       - cd bin && sha256sum bbcli-* bbtui-* > checksums.sha256 && cat checksums.sha256
+      - echo pass > .step-status/checksums
+
+  - name: generate-junit
+    image: alpine
+    depends_on: [lint-cli, lint-tui, build-cli-linux-amd64, build-cli-linux-arm, build-cli-darwin-amd64, build-cli-darwin-arm64, build-cli-windows-amd64, build-tui-linux-amd64, build-tui-linux-armv7, build-tui-darwin-amd64, validate-web-gui, shellcheck, checksums]
+    commands:
+      - bash scripts/generate-junit.sh 3-tools lint-cli lint-tui build-cli-linux-amd64 build-cli-linux-arm build-cli-darwin-amd64 build-cli-darwin-arm64 build-cli-windows-amd64 build-tui-linux-amd64 build-tui-linux-armv7 build-tui-darwin-amd64 validate-web-gui shellcheck checksums
+    when:
+      status: [success, failure]
 
   - name: allure-generate
     image: eclipse-temurin:17-jre
-    depends_on: [checksums, shellcheck, validate-web-gui]
+    depends_on: [generate-junit]
     commands:
       - bash scripts/allure-generate.sh 3-tools
       - echo "Allure Report http://192.168.2.55/downloads/3-tools/allure-report/index.html"
@@ -432,6 +498,7 @@ steps:
   - name: validate-html
     image: python:3.12-alpine
     commands:
+      - mkdir -p .step-status
       - |
         python -c "
         from html.parser import HTMLParser
@@ -439,21 +506,32 @@ steps:
         V().feed(open('tools/web-gui/index.html').read())
         print('HTML valide')
         "
+      - echo pass > .step-status/validate-html
 
   - name: package-web-gui
     image: alpine
     depends_on: [validate-html]
     commands:
+      - mkdir -p .step-status
       - apk add --no-cache zip
       - mkdir -p bin/web-gui
       - cp tools/web-gui/index.html bin/web-gui/
       - |
         echo "${DRONE_TAG:-dev}" > bin/web-gui/version.txt
       - cd bin && zip -r bbweb-gui.zip web-gui/
+      - echo pass > .step-status/package-web-gui
+
+  - name: generate-junit
+    image: alpine
+    depends_on: [validate-html, package-web-gui]
+    commands:
+      - bash scripts/generate-junit.sh 4-webapp validate-html package-web-gui
+    when:
+      status: [success, failure]
 
   - name: allure-generate
     image: eclipse-temurin:17-jre
-    depends_on: [package-web-gui]
+    depends_on: [generate-junit]
     commands:
       - bash scripts/allure-generate.sh 4-webapp
       - echo "Allure Report http://192.168.2.55/downloads/4-webapp/allure-report/index.html"
@@ -511,40 +589,50 @@ steps:
       OUTPUT: /drone/src/bin
       JUNIT: ""
     commands:
+      - mkdir -p .step-status
       - bash scripts/build-arm.sh
+      - echo pass > .step-status/build-arm
 
   - name: build-cli
     image: golang:1.24
     commands:
+      - mkdir -p .step-status
       - cd tools/cli
       - GOOS=linux  GOARCH=amd64        CGO_ENABLED=0 go build -ldflags="-s -w" -o ../../bin/bbcli-linux-amd64 .
       - GOOS=linux  GOARCH=arm GOARM=7  CGO_ENABLED=0 go build -ldflags="-s -w" -o ../../bin/bbcli-linux-arm .
       - GOOS=darwin GOARCH=amd64        CGO_ENABLED=0 go build -ldflags="-s -w" -o ../../bin/bbcli-darwin-amd64 .
       - GOOS=darwin GOARCH=arm64        CGO_ENABLED=0 go build -ldflags="-s -w" -o ../../bin/bbcli-darwin-arm64 .
       - GOOS=windows GOARCH=amd64       CGO_ENABLED=0 go build -ldflags="-s -w" -o ../../bin/bbcli-windows-amd64.exe .
+      - echo pass > .step-status/build-cli
 
   - name: build-tui
     image: golang:1.24
     commands:
+      - mkdir -p .step-status
       - cd tools/tui
       - GOOS=linux  GOARCH=amd64       CGO_ENABLED=0 go build -ldflags="-s -w" -o ../../bin/bbtui-linux-amd64 .
       - GOOS=linux  GOARCH=arm GOARM=7 CGO_ENABLED=0 go build -ldflags="-s -w" -o ../../bin/bbtui-linux-armv7 .
       - GOOS=darwin GOARCH=amd64       CGO_ENABLED=0 go build -ldflags="-s -w" -o ../../bin/bbtui-darwin-amd64 .
+      - echo pass > .step-status/build-tui
 
   - name: build-web-gui
     image: alpine
     commands:
+      - mkdir -p .step-status
       - apk add --no-cache zip
       - mkdir -p bin/web-gui
       - cp tools/web-gui/index.html bin/web-gui/
       - echo "$DRONE_TAG" > bin/web-gui/version.txt
       - cd bin && zip -r bbweb-gui.zip web-gui/
+      - echo pass > .step-status/build-web-gui
 
   - name: checksums
     image: alpine
     depends_on: [build-arm, build-cli, build-tui, build-web-gui]
     commands:
+      - mkdir -p .step-status
       - cd bin && sha256sum embedded bbcli-* bbtui-* bbweb-gui.zip > checksums.sha256 && cat checksums.sha256
+      - echo pass > .step-status/checksums
 
   - name: build-docker-image
     image: quay.io/podman/stable
@@ -554,10 +642,12 @@ steps:
       REGISTRY_USER:  {from_secret: registry_user}
       REGISTRY_TOKEN: {from_secret: Bau_token}
     commands:
+      - mkdir -p .step-status
       - podman login ghcr.io -u "$REGISTRY_USER" -p "$REGISTRY_TOKEN"
       - podman build --platform linux/arm/v7 -f project/go-api/Dockerfile.embedded -t ghcr.io/$REGISTRY_USER/embedded-sw:$DRONE_TAG -t ghcr.io/$REGISTRY_USER/embedded-sw:latest .
       - podman push ghcr.io/$REGISTRY_USER/embedded-sw:$DRONE_TAG
       - podman push ghcr.io/$REGISTRY_USER/embedded-sw:latest
+      - echo pass > .step-status/build-docker-image
 
   - name: create-release
     image: plugins/github-release
@@ -600,9 +690,17 @@ steps:
       tag: "$DRONE_TAG-toTestOnTarget"
       prerelease: true
 
+  - name: generate-junit
+    image: alpine
+    depends_on: [build-arm, build-cli, build-tui, build-web-gui, checksums, build-docker-image]
+    commands:
+      - bash scripts/generate-junit.sh 5-release build-arm build-cli build-tui build-web-gui checksums build-docker-image
+    when:
+      status: [success, failure]
+
   - name: allure-generate
     image: eclipse-temurin:17-jre
-    depends_on: [create-toTestOnTarget-release]
+    depends_on: [generate-junit]
     commands:
       - bash scripts/allure-generate.sh 5-release
       - echo "Allure Report http://192.168.2.55/downloads/5-release/allure-report/index.html"
@@ -654,8 +752,10 @@ steps:
     environment:
       BEAGLE_HOST: {from_secret: beagle_host}
     commands:
+      - mkdir -p .step-status
       - pip install pytest requests --break-system-packages -q
       - for backend in c rust auto; do echo "=== Backend $backend ==="; HW_BACKEND=$backend pytest tests/hardware/ -v --timeout=60 || exit 1; done
+      - echo pass > .step-status/test-all-backends
 
   - name: notify-slack
     image: plugins/slack
@@ -667,9 +767,17 @@ steps:
     when:
       status: [success, failure]
 
+  - name: generate-junit
+    image: alpine
+    depends_on: [test-all-backends]
+    commands:
+      - bash scripts/generate-junit.sh 6-nightly test-all-backends
+    when:
+      status: [success, failure]
+
   - name: allure-generate
     image: eclipse-temurin:17-jre
-    depends_on: [notify-slack]
+    depends_on: [generate-junit]
     commands:
       - bash scripts/allure-generate.sh 6-nightly
       - echo "Allure Report http://192.168.2.55/downloads/6-nightly/allure-report/index.html"
@@ -724,6 +832,7 @@ steps:
   - name: go-tests-with-coverage
     image: golang:1.24
     commands:
+      - mkdir -p .step-status
       - mkdir -p reports
       - cd project/go-api
       - go install gotest.tools/gotestsum@v1.12.0
@@ -738,6 +847,7 @@ steps:
           -coverpkg=./pkg/hal/,./pkg/hal/mock/,./pkg/hal/config/ \
           ./pkg/hal/ ./pkg/hal/mock/ ./pkg/hal/config/ || true
       - go tool cover -func=../../reports/go_coverage.out || true
+      - echo pass > .step-status/go-tests-with-coverage
 
   - name: junit-reports-pipe-7
     image: ghcr.io/rohit-gohri/drone-junit:v0
@@ -751,57 +861,71 @@ steps:
   - name: python-tests
     image: python:3.12-alpine
     commands:
+      - mkdir -p .step-status
       - mkdir -p reports
       - pip install -r tests/requirements-dev.txt pytest-json-report --break-system-packages -q
       - pytest tests/ --ignore=tests/hardware/ -v --json-report --json-report-file=reports/python_tests.json --timeout=30 || true
+      - echo pass > .step-status/python-tests
 
   - name: python-security
     image: python:3.12-alpine
     commands:
+      - mkdir -p .step-status
       - mkdir -p reports
       - pip install bandit bandit-sarif-formatter --break-system-packages -q
       - bandit -r scripts/ tests/ project/ -f sarif -o reports/python-sarif.json --exclude tests/hardware/ || true
       - echo "Bandit done"
+      - echo pass > .step-status/python-security
 
   - name: shellcheck
     image: koalaman/shellcheck-alpine:stable
     commands:
+      - mkdir -p .step-status
       - mkdir -p reports
       - shellcheck scripts/*.sh 2>&1 | tee reports/shellcheck.txt || true
+      - echo pass > .step-status/shellcheck
 
   - name: c-coverage
     image: debian:bookworm
     commands:
+      - mkdir -p .step-status
       - mkdir -p reports
       - apt-get update -q && apt-get install -y -q gcc make lcov
       - make -C c-lib CFLAGS="-fprofile-arcs -ftest-coverage -g" CC=gcc test || true
       - bash scripts/c_coverage.sh c-lib/ reports/c-coverage.info '/usr/*' '*/test/*' || true
+      - echo pass > .step-status/c-coverage
 
   - name: adoc-build
     image: asciidoctor/docker-asciidoctor:latest
     commands:
+      - mkdir -p .step-status
       - gem install asciidoctor-pdf rouge --quiet || true
       - ROOT_DIR=. OUTPUT_DIR=reports/docs bash scripts/build_adoc.sh || true
       - find reports/docs -name "*.html" -o -name "*.pdf" | sort || true
+      - echo pass > .step-status/adoc-build
 
   - name: strictdoc-export
     image: python:3.12-slim
     depends_on: [go-tests-with-coverage]
     commands:
+      - mkdir -p .step-status
       - pip install strictdoc
       - mkdir -p reports/strictdoc
       - strictdoc export . --formats html --output-dir reports/strictdoc || true
       - find reports/strictdoc -name "*.html" | head -10 || true
       - zip -r strictdoc-output.zip build/
+      - echo pass > .step-status/strictdoc-export
 
   - name: prepare-reports
     image: alpine
     depends_on: [strictdoc-export]
     commands:
+      - mkdir -p .step-status
       - SHA8=$(echo "$DRONE_COMMIT_SHA" | head -c8)
       - FILE=strictdoc-$SHA8.zip
       - mv strictdoc-output.zip $FILE
       - echo $FILE > artifact_name.txt
+      - echo pass > .step-status/prepare-reports
 
   - name: upload
     image: appleboy/drone-scp
@@ -818,20 +942,24 @@ steps:
     image: alpine
     depends_on: [upload]
     commands:
+      - mkdir -p .step-status
       - SHA8=$(echo "$DRONE_COMMIT_SHA" | head -c8)
       - echo "Download URL:"
       - echo "http://192.168.2.55/downloads/strictdoc-$SHA8.zip"
+      - echo pass > .step-status/print-url
 
   - name: strictdoc-coverage-gate
     image: python:3.12-slim
     depends_on: [strictdoc-export]
     commands:
+      - mkdir -p .step-status
       - |
         python3 scripts/check_req_coverage.py \
           --sdoc-dir docs/requirements \
           --junit-xml reports/go-tests-junit.xml \
           --output-junit reports/req-coverage-junit.xml \
           --min-coverage 70 || true
+      - echo pass > .step-status/strictdoc-coverage-gate
 
   - name: junit-reports-req-coverage
     image: ghcr.io/rohit-gohri/drone-junit:v0
@@ -846,16 +974,19 @@ steps:
     image: python:3.12-alpine
     depends_on: [go-tests-with-coverage, c-coverage, python-security]
     commands:
+      - mkdir -p .step-status
       - pip install requests defusedxml --break-system-packages -q
       - |
         SONAR_TOKEN=$(cat /run/secrets/sonar_token 2>/dev/null || echo "")
         if [ -z "$SONAR_TOKEN" ]; then echo "SONAR_TOKEN nicht gesetzt — übersprungen"; exit 0; fi
         python3 .github/actions/sonarqube-report/sonarqube_report.py --token "$SONAR_TOKEN" --project paulefl_beaglebone_black --output reports/sonar-report.html || true
+      - echo pass > .step-status/sonarqube-report
 
   - name: sonarcloud-scan
     image: sonarsource/sonar-scanner-cli:latest
     depends_on: [go-tests-with-coverage, c-coverage, python-security]
     commands:
+      - mkdir -p .step-status
       - |
         sonar-scanner \
             -Dsonar.projectKey=paulefl_beaglebone_black \
@@ -864,6 +995,7 @@ steps:
             -Dsonar.go.coverage.reportPaths=reports/go_coverage.out \
             -Dsonar.c.lcov.reportPaths=reports/c-coverage.info \
             || true
+      - echo pass > .step-status/sonarcloud-scan
     when:
       branch: [main, develop]
       event: [push]
@@ -876,16 +1008,20 @@ steps:
       - c-coverage
       - adoc-build
     commands:
+      - mkdir -p .step-status
       - pip install reportlab jinja2 --quiet
       - python3 scripts/collect_results.py --workspace reports --output reports/test_results.json || true
       - python3 scripts/generate_reports.py --output reports/summary --results reports/test_results.json --trend reports/test_trend.json || true
       - ls -lh reports/ || true
+      - echo pass > .step-status/collect-and-report
 
   - name: quality-gates
     image: python:3.12-alpine
     depends_on: [collect-and-report]
     commands:
+      - mkdir -p .step-status
       - python3 scripts/collect_results.py --check-gates --results reports/test_results.json --min-success-rate 90 --min-avg-coverage 75 --min-file-coverage 50 || true
+      - echo pass > .step-status/quality-gates
 
   - name: package-artifacts
     image: alpine
@@ -895,9 +1031,11 @@ steps:
       - strictdoc-coverage-gate
       - sonarqube-report
     commands:
+      - mkdir -p .step-status
       - apk add --no-cache zip
       - cd reports && zip -r ../reports-$DRONE_BUILD_NUMBER.zip . 2>/dev/null || true
       - echo "Artifacts gepackt"
+      - echo pass > .step-status/package-artifacts
 
   - name: notify
     image: plugins/slack
@@ -911,9 +1049,17 @@ steps:
       branch: [main, develop]
       event:  [push, tag]
 
+  - name: generate-junit
+    image: alpine
+    depends_on: [go-tests-with-coverage, python-tests, python-security, shellcheck, c-coverage, adoc-build, strictdoc-export, prepare-reports, print-url, strictdoc-coverage-gate, sonarqube-report, sonarcloud-scan, collect-and-report, quality-gates, package-artifacts]
+    commands:
+      - bash scripts/generate-junit.sh 7-reports go-tests-with-coverage python-tests python-security shellcheck c-coverage adoc-build strictdoc-export prepare-reports print-url strictdoc-coverage-gate sonarqube-report sonarcloud-scan collect-and-report quality-gates package-artifacts
+    when:
+      status: [success, failure]
+
   - name: allure-generate
     image: eclipse-temurin:17-jre
-    depends_on: [notify]
+    depends_on: [generate-junit]
     commands:
       - bash scripts/allure-generate.sh 7-reports
       - echo "Allure Report http://192.168.2.55/downloads/7-reports/allure-report/index.html"
@@ -968,36 +1114,46 @@ steps:
   - name: validate-model
     image: ghcr.io/paulefl/bausteinsicht:latest
     commands:
+      - mkdir -p .step-status
       - bausteinsicht validate --model arch/model/beaglebone_black.jsonc
+      - echo pass > .step-status/validate-model
 
   - name: export-plantuml
     image: ghcr.io/paulefl/bausteinsicht:latest
     depends_on: [validate-model]
     commands:
+      - mkdir -p .step-status
       - mkdir -p arch/model/export/plantuml
       - bausteinsicht export-diagram --model arch/model/beaglebone_black.jsonc --diagram-format plantuml --output arch/model/export/plantuml
+      - echo pass > .step-status/export-plantuml
 
   - name: export-mermaid
     image: ghcr.io/paulefl/bausteinsicht:latest
     depends_on: [validate-model]
     commands:
+      - mkdir -p .step-status
       - mkdir -p arch/model/export/mermaid
       - bausteinsicht export-diagram --model arch/model/beaglebone_black.jsonc --diagram-format mermaid --output arch/model/export/mermaid
+      - echo pass > .step-status/export-mermaid
 
   - name: export-table
     image: ghcr.io/paulefl/bausteinsicht:latest
     depends_on: [validate-model]
     commands:
+      - mkdir -p .step-status
       - mkdir -p arch/model/export/table
       - bausteinsicht export-table --model arch/model/beaglebone_black.jsonc --table-format md --combined --output arch/model/export/table
+      - echo pass > .step-status/export-table
 
   - name: export-png
     image: ghcr.io/paulefl/bausteinsicht:latest
     depends_on: [export-plantuml, export-mermaid, export-table]
     commands:
+      - mkdir -p .step-status
       - mkdir -p arch/model/export/png
       - dbus-daemon --system --fork 2>/dev/null || true
       - xvfb-run -a bausteinsicht export --model arch/model/beaglebone_black.jsonc --output arch/model/export/png
+      - echo pass > .step-status/export-png
 
   - name: commit-exports
     image: alpine/git
@@ -1006,6 +1162,7 @@ steps:
       GIT_TOKEN: {from_secret: git_token}
       GIT_USER:  {from_secret: git_user}
     commands:
+      - mkdir -p .step-status
       - git config user.name "drone-ci[bot]"
       - git config user.email "drone-ci[bot]@noreply"
       - git add arch/model/export/
@@ -1016,13 +1173,22 @@ steps:
           git commit -m "ci(bausteinsicht): update exported diagrams [skip ci]"
           git push https://${GIT_USER}:${GIT_TOKEN}@${DRONE_GIT_HTTP_URL#https://} HEAD:${DRONE_BRANCH}
         fi
+      - echo pass > .step-status/commit-exports
     when:
       event: [push]
       branch: [main, develop]
 
+  - name: generate-junit
+    image: alpine
+    depends_on: [validate-model, export-plantuml, export-mermaid, export-table, export-png, commit-exports]
+    commands:
+      - bash scripts/generate-junit.sh 8-bausteinsicht validate-model export-plantuml export-mermaid export-table export-png commit-exports
+    when:
+      status: [success, failure]
+
   - name: allure-generate
     image: eclipse-temurin:17-jre
-    depends_on: [commit-exports]
+    depends_on: [generate-junit]
     commands:
       - bash scripts/allure-generate.sh 8-bausteinsicht
       - echo "Allure Report http://192.168.2.55/downloads/8-bausteinsicht/allure-report/index.html"
@@ -1123,25 +1289,7 @@ steps:
     image: alpine
     depends_on: [build-generic-builder, build-bausteinsicht, build-strictdoc, clone-bausteinsicht-repo]
     commands:
-      - mkdir -p reports
-      - |
-        STEPS="build-generic-builder clone-bausteinsicht-repo build-bausteinsicht build-strictdoc"
-        PASS=0; FAIL=0
-        CASES=""
-        for step in $STEPS; do
-          if [ -f ".step-status/$step" ]; then
-            CASES="$CASES    <testcase name=\"$step\" classname=\"9-build-container\"/>\n"
-            PASS=$((PASS+1))
-          else
-            CASES="$CASES    <testcase name=\"$step\" classname=\"9-build-container\">\n      <failure message=\"Step failed or was skipped\"/>\n    </testcase>\n"
-            FAIL=$((FAIL+1))
-          fi
-        done
-        TOTAL=$((PASS+FAIL))
-        printf '<?xml version="1.0" encoding="UTF-8"?>\n<testsuites>\n  <testsuite name="9-build-container" tests="%d" failures="%d">\n%b  </testsuite>\n</testsuites>\n' \
-          "$TOTAL" "$FAIL" "$CASES" > reports/build-containers-junit.xml
-        echo "JUnit written: $PASS passed, $FAIL failed"
-        cat reports/build-containers-junit.xml
+      - bash scripts/generate-junit.sh 9-build-container build-generic-builder clone-bausteinsicht-repo build-bausteinsicht build-strictdoc
     when:
       status: [success, failure]
 
@@ -1200,6 +1348,7 @@ steps:
     environment:
       GIT_TOKEN: {from_secret: git_token}
     commands:
+      - mkdir -p .step-status
       - apk add --no-cache curl jq
       - mkdir -p bin
       - TAG=$DRONE_TAG
@@ -1213,6 +1362,7 @@ steps:
               echo "Downloaded: $NAME"
             done
       - ls -lh bin/
+      - echo pass > .step-status/download-release-assets
 
   - name: deploy-to-bbb
     image: appleboy/drone-scp
@@ -1253,8 +1403,10 @@ steps:
       BEAGLE_HOST:
         from_secret: beagle_host
     commands:
+      - mkdir -p .step-status
       - pip install pytest requests pytest-json-report --break-system-packages -q
       - pytest tests/hardware/test_hardware.py -v --timeout=60 --json-report --json-report-file=reports/hardware-tests.json || true
+      - echo pass > .step-status/test-hardware
 
   - name: test-api
     image: python:3.12-alpine
@@ -1263,8 +1415,10 @@ steps:
       BEAGLE_HOST:
         from_secret: beagle_host
     commands:
+      - mkdir -p .step-status
       - pip install pytest requests pytest-json-report --break-system-packages -q
       - pytest tests/api/test_api.py -v --timeout=30 --json-report --json-report-file=reports/api-tests.json || true
+      - echo pass > .step-status/test-api
 
   - name: test-uart-on-bbb
     image: python:3.12-alpine
@@ -1276,8 +1430,10 @@ steps:
         from_secret: beagle_user
       BBCLI_REMOTE: /home/debian/bin/bbcli
     commands:
+      - mkdir -p .step-status
       - pip install pytest --break-system-packages -q
       - pytest tests/hardware/test_uart.py -v --timeout=30 --json-report --json-report-file=reports/uart-tests.json || true
+      - echo pass > .step-status/test-uart-on-bbb
 
   - name: test-cli-on-bbb
     image: appleboy/drone-ssh
@@ -1303,9 +1459,11 @@ steps:
         from_secret: beagle_host
       BBCLI: ./bin/bbcli-linux-amd64
     commands:
+      - mkdir -p .step-status
       - pip install pytest pytest-json-report --break-system-packages -q
       - chmod +x bin/bbcli-linux-amd64
       - pytest tests/cli/test_cli.py -v --timeout=30 --json-report --json-report-file=reports/cli-tests.json || true
+      - echo pass > .step-status/test-cli-remote
 
   - name: promote-to-stable
     image: alpine
@@ -1318,6 +1476,7 @@ steps:
     environment:
       GIT_TOKEN: {from_secret: git_token}
     commands:
+      - mkdir -p .step-status
       - apk add --no-cache curl jq git
       - |
         OLD_TAG=$DRONE_TAG
@@ -1329,10 +1488,19 @@ steps:
           -H "Content-Type: application/json" \
           -d "{\"tag_name\":\"${NEW_TAG}\",\"name\":\"${VERSION}\",\"prerelease\":false}"
         echo "Promoted zu $NEW_TAG"
+      - echo pass > .step-status/promote-to-stable
+
+  - name: generate-junit
+    image: alpine
+    depends_on: [download-release-assets, test-hardware, test-api, test-uart-on-bbb, test-cli-remote, promote-to-stable]
+    commands:
+      - bash scripts/generate-junit.sh 10-integration-tests download-release-assets test-hardware test-api test-uart-on-bbb test-cli-remote promote-to-stable
+    when:
+      status: [success, failure]
 
   - name: allure-generate
     image: eclipse-temurin:17-jre
-    depends_on: [promote-to-stable]
+    depends_on: [generate-junit]
     commands:
       - bash scripts/allure-generate.sh 10-integration-tests
       - echo "Allure Report http://192.168.2.55/downloads/10-integration-tests/allure-report/index.html"
@@ -1385,6 +1553,7 @@ steps:
       GIT_TOKEN: {from_secret: git_token}
       GIT_USER:  {from_secret: git_user}
     commands:
+      - mkdir -p .step-status
       - |
         BUMP=${DRONE_DEPLOY_TO##release-}
         CURRENT=$(grep '^VERSION' Makefile | awk '{print $3}')
@@ -1403,10 +1572,19 @@ steps:
         git tag "v${NEW}"
         git push https://${GIT_USER}:${GIT_TOKEN}@${DRONE_GIT_HTTP_URL#https://} HEAD:main
         git push https://${GIT_USER}:${GIT_TOKEN}@${DRONE_GIT_HTTP_URL#https://} "v${NEW}"
+      - echo pass > .step-status/bump-version
+
+  - name: generate-junit
+    image: alpine
+    depends_on: [bump-version]
+    commands:
+      - bash scripts/generate-junit.sh 11-version-bump bump-version
+    when:
+      status: [success, failure]
 
   - name: allure-generate
     image: eclipse-temurin:17-jre
-    depends_on: [bump-version]
+    depends_on: [generate-junit]
     commands:
       - bash scripts/allure-generate.sh 11-version-bump
       - echo "Allure Report http://192.168.2.55/downloads/11-version-bump/allure-report/index.html"
@@ -1462,6 +1640,7 @@ steps:
       GIT_TOKEN: {from_secret: git_token}
       GIT_USER:  {from_secret: git_user}
     commands:
+      - mkdir -p .step-status
       - apk add --no-cache curl tar jq
       - |
         LATEST=$(curl -sf https://api.github.com/repos/orhun/git-cliff/releases/latest | grep '"tag_name"' | cut -d'"' -f4)
@@ -1481,10 +1660,19 @@ steps:
           git commit -m "docs(changelog): update unreleased section [skip ci]"
           git push https://${GIT_USER}:${GIT_TOKEN}@${DRONE_GIT_HTTP_URL#https://} HEAD:main
         fi
+      - echo pass > .step-status/update-changelog
+
+  - name: generate-junit
+    image: alpine
+    depends_on: [update-changelog]
+    commands:
+      - bash scripts/generate-junit.sh 12-changelog update-changelog
+    when:
+      status: [success, failure]
 
   - name: allure-generate
     image: eclipse-temurin:17-jre
-    depends_on: [update-changelog]
+    depends_on: [generate-junit]
     commands:
       - bash scripts/allure-generate.sh 12-changelog
       - echo "Allure Report http://192.168.2.55/downloads/12-changelog/allure-report/index.html"
