@@ -63,21 +63,12 @@ steps:
         echo "Coverage: ${total}%"
         awk "BEGIN{exit !($total >= 75)}" || (echo "❌ Coverage gate: ${total}% < 75%" && exit 1)
         echo "✅ Coverage gate: ${total}% >= 75%"
-  - name: junit-reports-pipe1-go_tests
+  - name: junit-reports-pipe1
     image: ghcr.io/rohit-gohri/drone-junit:v0
-    depends_on: [test-go]
+    depends_on: [build-libraries, test-go]
     settings:
-      paths: reports/go-tests-junit.xml
-      report_name: "junit-reports - Pipe 1 - go-tests-junit"
-    when:
-      status: [success, failure]
-
-  - name: junit-reports-pipe1-build
-    image: ghcr.io/rohit-gohri/drone-junit:v0
-    depends_on: [build-libraries]
-    settings:
-      paths: reports/build-libraries-junit.xml
-      report_name: "junit-reports - Pipe 1 - build-libraries"
+      paths: reports/*.xml
+      report_name: "Pipe 1 - Build & Tests"
     when:
       status: [success, failure]
 
