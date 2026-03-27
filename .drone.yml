@@ -656,6 +656,33 @@ steps:
       branch: [main,develop]
       event: [push]
 
+  - name: allure-report
+    image: openjdk:17-slim
+    depends_on: [go-tests-with-coverage, strictdoc-coverage-gate]
+    commands:
+      - apt-get update -q && apt-get install -y -q wget zip
+      - wget -q https://github.com/allure-framework/allure2/releases/download/2.27.0/allure-2.27.0.tgz -O allure.tgz
+      - tar -xzf allure.tgz
+      - mkdir -p allure-results
+      - cp reports/*.xml allure-results/ 2>/dev/null || true
+      - ./allure-2.27.0/bin/allure generate allure-results/ -o reports/allure-report --clean
+      - SHA8=$(echo "$DRONE_COMMIT_SHA" | head -c8)
+      - zip -r allure-$SHA8.zip reports/allure-report/
+      - echo "allure-$SHA8.zip" > allure_artifact.txt
+
+  - name: upload-allure
+    image: appleboy/drone-scp
+    depends_on: [allure-report]
+    settings:
+      host: 192.168.2.55
+      username: deploy
+      key:
+        from_secret: ssh_key
+      source: allure-*.zip
+      target: /var/www/downloads/
+    when:
+      status: [success, failure]
+
   - name: collect-and-report
     image: python:3.12-slim
     depends_on:
@@ -682,6 +709,7 @@ steps:
       - adoc-build
       - strictdoc-coverage-gate
       - sonarqube-report
+      - allure-report
     commands:
       - apk add --no-cache zip
       - cd reports && zip -r ../reports-$DRONE_BUILD_NUMBER.zip . 2>/dev/null || true
