@@ -61,6 +61,14 @@ RUN mkdir -p /root/.cargo && \
     echo '[target.armv7-unknown-linux-gnueabihf]' > /root/.cargo/config.toml && \
     echo 'linker = "arm-linux-gnueabihf-gcc"' >> /root/.cargo/config.toml
 
+# Pre-fetch Rust crate dependencies for faster CI builds
+COPY Cargo.toml /tmp/prefetch/Cargo.toml
+RUN mkdir -p /tmp/prefetch/src && \
+    echo 'pub fn dummy() {}' > /tmp/prefetch/src/lib.rs && \
+    cd /tmp/prefetch && \
+    cargo fetch --target armv7-unknown-linux-gnueabihf && \
+    rm -rf /tmp/prefetch
+
 # --- Python Test Tools ---
 # Erstelle venv
 RUN python3 -m venv /opt/venv
