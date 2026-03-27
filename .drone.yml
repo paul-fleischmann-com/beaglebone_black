@@ -66,19 +66,19 @@ steps:
       TEST_PACKAGES: ./pkg/hal/ ./pkg/hal/mock/ ./pkg/hal/config/
     commands:
       - mkdir -p .step-status && date +%s > .step-status/test-go.start
-      - cd project/go-api
-      - mkdir -p ../../reports
-      - >-
-        gotestsum
-        --junitfile ../../reports/go-tests-junit.xml
-        --jsonfile  ../../reports/go-tests.json
-        --
-        -race -count=3
-        -coverprofile=coverage.out
-        -covermode=atomic
-        -coverpkg=$COVERPKG
-        $TEST_PACKAGES
       - |
+        mkdir -p reports
+        cd project/go-api
+        mkdir -p ../../reports
+        gotestsum \
+          --junitfile ../../reports/go-tests-junit.xml \
+          --jsonfile  ../../reports/go-tests.json \
+          -- \
+          -race -count=3 \
+          -coverprofile=coverage.out \
+          -covermode=atomic \
+          -coverpkg=$COVERPKG \
+          $TEST_PACKAGES
         total=$(go tool cover -func=coverage.out | grep "^total:" | awk '{print $3}' | tr -d '%')
         echo "Coverage: ${total}%"
         awk "BEGIN{exit !($total >= 75)}" || (echo "Coverage gate: ${total}% < 75%" && exit 1)
@@ -304,7 +304,7 @@ steps:
     image: golang:1.24
     commands:
       - mkdir -p .step-status && date +%s > .step-status/lint-cli.start
-      - cd tools/cli && go mod tidy && go vet ./...
+      - (cd tools/cli && go mod tidy && go vet ./...)
       - |
         test -z "$(gofmt -l tools/cli/)" || (echo "gofmt: tools/cli/" && exit 1)
       - echo $(($(date +%s) - $(cat .step-status/lint-cli.start 2>/dev/null || date +%s))) > .step-status/lint-cli
@@ -313,7 +313,7 @@ steps:
     image: golang:1.24
     commands:
       - mkdir -p .step-status && date +%s > .step-status/lint-tui.start
-      - cd tools/tui && go mod tidy && go vet ./...
+      - (cd tools/tui && go mod tidy && go vet ./...)
       - echo $(($(date +%s) - $(cat .step-status/lint-tui.start 2>/dev/null || date +%s))) > .step-status/lint-tui
 
   - name: build-cli-linux-amd64
@@ -325,7 +325,7 @@ steps:
       CGO_ENABLED: "0"
     commands:
       - mkdir -p .step-status && date +%s > .step-status/build-cli-linux-amd64.start
-      - cd tools/cli && go build -ldflags="-s -w" -o ../../bin/bbcli-linux-amd64 .
+      - (cd tools/cli && go build -ldflags="-s -w" -o ../../bin/bbcli-linux-amd64 .)
       - echo $(($(date +%s) - $(cat .step-status/build-cli-linux-amd64.start 2>/dev/null || date +%s))) > .step-status/build-cli-linux-amd64
 
   - name: build-cli-linux-arm
@@ -338,7 +338,7 @@ steps:
       CGO_ENABLED: "0"
     commands:
       - mkdir -p .step-status && date +%s > .step-status/build-cli-linux-arm.start
-      - cd tools/cli && go build -ldflags="-s -w" -o ../../bin/bbcli-linux-arm .
+      - (cd tools/cli && go build -ldflags="-s -w" -o ../../bin/bbcli-linux-arm .)
       - echo $(($(date +%s) - $(cat .step-status/build-cli-linux-arm.start 2>/dev/null || date +%s))) > .step-status/build-cli-linux-arm
 
   - name: build-cli-darwin-amd64
@@ -350,7 +350,7 @@ steps:
       CGO_ENABLED: "0"
     commands:
       - mkdir -p .step-status && date +%s > .step-status/build-cli-darwin-amd64.start
-      - cd tools/cli && go build -ldflags="-s -w" -o ../../bin/bbcli-darwin-amd64 .
+      - (cd tools/cli && go build -ldflags="-s -w" -o ../../bin/bbcli-darwin-amd64 .)
       - echo $(($(date +%s) - $(cat .step-status/build-cli-darwin-amd64.start 2>/dev/null || date +%s))) > .step-status/build-cli-darwin-amd64
 
   - name: build-cli-darwin-arm64
@@ -362,7 +362,7 @@ steps:
       CGO_ENABLED: "0"
     commands:
       - mkdir -p .step-status && date +%s > .step-status/build-cli-darwin-arm64.start
-      - cd tools/cli && go build -ldflags="-s -w" -o ../../bin/bbcli-darwin-arm64 .
+      - (cd tools/cli && go build -ldflags="-s -w" -o ../../bin/bbcli-darwin-arm64 .)
       - echo $(($(date +%s) - $(cat .step-status/build-cli-darwin-arm64.start 2>/dev/null || date +%s))) > .step-status/build-cli-darwin-arm64
 
   - name: build-cli-windows-amd64
@@ -374,7 +374,7 @@ steps:
       CGO_ENABLED: "0"
     commands:
       - mkdir -p .step-status && date +%s > .step-status/build-cli-windows-amd64.start
-      - cd tools/cli && go build -ldflags="-s -w" -o ../../bin/bbcli-windows-amd64.exe .
+      - (cd tools/cli && go build -ldflags="-s -w" -o ../../bin/bbcli-windows-amd64.exe .)
       - echo $(($(date +%s) - $(cat .step-status/build-cli-windows-amd64.start 2>/dev/null || date +%s))) > .step-status/build-cli-windows-amd64
 
   - name: build-tui-linux-amd64
@@ -386,7 +386,7 @@ steps:
       CGO_ENABLED: "0"
     commands:
       - mkdir -p .step-status && date +%s > .step-status/build-tui-linux-amd64.start
-      - cd tools/tui && go build -ldflags="-s -w" -o ../../bin/bbtui-linux-amd64 .
+      - (cd tools/tui && go build -ldflags="-s -w" -o ../../bin/bbtui-linux-amd64 .)
       - echo $(($(date +%s) - $(cat .step-status/build-tui-linux-amd64.start 2>/dev/null || date +%s))) > .step-status/build-tui-linux-amd64
 
   - name: build-tui-linux-armv7
@@ -399,7 +399,7 @@ steps:
       CGO_ENABLED: "0"
     commands:
       - mkdir -p .step-status && date +%s > .step-status/build-tui-linux-armv7.start
-      - cd tools/tui && go build -ldflags="-s -w" -o ../../bin/bbtui-linux-armv7 .
+      - (cd tools/tui && go build -ldflags="-s -w" -o ../../bin/bbtui-linux-armv7 .)
       - echo $(($(date +%s) - $(cat .step-status/build-tui-linux-armv7.start 2>/dev/null || date +%s))) > .step-status/build-tui-linux-armv7
 
   - name: build-tui-darwin-amd64
@@ -411,7 +411,7 @@ steps:
       CGO_ENABLED: "0"
     commands:
       - mkdir -p .step-status && date +%s > .step-status/build-tui-darwin-amd64.start
-      - cd tools/tui && go build -ldflags="-s -w" -o ../../bin/bbtui-darwin-amd64 .
+      - (cd tools/tui && go build -ldflags="-s -w" -o ../../bin/bbtui-darwin-amd64 .)
       - echo $(($(date +%s) - $(cat .step-status/build-tui-darwin-amd64.start 2>/dev/null || date +%s))) > .step-status/build-tui-darwin-amd64
 
   - name: validate-web-gui
@@ -447,7 +447,7 @@ steps:
       - build-tui-darwin-amd64
     commands:
       - mkdir -p .step-status && date +%s > .step-status/checksums.start
-      - cd bin && sha256sum bbcli-* bbtui-* > checksums.sha256 && cat checksums.sha256
+      - (cd bin && sha256sum bbcli-* bbtui-* > checksums.sha256 && cat checksums.sha256)
       - echo $(($(date +%s) - $(cat .step-status/checksums.start 2>/dev/null || date +%s))) > .step-status/checksums
 
   - name: generate-junit
@@ -533,7 +533,7 @@ steps:
       - cp tools/web-gui/index.html bin/web-gui/
       - |
         echo "${DRONE_TAG:-dev}" > bin/web-gui/version.txt
-      - cd bin && zip -r bbweb-gui.zip web-gui/
+      - (cd bin && zip -r bbweb-gui.zip web-gui/)
       - echo $(($(date +%s) - $(cat .step-status/package-web-gui.start 2>/dev/null || date +%s))) > .step-status/package-web-gui
 
   - name: generate-junit
@@ -612,23 +612,25 @@ steps:
   - name: build-cli
     image: golang:1.24
     commands:
-      - mkdir -p .step-status && date +%s > .step-status/build-cli.start
-      - cd tools/cli
-      - GOOS=linux  GOARCH=amd64        CGO_ENABLED=0 go build -ldflags="-s -w" -o ../../bin/bbcli-linux-amd64 .
-      - GOOS=linux  GOARCH=arm GOARM=7  CGO_ENABLED=0 go build -ldflags="-s -w" -o ../../bin/bbcli-linux-arm .
-      - GOOS=darwin GOARCH=amd64        CGO_ENABLED=0 go build -ldflags="-s -w" -o ../../bin/bbcli-darwin-amd64 .
-      - GOOS=darwin GOARCH=arm64        CGO_ENABLED=0 go build -ldflags="-s -w" -o ../../bin/bbcli-darwin-arm64 .
-      - GOOS=windows GOARCH=amd64       CGO_ENABLED=0 go build -ldflags="-s -w" -o ../../bin/bbcli-windows-amd64.exe .
+      - mkdir -p .step-status bin && date +%s > .step-status/build-cli.start
+      - |
+        cd tools/cli
+        GOOS=linux  GOARCH=amd64        CGO_ENABLED=0 go build -ldflags="-s -w" -o ../../bin/bbcli-linux-amd64 .
+        GOOS=linux  GOARCH=arm GOARM=7  CGO_ENABLED=0 go build -ldflags="-s -w" -o ../../bin/bbcli-linux-arm .
+        GOOS=darwin GOARCH=amd64        CGO_ENABLED=0 go build -ldflags="-s -w" -o ../../bin/bbcli-darwin-amd64 .
+        GOOS=darwin GOARCH=arm64        CGO_ENABLED=0 go build -ldflags="-s -w" -o ../../bin/bbcli-darwin-arm64 .
+        GOOS=windows GOARCH=amd64       CGO_ENABLED=0 go build -ldflags="-s -w" -o ../../bin/bbcli-windows-amd64.exe .
       - echo $(($(date +%s) - $(cat .step-status/build-cli.start 2>/dev/null || date +%s))) > .step-status/build-cli
 
   - name: build-tui
     image: golang:1.24
     commands:
-      - mkdir -p .step-status && date +%s > .step-status/build-tui.start
-      - cd tools/tui
-      - GOOS=linux  GOARCH=amd64       CGO_ENABLED=0 go build -ldflags="-s -w" -o ../../bin/bbtui-linux-amd64 .
-      - GOOS=linux  GOARCH=arm GOARM=7 CGO_ENABLED=0 go build -ldflags="-s -w" -o ../../bin/bbtui-linux-armv7 .
-      - GOOS=darwin GOARCH=amd64       CGO_ENABLED=0 go build -ldflags="-s -w" -o ../../bin/bbtui-darwin-amd64 .
+      - mkdir -p .step-status bin && date +%s > .step-status/build-tui.start
+      - |
+        cd tools/tui
+        GOOS=linux  GOARCH=amd64       CGO_ENABLED=0 go build -ldflags="-s -w" -o ../../bin/bbtui-linux-amd64 .
+        GOOS=linux  GOARCH=arm GOARM=7 CGO_ENABLED=0 go build -ldflags="-s -w" -o ../../bin/bbtui-linux-armv7 .
+        GOOS=darwin GOARCH=amd64       CGO_ENABLED=0 go build -ldflags="-s -w" -o ../../bin/bbtui-darwin-amd64 .
       - echo $(($(date +%s) - $(cat .step-status/build-tui.start 2>/dev/null || date +%s))) > .step-status/build-tui
 
   - name: build-web-gui
@@ -639,7 +641,7 @@ steps:
       - mkdir -p bin/web-gui
       - cp tools/web-gui/index.html bin/web-gui/
       - echo "$DRONE_TAG" > bin/web-gui/version.txt
-      - cd bin && zip -r bbweb-gui.zip web-gui/
+      - (cd bin && zip -r bbweb-gui.zip web-gui/)
       - echo $(($(date +%s) - $(cat .step-status/build-web-gui.start 2>/dev/null || date +%s))) > .step-status/build-web-gui
 
   - name: checksums
@@ -647,7 +649,7 @@ steps:
     depends_on: [build-arm, build-cli, build-tui, build-web-gui]
     commands:
       - mkdir -p .step-status && date +%s > .step-status/checksums.start
-      - cd bin && sha256sum embedded bbcli-* bbtui-* bbweb-gui.zip > checksums.sha256 && cat checksums.sha256
+      - (cd bin && sha256sum embedded bbcli-* bbtui-* bbweb-gui.zip > checksums.sha256 && cat checksums.sha256)
       - echo $(($(date +%s) - $(cat .step-status/checksums.start 2>/dev/null || date +%s))) > .step-status/checksums
 
   - name: build-docker-image
@@ -852,9 +854,9 @@ steps:
     commands:
       - mkdir -p .step-status && date +%s > .step-status/go-tests-with-coverage.start
       - mkdir -p reports
-      - cd project/go-api
-      - go install gotest.tools/gotestsum@v1.12.0
       - |
+        cd project/go-api
+        go install gotest.tools/gotestsum@v1.12.0
         gotestsum \
           --junitfile ../../reports/go-tests-junit.xml \
           --jsonfile  ../../reports/go_tests.json \
@@ -864,7 +866,7 @@ steps:
           -covermode=atomic \
           -coverpkg=./pkg/hal/,./pkg/hal/mock/,./pkg/hal/config/ \
           ./pkg/hal/ ./pkg/hal/mock/ ./pkg/hal/config/ || true
-      - go tool cover -func=../../reports/go_coverage.out || true
+        go tool cover -func=../../reports/go_coverage.out || true
       - echo $(($(date +%s) - $(cat .step-status/go-tests-with-coverage.start 2>/dev/null || date +%s))) > .step-status/go-tests-with-coverage
 
   - name: junit-reports-pipe-7
@@ -1051,7 +1053,7 @@ steps:
     commands:
       - mkdir -p .step-status && date +%s > .step-status/package-artifacts.start
       - apk add --no-cache zip
-      - cd reports && zip -r ../reports-$DRONE_BUILD_NUMBER.zip . 2>/dev/null || true
+      - (cd reports && zip -r ../reports-$DRONE_BUILD_NUMBER.zip . 2>/dev/null || true)
       - echo "Artifacts gepackt"
       - echo $(($(date +%s) - $(cat .step-status/package-artifacts.start 2>/dev/null || date +%s))) > .step-status/package-artifacts
 
