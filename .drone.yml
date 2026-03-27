@@ -92,6 +92,7 @@ steps:
         from_secret: ssh_key
       source: allure-report.zip
       target: /var/www/downloads/1-libraries/
+      mkdir: true
     when:
       status: [success, failure]
 
@@ -206,6 +207,7 @@ steps:
         from_secret: ssh_key
       source: allure-report.zip
       target: /var/www/downloads/2-embedded-sw/
+      mkdir: true
     when:
       status: [success, failure]
 
@@ -366,6 +368,7 @@ steps:
         from_secret: ssh_key
       source: allure-report.zip
       target: /var/www/downloads/3-tools/
+      mkdir: true
     when:
       status: [success, failure]
 
@@ -424,6 +427,7 @@ steps:
         from_secret: ssh_key
       source: allure-report.zip
       target: /var/www/downloads/4-webapp/
+      mkdir: true
     when:
       status: [success, failure]
 
@@ -558,6 +562,7 @@ steps:
         from_secret: ssh_key
       source: allure-report.zip
       target: /var/www/downloads/5-release/
+      mkdir: true
     when:
       status: [success, failure]
 
@@ -610,6 +615,7 @@ steps:
         from_secret: ssh_key
       source: allure-report.zip
       target: /var/www/downloads/6-nightly/
+      mkdir: true
     when:
       status: [success, failure]
 
@@ -839,6 +845,7 @@ steps:
         from_secret: ssh_key
       source: allure-report.zip
       target: /var/www/downloads/7-reports/
+      mkdir: true
     when:
       status: [success, failure]
 
@@ -933,6 +940,7 @@ steps:
         from_secret: ssh_key
       source: allure-report.zip
       target: /var/www/downloads/8-bausteinsicht/
+      mkdir: true
     when:
       status: [success, failure]
 
@@ -1009,6 +1017,7 @@ steps:
         from_secret: ssh_key
       source: allure-report.zip
       target: /var/www/downloads/9-build-container/
+      mkdir: true
     when:
       status: [success, failure]
 
@@ -1179,6 +1188,7 @@ steps:
         from_secret: ssh_key
       source: allure-report.zip
       target: /var/www/downloads/10-integration-tests/
+      mkdir: true
     when:
       status: [success, failure]
 
@@ -1238,6 +1248,7 @@ steps:
         from_secret: ssh_key
       source: allure-report.zip
       target: /var/www/downloads/11-version-bump/
+      mkdir: true
     when:
       status: [success, failure]
 
@@ -1301,6 +1312,7 @@ steps:
         from_secret: ssh_key
       source: allure-report.zip
       target: /var/www/downloads/12-changelog/
+      mkdir: true
     when:
       status: [success, failure]
 
