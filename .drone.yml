@@ -804,7 +804,6 @@ steps:
       password: {from_secret: registry_token}
       dockerfile: docker/builder/Dockerfile
       context: docker/builder
-      # version must match docker/builder/VERSION
       tags: [latest, "1.0.0"]
       args: [VERSION=1.0.0]
 
@@ -853,7 +852,6 @@ steps:
       password: {from_secret: registry_token}
       dockerfile: docker/strictdoc/Dockerfile
       context: docker/strictdoc
-      # version must match docker/strictdoc/VERSION
       tags: [latest, "1.0.0"]
       args: [VERSION=1.0.0]
 
