@@ -103,12 +103,14 @@ type: docker
 name: 2-embedded-sw
 
 trigger:
-  event: [push, pull_request,custom]
-  branch: [main,develop]
+  event: [push, pull_request, custom]
+  branch: [main, develop]
   paths:
     - project/go-api/**
-    - c-lib/**
+    - project/c-lib/**
     - project/rust-lib/**
+    - scripts/build-arm.sh
+    - docker/builder/**
     - .drone.yml
 
 image_pull_secrets:
@@ -204,11 +206,10 @@ type: docker
 name: 3-tools
 
 trigger:
-  event: [push, pull_request,custom]
-  branch: [main,develop]
+  event: [push, pull_request, custom]
+  branch: [main, develop]
   paths:
     - tools/**
-    - .drone.yml
 
 steps:
   - name: lint-cli
@@ -368,11 +369,10 @@ type: docker
 name: 4-webapp
 
 trigger:
-  event: [push, pull_request,custom]
-  branch: [main,develop]
+  event: [push, pull_request, custom]
+  branch: [main, develop]
   paths:
     - tools/web-gui/**
-    - .drone.yml
 
 steps:
   - name: validate-html
@@ -613,8 +613,14 @@ type: docker
 name: 7-reports
 
 trigger:
-  event: [push, pull_request,custom]
-  branch: [main,develop]
+  event: [push, pull_request, custom]
+  branch: [main, develop]
+  paths:
+    - project/**
+    - tests/**
+    - scripts/**
+    - docs/**
+    - docker/strictdoc/**
 
 steps:
   - name: prepare-reports
@@ -840,11 +846,10 @@ type: docker
 name: 8-bausteinsicht
 
 trigger:
-  event: [push, pull_request,custom]
-  branch: [main,develop]
+  event: [push, pull_request, custom]
+  branch: [main, develop]
   paths:
     - arch/model/**
-    - .drone.yml
 
 image_pull_secrets:
   - dockerconfigjson
@@ -935,12 +940,13 @@ type: docker
 name: 9-build-container
 
 trigger:
-  event: [push, pull_request,custom]
-  branch: [main,container_build]
+  event: [push, pull_request, custom]
+  branch: [main, develop, container_build]
   paths:
     - docker/builder/**
     - docker/bausteinsicht/**
     - docker/strictdoc/**
+    - scripts/build-container.sh
     - .drone.yml
 
 steps:
@@ -1226,8 +1232,13 @@ type: docker
 name: 12-changelog
 
 trigger:
-  event: [push, pull_request,custom]
-  branch: [main,develop]
+  event: [push, pull_request, custom]
+  branch: [main, develop]
+  paths:
+    - project/**
+    - tools/**
+    - CHANGELOG.md
+    - Makefile
 
 steps:
   - name: update-changelog
