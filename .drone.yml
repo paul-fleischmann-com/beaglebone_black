@@ -1501,7 +1501,7 @@ steps:
       - echo pass > .step-status/promote-to-stable
 
   - name: generate-junit
-    image:alpine
+    image: alpine
     depends_on: [download-release-assets, test-hardware, test-api, test-uart-on-bbb, test-cli-remote, promote-to-stable]
     commands:
       - apk add --no-cache bash
@@ -1675,7 +1675,7 @@ steps:
       - echo pass > .step-status/update-changelog
 
   - name: generate-junit
-    image:alpine
+    image: alpine
     depends_on: [update-changelog]
     commands:
       - apk add --no-cache bash
