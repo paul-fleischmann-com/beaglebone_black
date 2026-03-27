@@ -79,7 +79,7 @@ steps:
     depends_on: [junit-reports-pipe1]
     commands:
       - bash scripts/allure-generate.sh 1-libraries
-      - echo "Report: http://192.168.2.55/downloads/1-libraries/allure-report/index.html"
+      - echo "Allure Report http://192.168.2.55/downloads/1-libraries/allure-report/index.html"
     when:
       status: [success, failure]
 
@@ -208,7 +208,7 @@ steps:
     depends_on: [test-hardware-all-backends, build-go-api]
     commands:
       - bash scripts/allure-generate.sh 2-embedded-sw
-      - echo "Report: http://192.168.2.55/downloads/2-embedded-sw/allure-report/index.html"
+      - echo "Allure Report http://192.168.2.55/downloads/2-embedded-sw/allure-report/index.html"
     when:
       status: [success, failure]
 
@@ -383,7 +383,7 @@ steps:
     depends_on: [checksums, shellcheck, validate-web-gui]
     commands:
       - bash scripts/allure-generate.sh 3-tools
-      - echo "Report: http://192.168.2.55/downloads/3-tools/allure-report/index.html"
+      - echo "Allure Report http://192.168.2.55/downloads/3-tools/allure-report/index.html"
     when:
       status: [success, failure]
 
@@ -456,7 +456,7 @@ steps:
     depends_on: [package-web-gui]
     commands:
       - bash scripts/allure-generate.sh 4-webapp
-      - echo "Report: http://192.168.2.55/downloads/4-webapp/allure-report/index.html"
+      - echo "Allure Report http://192.168.2.55/downloads/4-webapp/allure-report/index.html"
     when:
       status: [success, failure]
 
@@ -605,7 +605,7 @@ steps:
     depends_on: [create-toTestOnTarget-release]
     commands:
       - bash scripts/allure-generate.sh 5-release
-      - echo "Report: http://192.168.2.55/downloads/5-release/allure-report/index.html"
+      - echo "Allure Report http://192.168.2.55/downloads/5-release/allure-report/index.html"
     when:
       status: [success, failure]
 
@@ -672,7 +672,7 @@ steps:
     depends_on: [notify-slack]
     commands:
       - bash scripts/allure-generate.sh 6-nightly
-      - echo "Report: http://192.168.2.55/downloads/6-nightly/allure-report/index.html"
+      - echo "Allure Report http://192.168.2.55/downloads/6-nightly/allure-report/index.html"
     when:
       status: [success, failure]
 
@@ -916,7 +916,7 @@ steps:
     depends_on: [notify]
     commands:
       - bash scripts/allure-generate.sh 7-reports
-      - echo "Report: http://192.168.2.55/downloads/7-reports/allure-report/index.html"
+      - echo "Allure Report http://192.168.2.55/downloads/7-reports/allure-report/index.html"
     when:
       status: [success, failure]
 
@@ -1025,7 +1025,7 @@ steps:
     depends_on: [commit-exports]
     commands:
       - bash scripts/allure-generate.sh 8-bausteinsicht
-      - echo "Report: http://192.168.2.55/downloads/8-bausteinsicht/allure-report/index.html"
+      - echo "Allure Report http://192.168.2.55/downloads/8-bausteinsicht/allure-report/index.html"
     when:
       status: [success, failure]
 
@@ -1116,7 +1116,7 @@ steps:
     depends_on: [build-bausteinsicht, build-strictdoc,build-generic-builder]
     commands:
       - bash scripts/allure-generate.sh 9-build-container
-      - echo "Report: http://192.168.2.55/downloads/9-build-container/allure-report/index.html"
+      - echo "Allure Report http://192.168.2.55/downloads/9-build-container/allure-report/index.html"
     when:
       status: [success, failure]
 
@@ -1301,7 +1301,7 @@ steps:
     depends_on: [promote-to-stable]
     commands:
       - bash scripts/allure-generate.sh 10-integration-tests
-      - echo "Report: http://192.168.2.55/downloads/10-integration-tests/allure-report/index.html"
+      - echo "Allure Report http://192.168.2.55/downloads/10-integration-tests/allure-report/index.html"
     when:
       status: [success, failure]
 
@@ -1375,7 +1375,7 @@ steps:
     depends_on: [bump-version]
     commands:
       - bash scripts/allure-generate.sh 11-version-bump
-      - echo "Report: http://192.168.2.55/downloads/11-version-bump/allure-report/index.html"
+      - echo "Allure Report http://192.168.2.55/downloads/11-version-bump/allure-report/index.html"
     when:
       status: [success, failure]
 
@@ -1453,7 +1453,7 @@ steps:
     depends_on: [update-changelog]
     commands:
       - bash scripts/allure-generate.sh 12-changelog
-      - echo "Report: http://192.168.2.55/downloads/12-changelog/allure-report/index.html"
+      - echo "Allure Report http://192.168.2.55/downloads/12-changelog/allure-report/index.html"
     when:
       status: [success, failure]
 
