@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/usr/bin/env sh
 # Generates JUnit XML from .step-status/ files written by each pipeline step.
 # Usage: generate-junit.sh <pipeline-name> <step1> [step2 ...]
 # Output: reports/pipeline-steps-junit.xml

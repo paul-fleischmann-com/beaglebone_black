@@ -87,7 +87,7 @@ steps:
     depends_on: [build-libraries, test-c-lib, test-rust-lib, test-go]
     commands:
       - apk add --no-cache bash
-      - bash scripts/generate-junit.sh 1-libraries build-libraries test-c-lib test-rust-lib test-go
+      - sh scripts/generate-junit.sh 1-libraries build-libraries test-c-lib test-rust-lib test-go
     when:
       status: [success, failure]
 
@@ -233,7 +233,7 @@ steps:
     depends_on: [test-hal-unit, lint-go, build-go-api, test-hardware-all-backends]
     commands:
       - apk add --no-cache bash
-      - bash scripts/generate-junit.sh 2-embedded-sw test-hal-unit lint-go build-go-api test-hardware-all-backends
+      - sh scripts/generate-junit.sh 2-embedded-sw test-hal-unit lint-go build-go-api test-hardware-all-backends
     when:
       status: [success, failure]
 
@@ -443,7 +443,7 @@ steps:
     depends_on: [lint-cli, lint-tui, build-cli-linux-amd64, build-cli-linux-arm, build-cli-darwin-amd64, build-cli-darwin-arm64, build-cli-windows-amd64, build-tui-linux-amd64, build-tui-linux-armv7, build-tui-darwin-amd64, validate-web-gui, shellcheck, checksums]
     commands:
       - apk add --no-cache bash
-      - bash scripts/generate-junit.sh 3-tools lint-cli lint-tui build-cli-linux-amd64 build-cli-linux-arm build-cli-darwin-amd64 build-cli-darwin-arm64 build-cli-windows-amd64 build-tui-linux-amd64 build-tui-linux-armv7 build-tui-darwin-amd64 validate-web-gui shellcheck checksums
+      - sh scripts/generate-junit.sh 3-tools lint-cli lint-tui build-cli-linux-amd64 build-cli-linux-arm build-cli-darwin-amd64 build-cli-darwin-arm64 build-cli-windows-amd64 build-tui-linux-amd64 build-tui-linux-armv7 build-tui-darwin-amd64 validate-web-gui shellcheck checksums
     when:
       status: [success, failure]
 
@@ -529,7 +529,7 @@ steps:
     depends_on: [validate-html, package-web-gui]
     commands:
       - apk add --no-cache bash
-      - bash scripts/generate-junit.sh 4-webapp validate-html package-web-gui
+      - sh scripts/generate-junit.sh 4-webapp validate-html package-web-gui
     when:
       status: [success, failure]
 
@@ -699,7 +699,7 @@ steps:
     depends_on: [build-arm, build-cli, build-tui, build-web-gui, checksums, build-docker-image]
     commands:
       - apk add --no-cache bash
-      - bash scripts/generate-junit.sh 5-release build-arm build-cli build-tui build-web-gui checksums build-docker-image
+      - sh scripts/generate-junit.sh 5-release build-arm build-cli build-tui build-web-gui checksums build-docker-image
     when:
       status: [success, failure]
 
@@ -777,7 +777,7 @@ steps:
     depends_on: [test-all-backends]
     commands:
       - apk add --no-cache bash
-      - bash scripts/generate-junit.sh 6-nightly test-all-backends
+      - sh scripts/generate-junit.sh 6-nightly test-all-backends
     when:
       status: [success, failure]
 
@@ -1060,7 +1060,7 @@ steps:
     depends_on: [go-tests-with-coverage, python-tests, python-security, shellcheck, c-coverage, adoc-build, strictdoc-export, prepare-reports, print-url, strictdoc-coverage-gate, sonarqube-report, sonarcloud-scan, collect-and-report, quality-gates, package-artifacts]
     commands:
       - apk add --no-cache bash
-      - bash scripts/generate-junit.sh 7-reports go-tests-with-coverage python-tests python-security shellcheck c-coverage adoc-build strictdoc-export prepare-reports print-url strictdoc-coverage-gate sonarqube-report sonarcloud-scan collect-and-report quality-gates package-artifacts
+      - sh scripts/generate-junit.sh 7-reports go-tests-with-coverage python-tests python-security shellcheck c-coverage adoc-build strictdoc-export prepare-reports print-url strictdoc-coverage-gate sonarqube-report sonarcloud-scan collect-and-report quality-gates package-artifacts
     when:
       status: [success, failure]
 
@@ -1190,7 +1190,7 @@ steps:
     depends_on: [validate-model, export-plantuml, export-mermaid, export-table, export-png, commit-exports]
     commands:
       - apk add --no-cache bash
-      - bash scripts/generate-junit.sh 8-bausteinsicht validate-model export-plantuml export-mermaid export-table export-png commit-exports
+      - sh scripts/generate-junit.sh 8-bausteinsicht validate-model export-plantuml export-mermaid export-table export-png commit-exports
     when:
       status: [success, failure]
 
@@ -1299,7 +1299,7 @@ steps:
     depends_on: [build-generic-builder, build-bausteinsicht, build-strictdoc, clone-bausteinsicht-repo]
     commands:
       - apk add --no-cache bash
-      - bash scripts/generate-junit.sh 9-build-container build-generic-builder clone-bausteinsicht-repo build-bausteinsicht build-strictdoc
+      - sh scripts/generate-junit.sh 9-build-container build-generic-builder clone-bausteinsicht-repo build-bausteinsicht build-strictdoc
     when:
       status: [success, failure]
 
@@ -1505,7 +1505,7 @@ steps:
     depends_on: [download-release-assets, test-hardware, test-api, test-uart-on-bbb, test-cli-remote, promote-to-stable]
     commands:
       - apk add --no-cache bash
-      - bash scripts/generate-junit.sh 10-integration-tests download-release-assets test-hardware test-api test-uart-on-bbb test-cli-remote promote-to-stable
+      - sh scripts/generate-junit.sh 10-integration-tests download-release-assets test-hardware test-api test-uart-on-bbb test-cli-remote promote-to-stable
     when:
       status: [success, failure]
 
@@ -1590,7 +1590,7 @@ steps:
     depends_on: [bump-version]
     commands:
       - apk add --no-cache bash
-      - bash scripts/generate-junit.sh 11-version-bump bump-version
+      - sh scripts/generate-junit.sh 11-version-bump bump-version
     when:
       status: [success, failure]
 
@@ -1679,7 +1679,7 @@ steps:
     depends_on: [update-changelog]
     commands:
       - apk add --no-cache bash
-      - bash scripts/generate-junit.sh 12-changelog update-changelog
+      - sh scripts/generate-junit.sh 12-changelog update-changelog
     when:
       status: [success, failure]
 
