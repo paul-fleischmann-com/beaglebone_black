@@ -30,13 +30,25 @@ steps:
       - bash scripts/build-arm.sh
       - echo $(($(date +%s) - $(cat .step-status/build-libraries.start 2>/dev/null || date +%s))) > .step-status/build-libraries
 
-  - name: test-c-lib
+  - name: test-c-lib-pytest
     image: ghcr.io/paulefl/generic-builder:latest
     depends_on: [build-libraries]
     commands:
-      - mkdir -p .step-status && date +%s > .step-status/test-c-lib.start
+      - mkdir -p .step-status allure-results reports && date +%s > .step-status/test-c-lib-pytest.start
+      - pip install --quiet pytest allure-pytest
+      - make -C c-lib test-bin
+      - pytest tests/c_lib/ --alluredir=allure-results -v || true
       - make -C c-lib test
-      - echo $(($(date +%s) - $(cat .step-status/test-c-lib.start 2>/dev/null || date +%s))) > .step-status/test-c-lib
+      - echo $(($(date +%s) - $(cat .step-status/test-c-lib-pytest.start 2>/dev/null || date +%s))) > .step-status/test-c-lib-pytest
+
+  - name: test-c-lib-go
+    image: ghcr.io/paulefl/generic-builder:latest
+    depends_on: [build-libraries]
+    commands:
+      - mkdir -p .step-status allure-results && date +%s > .step-status/test-c-lib-go.start
+      - make -C c-lib test-bin
+      - cd tools/c_test_runner && go mod tidy && go test -v ./... -count=1
+      - echo $(($(date +%s) - $(cat .step-status/test-c-lib-go.start 2>/dev/null || date +%s))) > .step-status/test-c-lib-go
 
   - name: test-rust-lib
     image: ghcr.io/paulefl/generic-builder:latest
@@ -75,7 +87,7 @@ steps:
 
   - name: junit-reports-pipe1
     image: ghcr.io/rohit-gohri/drone-junit:v0
-    depends_on: [build-libraries, test-go]
+    depends_on: [build-libraries, test-c-lib-pytest, test-c-lib-go, test-go]
     settings:
       paths: reports/*.xml
       report_name: "Pipe 1 - Build & Tests"
@@ -84,10 +96,10 @@ steps:
 
   - name: generate-junit
     image: alpine
-    depends_on: [build-libraries, test-c-lib, test-rust-lib, test-go]
+    depends_on: [build-libraries, test-c-lib-pytest, test-c-lib-go, test-rust-lib, test-go]
     commands:
       - apk add --no-cache bash
-      - sh scripts/generate-junit.sh 1-libraries build-libraries test-c-lib test-rust-lib test-go
+      - sh scripts/generate-junit.sh 1-libraries build-libraries test-c-lib-pytest test-c-lib-go test-rust-lib test-go
     when:
       status: [success, failure]
 
