@@ -2,19 +2,13 @@
 # Generates Allure HTML report and zips it.
 # Usage: allure-generate.sh <pipeline-name>
 # Output: allure-report.zip in workspace root
-set -euo pipefail
 
 PIPELINE=${1:-unknown}
 ALLURE_VERSION=2.27.0
 RESULTS_DIR=allure-results
 REPORT_DIR=allure-report
 
-apt-get update -q && apt-get install -y -q wget zip 2>/dev/null
-
-wget -q "https://github.com/allure-framework/allure2/releases/download/$ALLURE_VERSION/allure-$ALLURE_VERSION.tgz" -O allure.tgz
-tar -xzf allure.tgz
-
-mkdir -p "$RESULTS_DIR"
+mkdir -p "$RESULTS_DIR" "$REPORT_DIR"
 
 # Copy any JUnit XML from reports/ into allure-results/
 find reports/ -name "*.xml" -exec cp {} "$RESULTS_DIR/" \; 2>/dev/null || true
@@ -31,7 +25,16 @@ if [ -z "$(ls -A $RESULTS_DIR 2>/dev/null)" ]; then
 EOF
 fi
 
-./allure-$ALLURE_VERSION/bin/allure generate "$RESULTS_DIR" -o "$REPORT_DIR" --clean
+# Try to install and run allure — fall back to plain zip of XML results
+apt-get update -q && apt-get install -y -q wget zip 2>/dev/null || true
 
-zip -r allure-report.zip "$REPORT_DIR/"
+if wget -q "https://github.com/allure-framework/allure2/releases/download/$ALLURE_VERSION/allure-$ALLURE_VERSION.tgz" -O allure.tgz 2>/dev/null; then
+  tar -xzf allure.tgz
+  ./allure-$ALLURE_VERSION/bin/allure generate "$RESULTS_DIR" -o "$REPORT_DIR" --clean || true
+else
+  echo "Allure download failed — using raw XML results"
+  cp "$RESULTS_DIR"/*.xml "$REPORT_DIR/" 2>/dev/null || true
+fi
+
+zip -r allure-report.zip "$REPORT_DIR/" "$RESULTS_DIR/"
 echo "Allure report generated → allure-report.zip"
