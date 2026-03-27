@@ -803,11 +803,13 @@ steps:
     commands:
       - |
         podman login ghcr.io -u "$REGISTRY_USER" -p "$REGISTRY_TOKEN"
+        VERSION=$(cat docker/builder/VERSION | tr -d '[:space:]')
         SHA8=$(echo "$DRONE_COMMIT_SHA" | head -c8)
-        podman build -t generic-builder:latest -t generic-builder:$SHA8 -f docker/builder/Dockerfile docker/builder
-        podman push generic-builder:latest ghcr.io/$REGISTRY_USER/generic-builder:latest
-        podman push generic-builder:$SHA8 ghcr.io/$REGISTRY_USER/generic-builder:$SHA8
-        echo "generic-builder gepushed mit SHA $SHA8"
+        echo "Building generic-builder version $VERSION (commit $SHA8)"
+        podman build --build-arg VERSION=$VERSION -t generic-builder:$VERSION -t generic-builder:latest -f docker/builder/Dockerfile docker/builder
+        podman push ghcr.io/$REGISTRY_USER/generic-builder:$VERSION
+        podman push ghcr.io/$REGISTRY_USER/generic-builder:latest
+        echo "generic-builder $VERSION gepushed"
 
   - name: clone-bausteinsicht-repo
     image: alpine/git
@@ -827,17 +829,19 @@ steps:
     commands:
       - |
         podman login ghcr.io -u "$REGISTRY_USER" -p "$REGISTRY_TOKEN"
+        VERSION=$(cat docker/bausteinsicht/VERSION | tr -d '[:space:]')
         SHA8=$(echo "$DRONE_COMMIT_SHA" | head -c8)
+        echo "Building bausteinsicht version $VERSION (commit $SHA8)"
         # Copy cloned repo and drawio-export script into build context
         cp -r docker/bausteinsicht/repo          docker/bausteinsicht/repo-src
         cp    docker/bausteinsicht/repo/.devcontainer/drawio-export docker/bausteinsicht/
         # Single-stage build from our own Dockerfile
-        podman build -t bausteinsicht:latest -t bausteinsicht:$SHA8 \
+        podman build --build-arg VERSION=$VERSION -t bausteinsicht:$VERSION -t bausteinsicht:latest \
           -f docker/bausteinsicht/Dockerfile \
           docker/bausteinsicht
-        podman push bausteinsicht:latest ghcr.io/$REGISTRY_USER/bausteinsicht:latest
-        podman push bausteinsicht:$SHA8 ghcr.io/$REGISTRY_USER/bausteinsicht:$SHA8
-        echo "bausteinsicht gepushed mit SHA $SHA8"
+        podman push ghcr.io/$REGISTRY_USER/bausteinsicht:$VERSION
+        podman push ghcr.io/$REGISTRY_USER/bausteinsicht:latest
+        echo "bausteinsicht $VERSION gepushed"
 
   - name: build-strictdoc
     image: quay.io/podman/stable
@@ -849,13 +853,15 @@ steps:
     commands:
       - |
         podman login ghcr.io -u "$REGISTRY_USER" -p "$REGISTRY_TOKEN"
+        VERSION=$(cat docker/strictdoc/VERSION | tr -d '[:space:]')
         SHA8=$(echo "$DRONE_COMMIT_SHA" | head -c8)
-        podman build -t strictdoc:latest -t strictdoc:$SHA8 \
+        echo "Building strictdoc version $VERSION (commit $SHA8)"
+        podman build --build-arg VERSION=$VERSION -t strictdoc:$VERSION -t strictdoc:latest \
           -f docker/strictdoc/Dockerfile \
           docker/strictdoc
-        podman push strictdoc:latest ghcr.io/$REGISTRY_USER/strictdoc:latest
-        podman push strictdoc:$SHA8 ghcr.io/$REGISTRY_USER/strictdoc:$SHA8
-        echo "strictdoc gepushed mit SHA $SHA8"
+        podman push ghcr.io/$REGISTRY_USER/strictdoc:$VERSION
+        podman push ghcr.io/$REGISTRY_USER/strictdoc:latest
+        echo "strictdoc $VERSION gepushed"
 
 ---
 # ════════════════════════════════════════

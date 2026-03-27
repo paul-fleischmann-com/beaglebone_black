@@ -3,7 +3,12 @@
 # Supports C, Rust, Go, Python
 # =============================================
 # previous : debian:12-slim
-FROM debian:bookworm 
+FROM debian:bookworm
+
+ARG VERSION=unknown
+
+LABEL org.opencontainers.image.version=$VERSION
+ENV APP_VERSION=$VERSION
 
 # ----------------------------
 # Install basic packages
@@ -73,7 +78,5 @@ ENV PATH="/opt/venv/bin:$PATH"
 # ----------------------------
 WORKDIR /workspace
 
-# ----------------------------
-# Entrypoint to allow arbitrary commands
-# ----------------------------
+CMD ["sh", "-c", "echo 'Container Version: $APP_VERSION'"]
 ENTRYPOINT ["/bin/bash"]

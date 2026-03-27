@@ -10,6 +10,10 @@
 FROM python:3.12-slim
 
 ARG DRAWIO_VERSION=26.0.4
+ARG VERSION=unknown
+
+LABEL org.opencontainers.image.version=$VERSION
+ENV APP_VERSION=$VERSION
 
 # System deps: drawio headless + build tools
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -36,4 +40,5 @@ COPY drawio-export /usr/local/bin/drawio-export
 RUN chmod +x /usr/local/bin/drawio-export
 
 WORKDIR /workspace
+CMD ["sh", "-c", "echo 'Container Version: $APP_VERSION'"]
 ENTRYPOINT ["/bin/bash"]
