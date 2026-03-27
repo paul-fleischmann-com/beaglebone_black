@@ -62,8 +62,9 @@ steps:
       - |
         total=$(go tool cover -func=coverage.out | grep "^total:" | awk '{print $3}' | tr -d '%')
         echo "Coverage: ${total}%"
-        awk "BEGIN{exit !($total >= 75)}" || (echo "❌ Coverage gate: ${total}% < 75%" && exit 1)
-        echo "✅ Coverage gate: ${total}% >= 75%"
+        awk "BEGIN{exit !($total >= 75)}" || (echo "Coverage gate: ${total}% < 75%" && exit 1)
+        echo "Coverage gate: ${total}% >= 75%"
+
   - name: junit-reports-pipe1
     image: ghcr.io/rohit-gohri/drone-junit:v0
     depends_on: [build-libraries, test-go]
@@ -110,8 +111,6 @@ trigger:
     - project/c-lib/**
     - project/rust-lib/**
     - scripts/build-arm.sh
-    - docker/builder/**
-    - .drone.yml
 
 image_pull_secrets:
   - dockerconfigjson
@@ -124,7 +123,6 @@ steps:
 
   - name: lint-go
     image: golang:1.24
-
     commands:
       - make lint
 
@@ -138,12 +136,14 @@ steps:
     commands:
       - bash scripts/build-arm.sh
 
-  - name: deploy-beaglebone-scp
+  - name: deploy-beaglebone
     image: appleboy/drone-scp
     depends_on: [build-go-api]
     settings:
-      host: {from_secret: beagle_host}
-      username: {from_secret: beagle_user}
+      host:
+        from_secret: beagle_host
+      username:
+        from_secret: beagle_user
       key:
         from_secret: ssh_key
       source:
@@ -153,15 +153,17 @@ steps:
         - bin/bbcli-linux-arm
       target: /app/
     when:
-      branch: [main,develop]
-      event:  [push]
+      branch: [main, develop]
+      event: [push]
 
-  - name: deploy-beaglebone-ssh
+  - name: restart-service
     image: appleboy/drone-ssh
-    depends_on: [deploy-beaglebone-scp]
+    depends_on: [deploy-beaglebone]
     settings:
-      host: {from_secret: beagle_host}
-      username: {from_secret: beagle_user}
+      host:
+        from_secret: beagle_host
+      username:
+        from_secret: beagle_user
       key:
         from_secret: ssh_key
       script:
@@ -170,23 +172,21 @@ steps:
         - sleep 3
         - systemctl is-active embedded-sw
     when:
-      branch: [main,develop]
-      event:  [push]
+      branch: [main, develop]
+      event: [push]
 
   - name: test-hardware-all-backends
     image: python:3.12-alpine
-    depends_on: [deploy-beaglebone-ssh]
+    depends_on: [restart-service]
     environment:
-      BEAGLE_HOST: {from_secret: beagle_host}
+      BEAGLE_HOST:
+        from_secret: beagle_host
     commands:
       - pip install pytest requests --break-system-packages -q
-      - for backend in c rust auto; do
-          echo "=== Backend $backend ===";
-          HW_BACKEND=$backend pytest tests/hardware/ -v --timeout=60 || exit 1;
-        done
+      - for backend in c rust auto; do echo "=== Backend $backend ==="; HW_BACKEND=$backend pytest tests/hardware/ -v --timeout=60 || exit 1; done
     when:
-      branch: [main,develop]
-      event:  [push]
+      branch: [main, develop]
+      event: [push]
 
   - name: allure-generate
     image: eclipse-temurin:17-jre
@@ -233,7 +233,6 @@ steps:
 
   - name: lint-tui
     image: golang:1.24
-
     commands:
       - cd tools/tui && go mod tidy && go vet ./...
 
@@ -321,7 +320,6 @@ steps:
 
   - name: validate-web-gui
     image: python:3.12-alpine
-
     commands:
       - |
         python -c "
@@ -333,7 +331,6 @@ steps:
 
   - name: shellcheck
     image: koalaman/shellcheck-alpine:stable
-
     commands:
       - shellcheck --severity=error scripts/*.sh
 
@@ -458,7 +455,6 @@ steps:
 
   - name: build-cli
     image: golang:1.24
-
     commands:
       - cd tools/cli
       - GOOS=linux  GOARCH=amd64        CGO_ENABLED=0 go build -ldflags="-s -w" -o ../../bin/bbcli-linux-amd64 .
@@ -469,7 +465,6 @@ steps:
 
   - name: build-tui
     image: golang:1.24
-
     commands:
       - cd tools/tui
       - GOOS=linux  GOARCH=amd64       CGO_ENABLED=0 go build -ldflags="-s -w" -o ../../bin/bbtui-linux-amd64 .
@@ -478,7 +473,6 @@ steps:
 
   - name: build-web-gui
     image: alpine
-
     commands:
       - apk add --no-cache zip
       - mkdir -p bin/web-gui
@@ -507,7 +501,7 @@ steps:
 
   - name: create-release
     image: plugins/github-release
-    depends_on: [build-docker-image]
+    depends_on: [build-docker-image, checksums]
     settings:
       api_key: {from_secret: github_token}
       files:
@@ -620,6 +614,9 @@ steps:
       status: [success, failure]
 
 ---
+# ════════════════════════════════════════
+# PIPELINE 7 — Reports & Quality Gates
+# ════════════════════════════════════════
 kind: pipeline
 type: docker
 name: 7-reports
@@ -632,19 +629,14 @@ trigger:
     - tests/**
     - scripts/**
     - docs/**
-    - docker/strictdoc/**
 
 steps:
-  - name: prepare-reports
-    image: alpine
-    commands:
-      - mkdir -p reports reports/strictdoc
-
   - name: go-tests-with-coverage
     image: golang:1.24
-    depends_on: [prepare-reports]
     commands:
+      - mkdir -p reports
       - cd project/go-api
+      - go install gotest.tools/gotestsum@v1.12.0
       - |
         gotestsum \
           --junitfile ../../reports/go-tests-junit.xml \
@@ -668,60 +660,62 @@ steps:
 
   - name: python-tests
     image: python:3.12-alpine
-    depends_on: [prepare-reports]
     commands:
+      - mkdir -p reports
       - pip install -r tests/requirements-dev.txt pytest-json-report --break-system-packages -q
       - pytest tests/ --ignore=tests/hardware/ -v --json-report --json-report-file=reports/python_tests.json --timeout=30 || true
 
   - name: python-security
     image: python:3.12-alpine
-    depends_on: [prepare-reports]
     commands:
+      - mkdir -p reports
       - pip install bandit bandit-sarif-formatter --break-system-packages -q
       - bandit -r scripts/ tests/ project/ -f sarif -o reports/python-sarif.json --exclude tests/hardware/ || true
       - echo "Bandit done"
 
   - name: shellcheck
     image: koalaman/shellcheck-alpine:stable
-    depends_on: [prepare-reports]
     commands:
+      - mkdir -p reports
       - shellcheck scripts/*.sh 2>&1 | tee reports/shellcheck.txt || true
 
   - name: c-coverage
     image: debian:bookworm
-    depends_on: [prepare-reports]
     commands:
+      - mkdir -p reports
       - apt-get update -q && apt-get install -y -q gcc make lcov
       - make -C c-lib CFLAGS="-fprofile-arcs -ftest-coverage -g" CC=gcc test || true
       - bash scripts/c_coverage.sh c-lib/ reports/c-coverage.info '/usr/*' '*/test/*' || true
 
   - name: adoc-build
     image: asciidoctor/docker-asciidoctor:latest
-    depends_on: [prepare-reports]
     commands:
       - gem install asciidoctor-pdf rouge --quiet || true
       - ROOT_DIR=. OUTPUT_DIR=reports/docs bash scripts/build_adoc.sh || true
       - find reports/docs -name "*.html" -o -name "*.pdf" | sort || true
-      
-  #ghcr.io/paulefl/strictdoc:latest
+
   - name: strictdoc-export
     image: python:3.12-slim
-    depends_on: [prepare-reports]
+    depends_on: [go-tests-with-coverage]
     commands:
       - pip install strictdoc
+      - mkdir -p reports/strictdoc
       - strictdoc export . --formats html --output-dir reports/strictdoc || true
       - find reports/strictdoc -name "*.html" | head -10 || true
       - zip -r strictdoc-output.zip build/
 
-  - name: prepare
+  - name: prepare-reports
     image: alpine
+    depends_on: [strictdoc-export]
     commands:
       - SHA8=$(echo "$DRONE_COMMIT_SHA" | head -c8)
       - FILE=strictdoc-$SHA8.zip
       - mv strictdoc-output.zip $FILE
+      - echo $FILE > artifact_name.txt
 
   - name: upload
     image: appleboy/drone-scp
+    depends_on: [prepare-reports]
     settings:
       host: 192.168.2.55
       username: deploy
@@ -732,6 +726,7 @@ steps:
 
   - name: print-url
     image: alpine
+    depends_on: [upload]
     commands:
       - SHA8=$(echo "$DRONE_COMMIT_SHA" | head -c8)
       - echo "Download URL:"
@@ -747,17 +742,16 @@ steps:
           --junit-xml reports/go-tests-junit.xml \
           --output-junit reports/req-coverage-junit.xml \
           --min-coverage 70 || true
+
   - name: junit-reports-req-coverage
     image: ghcr.io/rohit-gohri/drone-junit:v0
     depends_on: [strictdoc-coverage-gate]
     settings:
-      paths: reports/reports/req-coverage-junit.xml
+      paths: reports/req-coverage-junit.xml
       report_name: "junit-reports - Req coverage"
     when:
-      status: [
-        'success',
-        'failure',
-      ]
+      status: [success, failure]
+
   - name: sonarqube-report
     image: python:3.12-alpine
     depends_on: [go-tests-with-coverage, c-coverage, python-security]
@@ -781,7 +775,7 @@ steps:
             -Dsonar.c.lcov.reportPaths=reports/c-coverage.info \
             || true
     when:
-      branch: [main,develop]
+      branch: [main, develop]
       event: [push]
 
   - name: collect-and-report
@@ -824,12 +818,12 @@ steps:
       template: "Build {{build.number}} — {{build.status}} {{build.link}}"
     when:
       status: [success, failure]
-      branch: [main,develop]
+      branch: [main, develop]
       event:  [push, tag]
 
   - name: allure-generate
     image: eclipse-temurin:17-jre
-    depends_on: [notify, package-artifacts]
+    depends_on: [notify]
     commands:
       - bash scripts/allure-generate.sh 7-reports
     when:
@@ -919,7 +913,7 @@ steps:
         fi
     when:
       event: [push]
-      branch: [main,develop]
+      branch: [main, develop]
 
   - name: allure-generate
     image: eclipse-temurin:17-jre
@@ -944,7 +938,7 @@ steps:
 
 ---
 # ════════════════════════════════════════
-# PIPELINE 9 — Builder Image
+# PIPELINE 9 — Builder Images
 # ════════════════════════════════════════
 kind: pipeline
 type: docker
@@ -958,7 +952,6 @@ trigger:
     - docker/bausteinsicht/**
     - docker/strictdoc/**
     - scripts/build-container.sh
-    - .drone.yml
 
 steps:
   - name: build-generic-builder
@@ -968,11 +961,10 @@ steps:
       REGISTRY_USER:  {from_secret: registry_user}
       REGISTRY_TOKEN: {from_secret: Bau_token}
     commands:
-      - scripts/build-container.sh generic-builder docker/builder/Dockerfile docker/builder docker/builder/VERSION
+      - bash scripts/build-container.sh generic-builder docker/builder/Dockerfile docker/builder docker/builder/VERSION
 
   - name: clone-bausteinsicht-repo
     image: alpine/git
-
     environment:
       GIT_TOKEN: {from_secret: Bau_token}
     commands:
@@ -986,25 +978,22 @@ steps:
       REGISTRY_USER:  {from_secret: registry_user}
       REGISTRY_TOKEN: {from_secret: Bau_token}
     commands:
-      - |
-        # Prepare build context: copy cloned repo + drawio-export wrapper
-        cp -r docker/bausteinsicht/repo         docker/bausteinsicht/repo-src
-        cp    docker/bausteinsicht/repo/.devcontainer/drawio-export docker/bausteinsicht/
-        scripts/build-container.sh bausteinsicht docker/bausteinsicht/Dockerfile docker/bausteinsicht docker/bausteinsicht/VERSION
+      - cp -r docker/bausteinsicht/repo         docker/bausteinsicht/repo-src
+      - cp    docker/bausteinsicht/repo/.devcontainer/drawio-export docker/bausteinsicht/
+      - bash scripts/build-container.sh bausteinsicht docker/bausteinsicht/Dockerfile docker/bausteinsicht docker/bausteinsicht/VERSION
 
   - name: build-strictdoc
     image: quay.io/podman/stable
     privileged: true
-
     environment:
       REGISTRY_USER:  {from_secret: registry_user}
       REGISTRY_TOKEN: {from_secret: Bau_token}
     commands:
-      - scripts/build-container.sh strictdoc docker/strictdoc/Dockerfile docker/strictdoc docker/strictdoc/VERSION
+      - bash scripts/build-container.sh strictdoc docker/strictdoc/Dockerfile docker/strictdoc docker/strictdoc/VERSION
 
   - name: allure-generate
     image: eclipse-temurin:17-jre
-    depends_on: [build-bausteinsicht, build-strictdoc]
+    depends_on: [build-bausteinsicht, build-strictdoc,build-generic-builder]
     commands:
       - bash scripts/allure-generate.sh 9-build-container
     when:
@@ -1057,74 +1046,92 @@ steps:
       - ls -lh bin/
 
   - name: deploy-to-bbb
-    image: alpine
+    image: appleboy/drone-scp
     depends_on: [download-release-assets]
-    environment:
-      BEAGLE_HOST: {from_secret: beagle_host}
-      BEAGLE_USER: {from_secret: beagle_user}
-      BEAGLE_KEY:  {from_secret: beagle_ssh_key}
-    commands:
-      - apk add --no-cache openssh-client
-      - KEY=$(mktemp) && trap "rm -f $KEY" EXIT
-      - echo "$BEAGLE_KEY" | base64 -d > $KEY && chmod 600 $KEY
-      - SSH="ssh -i $KEY -o StrictHostKeyChecking=no $BEAGLE_USER@$BEAGLE_HOST"
-      - SCP="scp -i $KEY -o StrictHostKeyChecking=no"
-      - $SSH "mkdir -p ~/bin && rm -f ~/bin/*.so ~/bin/embedded ~/bin/bbcli"
-      - $SCP bin/embedded bin/libhardware.so bin/libhardware_rs.so bin/bbcli-linux-arm $BEAGLE_USER@$BEAGLE_HOST:~/bin/ 2>/dev/null || true
-      - $SSH "cp ~/bin/bbcli-linux-arm ~/bin/bbcli && chmod +x ~/bin/*"
-      - echo "Deploy abgeschlossen"
+    settings:
+      host:
+        from_secret: beagle_host
+      username:
+        from_secret: beagle_user
+      key:
+        from_secret: ssh_key
+      source:
+        - bin/embedded
+        - bin/libhardware.so
+        - bin/libhardware_rs.so
+        - bin/bbcli-linux-arm
+      target: /home/debian/bin/
+
+  - name: restart-bbb-service
+    image: appleboy/drone-ssh
+    depends_on: [deploy-to-bbb]
+    settings:
+      host:
+        from_secret: beagle_host
+      username:
+        from_secret: beagle_user
+      key:
+        from_secret: ssh_key
+      script:
+        - cp ~/bin/bbcli-linux-arm ~/bin/bbcli
+        - chmod +x ~/bin/*
+        - echo "Deploy abgeschlossen"
 
   - name: test-hardware
     image: python:3.12-alpine
-    depends_on: [deploy-to-bbb]
+    depends_on: [restart-bbb-service]
     environment:
-      BEAGLE_HOST: {from_secret: beagle_host}
+      BEAGLE_HOST:
+        from_secret: beagle_host
     commands:
       - pip install pytest requests pytest-json-report --break-system-packages -q
       - pytest tests/hardware/test_hardware.py -v --timeout=60 --json-report --json-report-file=reports/hardware-tests.json || true
 
   - name: test-api
     image: python:3.12-alpine
-    depends_on: [deploy-to-bbb]
+    depends_on: [restart-bbb-service]
     environment:
-      BEAGLE_HOST: {from_secret: beagle_host}
+      BEAGLE_HOST:
+        from_secret: beagle_host
     commands:
       - pip install pytest requests pytest-json-report --break-system-packages -q
       - pytest tests/api/test_api.py -v --timeout=30 --json-report --json-report-file=reports/api-tests.json || true
 
   - name: test-uart-on-bbb
     image: python:3.12-alpine
-    depends_on: [deploy-to-bbb]
+    depends_on: [restart-bbb-service]
     environment:
-      BEAGLE_HOST: {from_secret: beagle_host}
-      BEAGLE_USER: {from_secret: beagle_user}
+      BEAGLE_HOST:
+        from_secret: beagle_host
+      BEAGLE_USER:
+        from_secret: beagle_user
       BBCLI_REMOTE: /home/debian/bin/bbcli
     commands:
       - pip install pytest --break-system-packages -q
       - pytest tests/hardware/test_uart.py -v --timeout=30 --json-report --json-report-file=reports/uart-tests.json || true
 
   - name: test-cli-on-bbb
-    image: alpine
-    depends_on: [deploy-to-bbb]
-    environment:
-      BEAGLE_HOST: {from_secret: beagle_host}
-      BEAGLE_USER: {from_secret: beagle_user}
-      BEAGLE_KEY:  {from_secret: beagle_ssh_key}
-    commands:
-      - apk add --no-cache openssh-client
-      - KEY=$(mktemp) && trap "rm -f $KEY" EXIT
-      - echo "$BEAGLE_KEY" | base64 -d > $KEY && chmod 600 $KEY
-      - SSH="ssh -i $KEY -o StrictHostKeyChecking=no $BEAGLE_USER@$BEAGLE_HOST"
-      - $SSH "~/bin/bbcli --version"
-      - $SSH "~/bin/bbcli system status"
-      - $SSH "~/bin/bbcli bme280 read"
-      - echo "CLI on-device Tests bestanden"
+    image: appleboy/drone-ssh
+    depends_on: [restart-bbb-service]
+    settings:
+      host:
+        from_secret: beagle_host
+      username:
+        from_secret: beagle_user
+      key:
+        from_secret: ssh_key
+      script:
+        - ~/bin/bbcli --version
+        - ~/bin/bbcli system status
+        - ~/bin/bbcli bme280 read
+        - echo "CLI on-device Tests bestanden"
 
   - name: test-cli-remote
     image: python:3.12-alpine
-    depends_on: [deploy-to-bbb]
+    depends_on: [restart-bbb-service]
     environment:
-      BEAGLE_HOST: {from_secret: beagle_host}
+      BEAGLE_HOST:
+        from_secret: beagle_host
       BBCLI: ./bin/bbcli-linux-amd64
     commands:
       - pip install pytest pytest-json-report --break-system-packages -q
@@ -1248,8 +1255,6 @@ trigger:
   paths:
     - project/**
     - tools/**
-    - CHANGELOG.md
-    - Makefile
 
 steps:
   - name: update-changelog
@@ -1260,10 +1265,10 @@ steps:
     commands:
       - apk add --no-cache curl tar jq
       - |
-        CLIFF_URL=$(curl -s https://api.github.com/repos/orhun/git-cliff/releases/latest           | grep browser_download_url           | grep x86_64-unknown-linux-musl.tar.gz           | head -1 | cut -d'"' -f4)
-        mkdir -p /tmp/git-cliff
-        curl -sSfL "$CLIFF_URL" | tar -xz -C /tmp/git-cliff
-        find /tmp/git-cliff -name "git-cliff" -type f | head -1 | xargs -I{} cp {} /usr/local/bin/git-cliff
+        LATEST=$(curl -sf https://api.github.com/repos/orhun/git-cliff/releases/latest | grep '"tag_name"' | cut -d'"' -f4)
+        curl -sSfL "https://github.com/orhun/git-cliff/releases/download/$LATEST/git-cliff-x86_64-unknown-linux-musl.tar.gz" \
+          | tar -xz -C /tmp
+        find /tmp -name "git-cliff" -type f -exec mv {} /usr/local/bin/ \;
         chmod +x /usr/local/bin/git-cliff
       - git-cliff --unreleased --output unreleased.md
       - make prepend-changelog
@@ -1298,3 +1303,40 @@ steps:
       target: /var/www/downloads/12-changelog/
     when:
       status: [success, failure]
+
+---
+# ════════════════════════════════════════
+# PIPELINE 13 — Runner Cleanup
+# ════════════════════════════════════════
+kind: pipeline
+type: docker
+name: 13-cleanup
+
+trigger:
+  event: [cron]
+  cron: [cleanup]
+
+volumes:
+  - name: docker-sock
+    host:
+      path: /var/run/docker.sock
+
+steps:
+  - name: prune-images
+    image: docker:cli
+    volumes:
+      - name: docker-sock
+        path: /var/run/docker.sock
+    commands:
+      - echo "=== Docker disk usage before ==="
+      - docker system df
+      - echo "=== Removing unused images (>48h) ==="
+      - docker image prune -af --filter "until=48h"
+      - echo "=== Removing stopped containers ==="
+      - docker container prune -f
+      - echo "=== Removing unused volumes ==="
+      - docker volume prune -f
+      - echo "=== Removing unused networks ==="
+      - docker network prune -f
+      - echo "=== Docker disk usage after ==="
+      - docker system df
