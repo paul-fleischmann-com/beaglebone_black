@@ -804,6 +804,10 @@ steps:
       - |
         VERSION=$(cat docker/builder/VERSION | tr -d '[:space:]')
         podman login ghcr.io -u "$REGISTRY_USER" -p "$REGISTRY_TOKEN"
+        if podman manifest inspect ghcr.io/$REGISTRY_USER/generic-builder:$VERSION > /dev/null 2>&1; then
+          echo "generic-builder:$VERSION already exists — skipping build"
+          exit 0
+        fi
         podman build --build-arg VERSION=$VERSION \
           -t ghcr.io/$REGISTRY_USER/generic-builder:$VERSION \
           -t ghcr.io/$REGISTRY_USER/generic-builder:latest \
@@ -831,6 +835,10 @@ steps:
       - |
         podman login ghcr.io -u "$REGISTRY_USER" -p "$REGISTRY_TOKEN"
         VERSION=$(cat docker/bausteinsicht/VERSION | tr -d '[:space:]')
+        if podman manifest inspect ghcr.io/$REGISTRY_USER/bausteinsicht:$VERSION > /dev/null 2>&1; then
+          echo "bausteinsicht:$VERSION already exists — skipping build"
+          exit 0
+        fi
         SHA8=$(echo "$DRONE_COMMIT_SHA" | head -c8)
         echo "Building bausteinsicht version $VERSION (commit $SHA8)"
         # Copy cloned repo and drawio-export script into build context
@@ -857,6 +865,10 @@ steps:
       - |
         VERSION=$(cat docker/strictdoc/VERSION | tr -d '[:space:]')
         podman login ghcr.io -u "$REGISTRY_USER" -p "$REGISTRY_TOKEN"
+        if podman manifest inspect ghcr.io/$REGISTRY_USER/strictdoc:$VERSION > /dev/null 2>&1; then
+          echo "strictdoc:$VERSION already exists — skipping build"
+          exit 0
+        fi
         podman build --build-arg VERSION=$VERSION \
           -t ghcr.io/$REGISTRY_USER/strictdoc:$VERSION \
           -t ghcr.io/$REGISTRY_USER/strictdoc:latest \
