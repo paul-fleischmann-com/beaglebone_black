@@ -828,19 +828,11 @@ steps:
       - |
         podman login ghcr.io -u "$REGISTRY_USER" -p "$REGISTRY_TOKEN"
         SHA8=$(echo "$DRONE_COMMIT_SHA" | head -c8)
-        # Copy upstream devcontainer files into our build context
-        cp docker/bausteinsicht/repo/.devcontainer/drawio-export docker/bausteinsicht/
-        cp docker/bausteinsicht/repo/.devcontainer/Dockerfile    docker/bausteinsicht/Dockerfile.upstream
-        # Remove Claude Code installation (causes OOM in CI)
-        grep -v "claude.ai/install.sh" docker/bausteinsicht/Dockerfile.upstream \
-          > docker/bausteinsicht/Dockerfile.base
-        # Build base image from patched upstream Dockerfile
-        podman build -t bausteinsicht-base:latest \
-          -f docker/bausteinsicht/Dockerfile.base \
-          docker/bausteinsicht
-        # Extend with DrawIO layer
+        # Copy cloned repo and drawio-export script into build context
+        cp -r docker/bausteinsicht/repo          docker/bausteinsicht/repo-src
+        cp    docker/bausteinsicht/repo/.devcontainer/drawio-export docker/bausteinsicht/
+        # Single-stage build from our own Dockerfile
         podman build -t bausteinsicht:latest -t bausteinsicht:$SHA8 \
-          --build-arg BASE_IMAGE=bausteinsicht-base:latest \
           -f docker/bausteinsicht/Dockerfile \
           docker/bausteinsicht
         podman push bausteinsicht:latest ghcr.io/$REGISTRY_USER/bausteinsicht:latest
