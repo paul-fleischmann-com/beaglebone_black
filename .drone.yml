@@ -7,12 +7,14 @@ type: docker
 name: 1-libraries
 
 trigger:
-  event: [push, pull_request,custom]
-  branch: [main,develop]
+  event: [push, pull_request, custom]
+  branch: [main, develop]
   paths:
     - project/c-lib/**
     - project/rust-lib/**
-    - .drone.yml
+    - project/go-api/pkg/hal/**
+    - scripts/build-arm.sh
+    - docker/builder/**
 
 image_pull_secrets:
   - dockerconfigjson
