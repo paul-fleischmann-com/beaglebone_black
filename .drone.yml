@@ -795,19 +795,21 @@ trigger:
 
 steps:
   - name: build-generic-builder
-    image: plugins/buildah
+    image: quay.io/podman/stable
     privileged: true
-    settings:
-      registry: ghcr.io
-      repo: ghcr.io/${DRONE_REPO_OWNER}/generic-builder
-      username:
-        from_secret: registry_user
-      password:
-        from_secret: Bau_token
-      dockerfile: docker/builder/Dockerfile
-      context: docker/builder
-      tags: [latest, "1.0.0"]
-      args: [VERSION=1.0.0]
+    environment:
+      REGISTRY_USER:  {from_secret: registry_user}
+      REGISTRY_TOKEN: {from_secret: Bau_token}
+    commands:
+      - |
+        podman login ghcr.io -u "$REGISTRY_USER" -p "$REGISTRY_TOKEN"
+        podman build --build-arg VERSION=1.0.0 \
+          -t ghcr.io/$REGISTRY_USER/generic-builder:1.0.0 \
+          -t ghcr.io/$REGISTRY_USER/generic-builder:latest \
+          -f docker/builder/Dockerfile \
+          docker/builder
+        podman push ghcr.io/$REGISTRY_USER/generic-builder:1.0.0
+        podman push ghcr.io/$REGISTRY_USER/generic-builder:latest
 
   - name: clone-bausteinsicht-repo
     image: alpine/git
@@ -844,20 +846,22 @@ steps:
         echo "bausteinsicht $VERSION gepushed"
 
   - name: build-strictdoc
-    image: plugins/buildah
+    image: quay.io/podman/stable
     privileged: true
     depends_on: []
-    settings:
-      registry: ghcr.io
-      repo: ghcr.io/${DRONE_REPO_OWNER}/strictdoc
-      username:
-        from_secret: registry_user
-      password:
-        from_secret: Bau_token
-      dockerfile: docker/strictdoc/Dockerfile
-      context: docker/strictdoc
-      tags: [latest, "1.0.0"]
-      args: [VERSION=1.0.0]
+    environment:
+      REGISTRY_USER:  {from_secret: registry_user}
+      REGISTRY_TOKEN: {from_secret: Bau_token}
+    commands:
+      - |
+        podman login ghcr.io -u "$REGISTRY_USER" -p "$REGISTRY_TOKEN"
+        podman build --build-arg VERSION=1.0.0 \
+          -t ghcr.io/$REGISTRY_USER/strictdoc:1.0.0 \
+          -t ghcr.io/$REGISTRY_USER/strictdoc:latest \
+          -f docker/strictdoc/Dockerfile \
+          docker/strictdoc
+        podman push ghcr.io/$REGISTRY_USER/strictdoc:1.0.0
+        podman push ghcr.io/$REGISTRY_USER/strictdoc:latest
 
 ---
 # ════════════════════════════════════════
