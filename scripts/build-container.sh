@@ -13,7 +13,11 @@ FULL_IMAGE="ghcr.io/$REGISTRY_USER/$IMAGE"
 
 podman login ghcr.io -u "$REGISTRY_USER" -p "$REGISTRY_TOKEN"
 
-if skopeo inspect "docker://$FULL_IMAGE:$VERSION" > /dev/null 2>&1; then
+HTTP=$(curl -s -o /dev/null -w "%{http_code}" \
+  -H "Authorization: Bearer $REGISTRY_TOKEN" \
+  "https://ghcr.io/v2/$REGISTRY_USER/$IMAGE/manifests/$VERSION")
+echo "Registry check for $IMAGE:$VERSION → HTTP $HTTP"
+if [ "$HTTP" = "200" ]; then
   echo "$IMAGE:$VERSION already exists in ghcr.io — skipping build"
   exit 0
 fi
