@@ -784,27 +784,6 @@ steps:
       branch: [main,develop]
       event: [push]
 
-  - name: allure-generate
-    image: eclipse-temurin:17-jre
-    depends_on: [collect-and-report, strictdoc-coverage-gate]
-    commands:
-      - bash scripts/allure-generate.sh 7-reports
-    when:
-      status: [success, failure]
-
-  - name: upload-allure
-    image: appleboy/drone-scp
-    depends_on: [allure-generate]
-    settings:
-      host: 192.168.2.55
-      username: deploy
-      key:
-        from_secret: ssh_key
-      source: allure-report.zip
-      target: /var/www/downloads/7-reports/
-    when:
-      status: [success, failure]
-
   - name: collect-and-report
     image: python:3.12-slim
     depends_on:
@@ -831,7 +810,6 @@ steps:
       - adoc-build
       - strictdoc-coverage-gate
       - sonarqube-report
-      - allure-generate
     commands:
       - apk add --no-cache zip
       - cd reports && zip -r ../reports-$DRONE_BUILD_NUMBER.zip . 2>/dev/null || true
@@ -848,6 +826,27 @@ steps:
       status: [success, failure]
       branch: [main,develop]
       event:  [push, tag]
+
+  - name: allure-generate
+    image: eclipse-temurin:17-jre
+    depends_on: [notify, package-artifacts]
+    commands:
+      - bash scripts/allure-generate.sh 7-reports
+    when:
+      status: [success, failure]
+
+  - name: upload-allure
+    image: appleboy/drone-scp
+    depends_on: [allure-generate]
+    settings:
+      host: 192.168.2.55
+      username: deploy
+      key:
+        from_secret: ssh_key
+      source: allure-report.zip
+      target: /var/www/downloads/7-reports/
+    when:
+      status: [success, failure]
 
 ---
 # ════════════════════════════════════════
