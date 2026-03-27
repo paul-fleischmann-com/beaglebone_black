@@ -1081,14 +1081,18 @@ steps:
       REGISTRY_USER:  {from_secret: registry_user}
       REGISTRY_TOKEN: {from_secret: Bau_token}
     commands:
+      - mkdir -p .step-status
       - bash scripts/build-container.sh generic-builder docker/builder/Dockerfile docker/builder docker/builder/VERSION
+      - echo pass > .step-status/build-generic-builder
 
   - name: clone-bausteinsicht-repo
     image: alpine/git
     environment:
       GIT_TOKEN: {from_secret: Bau_token}
     commands:
+      - mkdir -p .step-status
       - git clone --depth 1 https://oauth2:$GIT_TOKEN@github.com/docToolchain/Bausteinsicht.git /drone/src/docker/bausteinsicht/repo
+      - echo pass > .step-status/clone-bausteinsicht-repo
 
   - name: build-bausteinsicht
     image: quay.io/podman/stable
@@ -1098,9 +1102,11 @@ steps:
       REGISTRY_USER:  {from_secret: registry_user}
       REGISTRY_TOKEN: {from_secret: Bau_token}
     commands:
+      - mkdir -p .step-status
       - cp -r docker/bausteinsicht/repo         docker/bausteinsicht/repo-src
       - cp    docker/bausteinsicht/repo/.devcontainer/drawio-export docker/bausteinsicht/
       - bash scripts/build-container.sh bausteinsicht docker/bausteinsicht/Dockerfile docker/bausteinsicht docker/bausteinsicht/VERSION
+      - echo pass > .step-status/build-bausteinsicht
 
   - name: build-strictdoc
     image: quay.io/podman/stable
@@ -1109,11 +1115,39 @@ steps:
       REGISTRY_USER:  {from_secret: registry_user}
       REGISTRY_TOKEN: {from_secret: Bau_token}
     commands:
+      - mkdir -p .step-status
       - bash scripts/build-container.sh strictdoc docker/strictdoc/Dockerfile docker/strictdoc docker/strictdoc/VERSION
+      - echo pass > .step-status/build-strictdoc
+
+  - name: generate-junit
+    image: alpine
+    depends_on: [build-generic-builder, build-bausteinsicht, build-strictdoc, clone-bausteinsicht-repo]
+    commands:
+      - mkdir -p reports
+      - |
+        STEPS="build-generic-builder clone-bausteinsicht-repo build-bausteinsicht build-strictdoc"
+        PASS=0; FAIL=0
+        CASES=""
+        for step in $STEPS; do
+          if [ -f ".step-status/$step" ]; then
+            CASES="$CASES    <testcase name=\"$step\" classname=\"9-build-container\"/>\n"
+            PASS=$((PASS+1))
+          else
+            CASES="$CASES    <testcase name=\"$step\" classname=\"9-build-container\">\n      <failure message=\"Step failed or was skipped\"/>\n    </testcase>\n"
+            FAIL=$((FAIL+1))
+          fi
+        done
+        TOTAL=$((PASS+FAIL))
+        printf '<?xml version="1.0" encoding="UTF-8"?>\n<testsuites>\n  <testsuite name="9-build-container" tests="%d" failures="%d">\n%b  </testsuite>\n</testsuites>\n' \
+          "$TOTAL" "$FAIL" "$CASES" > reports/build-containers-junit.xml
+        echo "JUnit written: $PASS passed, $FAIL failed"
+        cat reports/build-containers-junit.xml
+    when:
+      status: [success, failure]
 
   - name: allure-generate
     image: eclipse-temurin:17-jre
-    depends_on: [build-bausteinsicht, build-strictdoc,build-generic-builder]
+    depends_on: [generate-junit]
     commands:
       - bash scripts/allure-generate.sh 9-build-container
       - echo "Allure Report http://192.168.2.55/downloads/9-build-container/allure-report/index.html"
