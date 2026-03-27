@@ -47,7 +47,7 @@ steps:
     commands:
       - mkdir -p .step-status allure-results && date +%s > .step-status/test-c-lib-go.start
       - make -C c-lib test-bin
-      - cd tools/c_test_runner && go mod tidy && go test -v ./... -count=1
+      - (cd tools/c_test_runner && go mod tidy && go test -v ./... -count=1)
       - echo $(($(date +%s) - $(cat .step-status/test-c-lib-go.start 2>/dev/null || date +%s))) > .step-status/test-c-lib-go
 
   - name: test-rust-lib
@@ -164,7 +164,7 @@ steps:
     image: golang:1.24
     commands:
       - mkdir -p .step-status && date +%s > .step-status/test-hal-unit.start
-      - cd project/go-api && go test ./pkg/hal/ ./pkg/hal/mock/ ./pkg/hal/config/ -v -count=1
+      - (cd project/go-api && go test ./pkg/hal/ ./pkg/hal/mock/ ./pkg/hal/config/ -v -count=1)
       - echo $(($(date +%s) - $(cat .step-status/test-hal-unit.start 2>/dev/null || date +%s))) > .step-status/test-hal-unit
 
   - name: lint-go
