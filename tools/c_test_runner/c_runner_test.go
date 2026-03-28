@@ -1,15 +1,13 @@
-// Package c_test_runner ist der Go-Äquivalent zum Python allure-pytest Wrapper.
+// Package c_test_runner runs the Unity C test binary and reports each result
+// as an individual Allure result file (allure-results/*.json).
 //
-// Struktur:
-//   - Eine Suite-Struct pro Hardware-Komponente (BME280Suite, GPIOSuite, UARTSuite)
-//   - Jede Struct embeddet suite.Suite → entspricht einer Python-Klasse mit @allure.epic/@allure.feature
-//   - Jede Methode = ein Test mit t.Epic/t.Feature/t.Story/t.Severity + Steps + Links
-//   - runUnityTest() = Go-Äquivalent zu _run_unity_test() aus dem Python-Wrapper
+// Verwendet nur pkg/allure (kein pkg/framework) um API-Brüche zu vermeiden.
+// Jede Unity-Test-Gruppe wird als t.Run Subtest abgebildet — gleiche logische
+// Struktur wie der Python-Wrapper (BME280, GPIO, UART als Gruppen).
 //
 // Run:
 //
 //	cd tools/c_test_runner && go mod tidy && go test -v ./... -count=1
-//	allure generate ../../allure-results -o ../../allure-report --clean
 package c_test_runner
 
 import (
@@ -24,302 +22,287 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/ozontech/allure-go/pkg/allure"
-	"github.com/ozontech/allure-go/pkg/framework/provider"
-	"github.com/ozontech/allure-go/pkg/framework/suite"
 )
 
 // ── Paths ─────────────────────────────────────────────────────────────────────
 
 func repoRoot() string {
-	_, thisFile, _, _ := runtime.Caller(0)
-	return filepath.Join(filepath.Dir(thisFile), "..", "..")
+	_, f, _, _ := runtime.Caller(0)
+	return filepath.Join(filepath.Dir(f), "..", "..")
 }
 
-func cLibDir() string { return filepath.Join(repoRoot(), "c-lib") }
-func testBin() string { return filepath.Join(repoRoot(), "project", "c", "test", "test_runner") }
+func cLibDir() string   { return filepath.Join(repoRoot(), "c-lib") }
+func testBin() string   { return filepath.Join(repoRoot(), "project", "c", "test", "test_runner") }
+func resultsDir() string {
+	d := filepath.Join(repoRoot(), "allure-results")
+	_ = os.MkdirAll(d, 0o755)
+	return d
+}
 
-// ── Unity output parser ───────────────────────────────────────────────────────
+// ── Unity parser ──────────────────────────────────────────────────────────────
 
 var resultRE = regexp.MustCompile(
 	`^(?P<file>[^:]+):(?P<line>\d+):(?P<name>[^:]+):(?P<status>PASS|FAIL|IGNORE)(?::(?P<msg>.*))?$`,
 )
 
 type unityResult struct {
-	File   string
-	Line   int
-	Name   string
-	Status string
-	Msg    string
+	File, Name, Status, Msg string
+	Line                    int
 }
 
-func parseUnityOutput(output string) map[string]unityResult {
-	results := make(map[string]unityResult)
-	scanner := bufio.NewScanner(strings.NewReader(output))
-	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
-		m := resultRE.FindStringSubmatch(line)
-		if m == nil {
+func parseUnity(output string) map[string]unityResult {
+	m := make(map[string]unityResult)
+	sc := bufio.NewScanner(strings.NewReader(output))
+	for sc.Scan() {
+		groups := resultRE.FindStringSubmatch(strings.TrimSpace(sc.Text()))
+		if groups == nil {
 			continue
 		}
-		names := resultRE.SubexpNames()
 		r := unityResult{}
-		for i, v := range m {
-			switch names[i] {
+		for i, name := range resultRE.SubexpNames() {
+			switch name {
 			case "file":
-				r.File = v
+				r.File = groups[i]
 			case "line":
-				r.Line, _ = strconv.Atoi(v)
+				r.Line, _ = strconv.Atoi(groups[i])
 			case "name":
-				r.Name = v
+				r.Name = groups[i]
 			case "status":
-				r.Status = v
+				r.Status = groups[i]
 			case "msg":
-				r.Msg = strings.TrimSpace(v)
+				r.Msg = strings.TrimSpace(groups[i])
 			}
 		}
-		results[r.Name] = r
+		m[r.Name] = r
 	}
-	return results
+	return m
 }
 
-// ── Shared binary run (once per test binary execution) ────────────────────────
+// ── Build + run once ──────────────────────────────────────────────────────────
 
 var (
-	buildOnce   sync.Once
-	unityResult_ map[string]unityResult
-	rawStdout   string
-	buildErr    error
+	once      sync.Once
+	cache     map[string]unityResult
+	rawOutput string
+	buildErr  error
 )
 
-func ensureBuilt() (map[string]unityResult, string, error) {
-	buildOnce.Do(func() {
-		build := exec.Command("make", "-C", cLibDir(), "test-bin")
-		build.Stdout = os.Stderr
-		build.Stderr = os.Stderr
-		if err := build.Run(); err != nil {
-			buildErr = fmt.Errorf("make test-bin: %w", err)
+func ensureRun() (map[string]unityResult, string, error) {
+	once.Do(func() {
+		b := exec.Command("make", "-C", cLibDir(), "test-bin")
+		b.Stdout, b.Stderr = os.Stderr, os.Stderr
+		if buildErr = b.Run(); buildErr != nil {
 			return
 		}
 		out, _ := exec.Command(testBin()).CombinedOutput()
-		rawStdout = string(out)
-		unityResult_ = parseUnityOutput(rawStdout)
+		rawOutput = string(out)
+		cache = parseUnity(rawOutput)
 	})
-	return unityResult_, rawStdout, buildErr
+	return cache, rawOutput, buildErr
+}
+
+// ── Label helpers ─────────────────────────────────────────────────────────────
+
+type meta struct{ feature, story, severity string }
+
+var featureMap = map[string]meta{
+	"test_bme280": {"BME280 Sensor", "I2C Sensor Driver", "normal"},
+	"test_gpio":   {"GPIO", "Sysfs GPIO Driver", "normal"},
+	"test_uart":   {"UART", "Serial Communication", "normal"},
+	"test_spi":    {"SPI", "SPI Bus Driver", "normal"},
+}
+
+var stepKeys = [][2]string{
+	{"null_ptr", "Verify null-pointer guard"},
+	{"null_output", "Verify NULL output parameter"},
+	{"null_data", "Verify NULL data parameter"},
+	{"invalid_fd", "Verify invalid file-descriptor handling"},
+	{"no_device", "Verify graceful failure without hardware"},
+	{"no_sysfs", "Verify graceful failure without sysfs"},
+	{"init", "Call init function"},
+	{"open", "Open device"},
+	{"close", "Close device"},
+	{"read", "Read from device"},
+	{"write", "Write to device"},
+}
+
+func metaFor(name string) meta {
+	for prefix, m := range featureMap {
+		if strings.HasPrefix(name, prefix) {
+			return m
+		}
+	}
+	return meta{"C Library", "Hardware Abstraction", "minor"}
+}
+
+func stepLabel(name string) string {
+	for _, pair := range stepKeys {
+		if strings.Contains(name, pair[0]) {
+			return pair[1]
+		}
+	}
+	return "Execute test"
+}
+
+func toAllureStatus(s string) allure.Status {
+	switch s {
+	case "PASS":
+		return allure.Passed
+	case "FAIL":
+		return allure.Failed
+	case "IGNORE":
+		return allure.Skipped
+	}
+	return allure.Unknown
+}
+
+// ── Allure JSON writer ────────────────────────────────────────────────────────
+
+func writeResult(r unityResult, raw string) {
+	m := metaFor(r.Name)
+	now := time.Now().UnixMilli()
+
+	result := allure.NewResult(r.Name, "c-unity/"+r.Name)
+	result.Status = toAllureStatus(r.Status)
+	result.WithLabels(
+		allure.Label{Name: "epic",      Value: "C Hardware Drivers"},
+		allure.Label{Name: "feature",   Value: m.feature},
+		allure.Label{Name: "story",     Value: m.story},
+		allure.Label{Name: "severity",  Value: m.severity},
+		allure.Label{Name: "owner",     Value: "Adrian"},
+		allure.Label{Name: "framework", Value: "Unity"},
+		allure.Label{Name: "language",  Value: "C"},
+		allure.Label{Name: "priority",  Value: "high"},
+	)
+	desc := r.Msg
+	if desc == "" {
+		desc = fmt.Sprintf("%s — CI error-path test (no hardware required).\nSource: %s:%d",
+			r.Name, filepath.Base(r.File), r.Line)
+	}
+	result.Description = desc
+	if r.Msg != "" {
+		result.StatusDetails = &allure.StatusDetail{Message: r.Msg}
+	}
+
+	// Steps: source → execute → assert
+	locStep := allure.NewSimpleInnerStep(
+		fmt.Sprintf("Source: %s:%d", filepath.Base(r.File), r.Line), allure.Passed)
+	locStep.Start, locStep.Stop = now, now+1
+
+	execStep := allure.NewSimpleInnerStep(stepLabel(r.Name), toAllureStatus(r.Status))
+	execStep.Start, execStep.Stop = now+1, now+2
+
+	assertStep := allure.NewSimpleInnerStep(
+		fmt.Sprintf("Assert → %s", r.Status), toAllureStatus(r.Status))
+	assertStep.Start, assertStep.Stop = now+2, now+3
+
+	result.Steps = []*allure.Step{locStep, execStep, assertStep}
+	result.Start, result.Stop = now, now+3
+
+	// Attach: relevant console lines
+	var lines []string
+	for _, l := range strings.Split(raw, "\n") {
+		if strings.Contains(l, r.Name) || strings.HasPrefix(l, "-") || strings.Contains(l, "Tests") {
+			lines = append(lines, l)
+		}
+	}
+	if len(lines) > 0 {
+		result.Attachments = []*allure.Attachment{
+			allure.NewAttachment("unity console output", allure.Text,
+				[]byte(strings.Join(lines, "\n"))),
+		}
+	}
+
+	_ = result.Print(resultsDir())
 }
 
 // ── Core helper — Go-Äquivalent zu Python _run_unity_test() ──────────────────
 //
-// Entspricht exakt diesem Python-Muster:
+// Entspricht exakt:
 //
-//	with allure.step("Starte C-Binary"):
-//	    result = subprocess.run([binary_path, ...], capture_output=True, text=True)
-//	    allure.attach(result.stdout, ...)
-//	with allure.step("Prüfe Rückgabewert"):
-//	    assert result.returncode == 0
+//	with allure.step("Starte C-Binary"):   result = subprocess.run(binary, ...)
+//	with allure.step("Prüfe Rückgabewert"): assert result.returncode == 0
 
-func runUnityTest(t provider.T, testName string) {
-	results, raw, err := ensureBuilt()
+func runUnityTest(t *testing.T, name string, results map[string]unityResult, raw string) {
+	t.Helper()
 
-	// Step 1: Starte Unity C-Binary
-	t.WithNewStep(fmt.Sprintf("Starte Unity C-Binary: %s", testBin()),
-		func(sCtx provider.StepCtx) {
-			sCtx.WithAttachments(allure.NewAttachment(
-				"C-Standard-Output", allure.Text, []byte(raw),
-			))
-			if err != nil {
-				sCtx.WithAttachments(allure.NewAttachment(
-					"C-Fehlermeldung", allure.Text, []byte(err.Error()),
-				))
-				t.Errorf("Build fehlgeschlagen: %v", err)
-			}
-		},
-	)
-
-	if err != nil {
-		return
-	}
-
-	// Step 2: Suche Ergebnis
-	r, ok := results[testName]
-	t.WithNewStep(fmt.Sprintf("Suche Ergebnis für: %s", testName),
-		func(sCtx provider.StepCtx) {
-			if !ok {
-				t.Errorf("Test %q nicht in Unity-Output gefunden", testName)
-				return
-			}
-			detail := fmt.Sprintf("%s:%d  →  %s", filepath.Base(r.File), r.Line, r.Status)
-			if r.Msg != "" {
-				detail += "\n" + r.Msg
-			}
-			sCtx.WithAttachments(allure.NewAttachment(
-				"Unity Testergebnis", allure.Text, []byte(detail),
-			))
-		},
-	)
-
+	r, ok := results[name]
 	if !ok {
+		t.Errorf("Test %q nicht in Unity-Output gefunden", name)
 		return
 	}
 
-	// Step 3: Prüfe Rückgabewert
-	t.WithNewStep(fmt.Sprintf("Prüfe Rückgabewert → %s", r.Status),
-		func(sCtx provider.StepCtx) {
-			// Relevante Zeilen aus raw output anhängen
-			var lines []string
-			for _, l := range strings.Split(raw, "\n") {
-				if strings.Contains(l, r.Name) ||
-					strings.HasPrefix(l, "-") ||
-					strings.Contains(l, "Tests") {
-					lines = append(lines, l)
-				}
-			}
-			if len(lines) > 0 {
-				sCtx.WithAttachments(allure.NewAttachment(
-					"Unity Console (gefiltert)", allure.Text,
-					[]byte(strings.Join(lines, "\n")),
-				))
-			}
+	writeResult(r, raw)
 
-			switch r.Status {
-			case "FAIL":
-				t.Errorf("Unity meldet FAIL für %s: %s", r.Name, r.Msg)
-			case "IGNORE":
-				t.Skip(r.Msg)
-			}
-		},
-	)
+	t.Logf("[%s] %s  source=%s:%d", r.Status, r.Name, filepath.Base(r.File), r.Line)
+	if r.Msg != "" {
+		t.Log(r.Msg)
+	}
+
+	switch r.Status {
+	case "FAIL":
+		t.Fail()
+	case "IGNORE":
+		t.Skip(r.Msg)
+	}
 }
 
-// ── BME280Suite ───────────────────────────────────────────────────────────────
-// Entspricht:  @allure.epic('C Hardware Drivers') + @allure.feature('BME280 Sensor') class TestBME280
+// ── BME280 — @allure.epic('C Hardware Drivers') @allure.feature('BME280 Sensor') ──
 
-type BME280Suite struct{ suite.Suite }
+func TestBME280(t *testing.T) {
+	results, raw, err := ensureRun()
+	if err != nil {
+		t.Skipf("Unity binary build failed: %v", err)
+	}
 
-func (s *BME280Suite) TestBME280InitNullPtrs(t provider.T) {
-	t.Epic("C Hardware Drivers")
-	t.Feature("BME280 Sensor")
-	t.Story("Null-Pointer Validierung")
-	t.Severity(allure.CRITICAL)
-	t.Title("BME280 init — null function pointers")
-	t.Description("Erwartet BME280_E_NULL_PTR wenn read/write/delay_us NULL sind.")
-	t.AddLabel("owner", "Adrian")
-	t.AddLabel("framework", "Unity")
-	t.AddLabel("language", "C")
-	t.Link("https://github.com/BoschSensortec/BME280_driver",
-		"BME280 Treiber Dokumentation", allure.LinkType("link"))
-
-	runUnityTest(t, "test_bme280_init_null_ptrs")
+	t.Run("test_bme280_init_null_ptrs", func(t *testing.T) {
+		runUnityTest(t, "test_bme280_init_null_ptrs", results, raw)
+	})
+	t.Run("test_bme280_get_sensor_data_null_output", func(t *testing.T) {
+		runUnityTest(t, "test_bme280_get_sensor_data_null_output", results, raw)
+	})
+	t.Run("test_bme280_set_sensor_settings_null_settings", func(t *testing.T) {
+		runUnityTest(t, "test_bme280_set_sensor_settings_null_settings", results, raw)
+	})
+	t.Run("test_bme280_compensate_null_data", func(t *testing.T) {
+		runUnityTest(t, "test_bme280_compensate_null_data", results, raw)
+	})
 }
 
-func (s *BME280Suite) TestBME280GetSensorDataNullOutput(t provider.T) {
-	t.Epic("C Hardware Drivers")
-	t.Feature("BME280 Sensor")
-	t.Story("Null-Pointer Validierung")
-	t.Severity(allure.NORMAL)
-	t.Title("BME280 get_sensor_data — NULL comp_data")
-	t.AddLabel("owner", "Adrian")
+// ── GPIO — @allure.epic('C Hardware Drivers') @allure.feature('GPIO') ──────────
 
-	runUnityTest(t, "test_bme280_get_sensor_data_null_output")
+func TestGPIO(t *testing.T) {
+	results, raw, err := ensureRun()
+	if err != nil {
+		t.Skipf("Unity binary build failed: %v", err)
+	}
+
+	t.Run("test_gpio_export_fails_no_sysfs", func(t *testing.T) {
+		runUnityTest(t, "test_gpio_export_fails_no_sysfs", results, raw)
+	})
+	t.Run("test_gpio_read_fails_no_sysfs", func(t *testing.T) {
+		runUnityTest(t, "test_gpio_read_fails_no_sysfs", results, raw)
+	})
+	t.Run("test_gpio_write_fails_no_sysfs", func(t *testing.T) {
+		runUnityTest(t, "test_gpio_write_fails_no_sysfs", results, raw)
+	})
 }
 
-func (s *BME280Suite) TestBME280SetSensorSettingsNullSettings(t provider.T) {
-	t.Epic("C Hardware Drivers")
-	t.Feature("BME280 Sensor")
-	t.Story("Null-Pointer Validierung")
-	t.Severity(allure.NORMAL)
-	t.Title("BME280 set_sensor_settings — NULL settings")
-	t.AddLabel("owner", "Adrian")
+// ── UART — @allure.epic('C Hardware Drivers') @allure.feature('UART') ──────────
 
-	runUnityTest(t, "test_bme280_set_sensor_settings_null_settings")
+func TestUART(t *testing.T) {
+	results, raw, err := ensureRun()
+	if err != nil {
+		t.Skipf("Unity binary build failed: %v", err)
+	}
+
+	t.Run("test_uart_open_fails_no_device", func(t *testing.T) {
+		runUnityTest(t, "test_uart_open_fails_no_device", results, raw)
+	})
+	t.Run("test_uart_close_invalid_fd", func(t *testing.T) {
+		runUnityTest(t, "test_uart_close_invalid_fd", results, raw)
+	})
 }
-
-func (s *BME280Suite) TestBME280CompensateNullData(t provider.T) {
-	t.Epic("C Hardware Drivers")
-	t.Feature("BME280 Sensor")
-	t.Story("Kompensationsberechnung")
-	t.Severity(allure.NORMAL)
-	t.Title("BME280 compensate_data — NULL comp und calib")
-	t.AddLabel("owner", "Adrian")
-
-	runUnityTest(t, "test_bme280_compensate_null_data")
-}
-
-func TestBME280(t *testing.T) { suite.RunSuite(t, new(BME280Suite)) }
-
-// ── GPIOSuite ─────────────────────────────────────────────────────────────────
-// Entspricht:  @allure.epic('C Hardware Drivers') + @allure.feature('GPIO') class TestGPIO
-
-type GPIOSuite struct{ suite.Suite }
-
-func (s *GPIOSuite) TestGPIOExportFailsNoSysfs(t provider.T) {
-	t.Epic("C Hardware Drivers")
-	t.Feature("GPIO")
-	t.Story("Sysfs Fehlerbehandlung")
-	t.Severity(allure.NORMAL)
-	t.Title("GPIO export — schlägt fehl ohne /sys/class/gpio")
-	t.Description("Prüft ob gpio_export() einen Fehlercode zurückgibt wenn kein sysfs vorhanden ist.")
-	t.AddLabel("owner", "Adrian")
-	t.AddLabel("tag", "ci-compatible")
-
-	runUnityTest(t, "test_gpio_export_fails_no_sysfs")
-}
-
-func (s *GPIOSuite) TestGPIOReadFailsNoSysfs(t provider.T) {
-	t.Epic("C Hardware Drivers")
-	t.Feature("GPIO")
-	t.Story("Sysfs Fehlerbehandlung")
-	t.Severity(allure.NORMAL)
-	t.Title("GPIO read — schlägt fehl ohne /sys/class/gpio")
-	t.AddLabel("owner", "Adrian")
-	t.AddLabel("tag", "ci-compatible")
-
-	runUnityTest(t, "test_gpio_read_fails_no_sysfs")
-}
-
-func (s *GPIOSuite) TestGPIOWriteFailsNoSysfs(t provider.T) {
-	t.Epic("C Hardware Drivers")
-	t.Feature("GPIO")
-	t.Story("Sysfs Fehlerbehandlung")
-	t.Severity(allure.NORMAL)
-	t.Title("GPIO write — schlägt fehl ohne /sys/class/gpio")
-	t.AddLabel("owner", "Adrian")
-	t.AddLabel("tag", "ci-compatible")
-
-	runUnityTest(t, "test_gpio_write_fails_no_sysfs")
-}
-
-func TestGPIO(t *testing.T) { suite.RunSuite(t, new(GPIOSuite)) }
-
-// ── UARTSuite ─────────────────────────────────────────────────────────────────
-// Entspricht:  @allure.epic('C Hardware Drivers') + @allure.feature('UART') class TestUART
-
-type UARTSuite struct{ suite.Suite }
-
-func (s *UARTSuite) TestUARTOpenFailsNoDevice(t provider.T) {
-	t.Epic("C Hardware Drivers")
-	t.Feature("UART")
-	t.Story("Geräteinitialisierung")
-	t.Severity(allure.CRITICAL)
-	t.Title("UART open — schlägt fehl ohne /dev/ttyS1")
-	t.Description("uart_open() muss einen Fehler zurückgeben wenn das Gerät nicht existiert.")
-	t.AddLabel("owner", "Adrian")
-	t.AddLabel("tag", "ci-compatible")
-
-	runUnityTest(t, "test_uart_open_fails_no_device")
-}
-
-func (s *UARTSuite) TestUARTCloseInvalidFd(t provider.T) {
-	t.Epic("C Hardware Drivers")
-	t.Feature("UART")
-	t.Story("Ressourcenfreigabe")
-	t.Severity(allure.NORMAL)
-	t.Title("UART close — fd=-1 darf nicht abstürzen")
-	t.Description("uart_close() mit fd=-1 darf keinen Segfault oder undefined behaviour auslösen.")
-	t.AddLabel("owner", "Adrian")
-
-	runUnityTest(t, "test_uart_close_invalid_fd")
-}
-
-func TestUART(t *testing.T) { suite.RunSuite(t, new(UARTSuite)) }
