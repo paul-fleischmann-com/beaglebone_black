@@ -54,6 +54,19 @@ steps:
     commands:
       - sh scripts/run-step.sh
 
+  - name: test-c-lib-cgo
+    image: golang:1.24
+    depends_on: [build-libraries]
+    environment:
+      STEP: test-c-lib-cgo
+      CMD: |
+        mkdir -p allure-results
+        cd tools/c_cgo_test
+        go mod tidy
+        ALLURE_OUTPUT_PATH=../../allure-results go test -v ./... -count=1
+    commands:
+      - sh scripts/run-step.sh
+
   - name: test-rust-lib
     image: ghcr.io/paulefl/generic-builder:latest
     depends_on: [build-libraries]
@@ -101,10 +114,10 @@ steps:
 
   - name: generate-junit
     image: alpine
-    depends_on: [build-libraries, test-c-lib-pytest, test-c-lib-go, test-rust-lib, test-go]
+    depends_on: [build-libraries, test-c-lib-pytest, test-c-lib-go, test-c-lib-cgo, test-rust-lib, test-go]
     commands:
       - apk add --no-cache bash
-      - sh scripts/generate-junit.sh 1-libraries build-libraries test-c-lib-pytest test-c-lib-go test-rust-lib test-go
+      - sh scripts/generate-junit.sh 1-libraries build-libraries test-c-lib-pytest test-c-lib-go test-c-lib-cgo test-rust-lib test-go
     when:
       status: [success, failure]
 
