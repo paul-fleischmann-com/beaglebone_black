@@ -163,14 +163,14 @@ func writeResult(r unityResult, raw string) {
 	result := allure.NewResult(r.Name, "c-unity/"+r.Name)
 	result.Status = toAllureStatus(r.Status)
 	result.WithLabels(
-		&allure.Label{Name: "epic",      Value: "C Hardware Drivers"},
-		&allure.Label{Name: "feature",   Value: m.feature},
-		&allure.Label{Name: "story",     Value: m.story},
-		&allure.Label{Name: "severity",  Value: m.severity},
-		&allure.Label{Name: "owner",     Value: "Adrian"},
+		&allure.Label{Name: "epic", Value: "C Hardware Drivers"},
+		&allure.Label{Name: "feature", Value: m.feature},
+		&allure.Label{Name: "story", Value: m.story},
+		&allure.Label{Name: "severity", Value: m.severity},
+		&allure.Label{Name: "owner", Value: "Adrian"},
 		&allure.Label{Name: "framework", Value: "Unity"},
-		&allure.Label{Name: "language",  Value: "C"},
-		&allure.Label{Name: "priority",  Value: "high"},
+		&allure.Label{Name: "language", Value: "C"},
+		&allure.Label{Name: "priority", Value: "high"},
 	)
 	desc := r.Msg
 	if desc == "" {

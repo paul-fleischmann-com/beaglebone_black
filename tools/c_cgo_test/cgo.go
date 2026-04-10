@@ -24,7 +24,7 @@ func GPIOUnexport(pin uint32) int {
 }
 
 func GPIOSetDirection(pin uint32, out bool) int {
-	dir := C.GPIO_INPUT
+	var dir C.gpio_direction_t = C.GPIO_INPUT
 	if out {
 		dir = C.GPIO_OUTPUT
 	}

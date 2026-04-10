@@ -59,6 +59,7 @@ steps:
     image: golang:1.24
     depends_on: [build-libraries]
     environment:
+      CGO_ENABLED: "1"
       STEP: test-c-lib-cgo
       CMD: |
         mkdir -p allure-results
