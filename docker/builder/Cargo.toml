@@ -1,0 +1,18 @@
+[package]
+name    = "prefetch"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name       = "prefetch"
+crate-type = ["cdylib"]
+
+[dependencies]
+linux-embedded-hal = "0.4"
+bme280             = "0.5"
+serialport         = "4"
+spidev             = "0.7"
+libc               = "0.2"
+
+[build-dependencies]
+cbindgen = "0.29"

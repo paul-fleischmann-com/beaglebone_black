@@ -1,107 +1,98 @@
 /*
- * c-lib Unit Tests (CI-kompatibel, keine Hardware erforderlich)
- *
+ * c-lib Unit Tests mit Unity Framework
+ * CI-kompatibel — keine Hardware erforderlich.
  * Strategie: Hardware-Funktionen schlagen in CI kontrolliert fehl
- * (keine /dev/i2c-1, /dev/ttyS*, /sys/class/gpio vorhanden).
- * Die Fehlerpfade werden explizit verifiziert → Coverage-Daten entstehen.
+ * (kein /dev/i2c-1, /dev/ttyS*, /sys/class/gpio vorhanden).
  */
-#include <assert.h>
-#include <stdio.h>
+#include "unity.h"
 #include <string.h>
-
 #include "bme280.h"
 #include "gpio.h"
 #include "uart.h"
 
-#define TEST(name) printf("  %-50s", #name); name(); printf("OK\n")
+void setUp(void)    {}
+void tearDown(void) {}
 
-/* ── bme280 ──────────────────────────────────────────────────────────────── */
+/* ── bme280 ──────────────────────────────────────────────────────────── */
 
-static void test_bme280_init_null_ptrs(void) {
+void test_bme280_init_null_ptrs(void) {
     struct bme280_dev dev;
     memset(&dev, 0, sizeof(dev));
-    /* NULL read/write/delay_us → null_ptr_check → BME280_E_NULL_PTR (< 0) */
+    /* NULL read/write/delay_us → null_ptr_check → BME280_E_NULL_PTR */
     int8_t ret = bme280_init(&dev);
-    assert(ret < 0);
+    TEST_ASSERT_TRUE_MESSAGE(ret < 0, "Expected error for null function pointers");
 }
 
-static void test_bme280_get_sensor_data_null_output(void) {
+void test_bme280_get_sensor_data_null_output(void) {
     struct bme280_dev dev;
     memset(&dev, 0, sizeof(dev));
-    /* NULL comp_data argument → BME280_E_NULL_PTR (< 0) */
     int8_t ret = bme280_get_sensor_data(7 /* BME280_ALL */, NULL, &dev);
-    assert(ret < 0);
+    TEST_ASSERT_TRUE_MESSAGE(ret < 0, "Expected error for NULL comp_data");
 }
 
-static void test_bme280_set_sensor_settings_null_settings(void) {
+void test_bme280_set_sensor_settings_null_settings(void) {
     struct bme280_dev dev;
     memset(&dev, 0, sizeof(dev));
-    /* NULL settings pointer → BME280_E_NULL_PTR (< 0) */
     int8_t ret = bme280_set_sensor_settings(0, NULL, &dev);
-    assert(ret < 0);
+    TEST_ASSERT_TRUE_MESSAGE(ret < 0, "Expected error for NULL settings");
 }
 
-static void test_bme280_compensate_null_data(void) {
+void test_bme280_compensate_null_data(void) {
     struct bme280_uncomp_data uncomp;
     memset(&uncomp, 0, sizeof(uncomp));
-    /* NULL comp_data → BME280_E_NULL_PTR (< 0) */
     int8_t ret = bme280_compensate_data(7, &uncomp, NULL, NULL);
-    assert(ret < 0);
+    TEST_ASSERT_TRUE_MESSAGE(ret < 0, "Expected error for NULL comp_data and calib_data");
 }
 
-/* ── gpio ────────────────────────────────────────────────────────────────── */
+/* ── gpio ─────────────────────────────────────────────────────────────── */
 
-static void test_gpio_export_fails_no_sysfs(void) {
-    /* Kein /sys/class/gpio in CI → schlägt fehl */
+void test_gpio_export_fails_no_sysfs(void) {
     int ret = gpio_export(60);
-    assert(ret < 0);
+    TEST_ASSERT_TRUE_MESSAGE(ret < 0, "gpio_export should fail without /sys/class/gpio");
 }
 
-static void test_gpio_read_fails_no_sysfs(void) {
+void test_gpio_read_fails_no_sysfs(void) {
     int value = 0;
     int ret = gpio_read(60, &value);
-    assert(ret < 0);
+    TEST_ASSERT_TRUE_MESSAGE(ret < 0, "gpio_read should fail without /sys/class/gpio");
 }
 
-static void test_gpio_write_fails_no_sysfs(void) {
+void test_gpio_write_fails_no_sysfs(void) {
     int ret = gpio_write(60, 1);
-    assert(ret < 0);
+    TEST_ASSERT_TRUE_MESSAGE(ret < 0, "gpio_write should fail without /sys/class/gpio");
 }
 
-/* ── uart ────────────────────────────────────────────────────────────────── */
+/* ── uart ─────────────────────────────────────────────────────────────── */
 
-static void test_uart_open_fails_no_device(void) {
+void test_uart_open_fails_no_device(void) {
     uart_dev_t dev;
     memset(&dev, 0, sizeof(dev));
-    /* Kein /dev/ttyS1 in CI */
     int ret = uart_open(&dev, "/dev/ttyS1", 115200);
-    assert(ret < 0);
+    TEST_ASSERT_TRUE_MESSAGE(ret < 0, "uart_open should fail without /dev/ttyS1");
 }
 
-static void test_uart_close_invalid_fd(void) {
+void test_uart_close_invalid_fd(void) {
     uart_dev_t dev;
     memset(&dev, 0, sizeof(dev));
     dev.fd = -1;
-    uart_close(&dev); /* darf nicht abstürzen */
+    uart_close(&dev);
+    TEST_PASS_MESSAGE("uart_close with fd=-1 did not crash");
 }
 
-/* ── main ────────────────────────────────────────────────────────────────── */
+/* ── main ─────────────────────────────────────────────────────────────── */
 
 int main(void) {
-    printf("c-lib Tests (CI-Modus: Hardware-Fehlerpfade)\n");
-    printf("============================================================\n");
+    UNITY_BEGIN();
 
-    TEST(test_bme280_init_null_ptrs);
-    TEST(test_bme280_get_sensor_data_null_output);
-    TEST(test_bme280_set_sensor_settings_null_settings);
-    TEST(test_bme280_compensate_null_data);
-    TEST(test_gpio_export_fails_no_sysfs);
-    TEST(test_gpio_read_fails_no_sysfs);
-    TEST(test_gpio_write_fails_no_sysfs);
-    TEST(test_uart_open_fails_no_device);
-    TEST(test_uart_close_invalid_fd);
+    RUN_TEST(test_bme280_init_null_ptrs);
+    RUN_TEST(test_bme280_get_sensor_data_null_output);
+    RUN_TEST(test_bme280_set_sensor_settings_null_settings);
+    RUN_TEST(test_bme280_compensate_null_data);
+    RUN_TEST(test_gpio_export_fails_no_sysfs);
+    RUN_TEST(test_gpio_read_fails_no_sysfs);
+    RUN_TEST(test_gpio_write_fails_no_sysfs);
+    RUN_TEST(test_uart_open_fails_no_device);
+    RUN_TEST(test_uart_close_invalid_fd);
 
-    printf("============================================================\n");
-    printf("Alle Tests bestanden.\n");
-    return 0;
+    return UNITY_END();
 }

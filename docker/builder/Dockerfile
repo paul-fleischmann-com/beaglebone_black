@@ -3,7 +3,12 @@
 # Supports C, Rust, Go, Python
 # =============================================
 # previous : debian:12-slim
-FROM debian:bookworm 
+FROM debian:bookworm
+
+ARG VERSION=unknown
+
+LABEL org.opencontainers.image.version=$VERSION
+ENV APP_VERSION=$VERSION
 
 # ----------------------------
 # Install basic packages
@@ -21,6 +26,7 @@ RUN apt-get update && apt-get install -y \
     python3 \
     python3-pip \
     python3-setuptools \
+    python3-venv \
     unzip \
     gcc-arm-linux-gnueabihf \
     g++-arm-linux-gnueabihf \
@@ -38,8 +44,9 @@ RUN curl -fsSL https://go.dev/dl/go1.24.1.linux-amd64.tar.gz \
 
 ENV PATH="/usr/local/go/bin:${PATH}"
 
-# Install gotestsum for JUnit XML test output
-RUN GOPATH=/usr/local go install gotest.tools/gotestsum@latest
+# Install gotestsum for JUnit XML test output + gocover-cobertura for coverage reports
+RUN GOPATH=/usr/local go install gotest.tools/gotestsum@latest && \
+    GOPATH=/usr/local go install github.com/boumenot/gocover-cobertura@latest
 # ----------------------------
 # Install Rust + ARM Target
 # ----------------------------
@@ -54,10 +61,15 @@ RUN mkdir -p /root/.cargo && \
     echo '[target.armv7-unknown-linux-gnueabihf]' > /root/.cargo/config.toml && \
     echo 'linker = "arm-linux-gnueabihf-gcc"' >> /root/.cargo/config.toml
 
-# --- Python Test Tools ---
-# Installiere venv falls noch nicht vorhanden
-RUN apt-get update && apt-get install -y python3-venv python3-pip
+# Pre-fetch Rust crate dependencies for faster CI builds
+COPY Cargo.toml /tmp/prefetch/Cargo.toml
+RUN mkdir -p /tmp/prefetch/src && \
+    echo 'pub fn dummy() {}' > /tmp/prefetch/src/lib.rs && \
+    cd /tmp/prefetch && \
+    cargo fetch --target armv7-unknown-linux-gnueabihf && \
+    rm -rf /tmp/prefetch
 
+# --- Python Test Tools ---
 # Erstelle venv
 RUN python3 -m venv /opt/venv
 
@@ -75,7 +87,5 @@ ENV PATH="/opt/venv/bin:$PATH"
 # ----------------------------
 WORKDIR /workspace
 
-# ----------------------------
-# Entrypoint to allow arbitrary commands
-# ----------------------------
+CMD ["sh", "-c", "echo 'Container Version: $APP_VERSION'"]
 ENTRYPOINT ["/bin/bash"]
