@@ -7,7 +7,7 @@ type: docker
 name: 1-libraries
 
 trigger:
-  event: [push, pull_request, custom]
+  event: [push, pull_request, custom, promote]
   branch:
     exclude: [refs/tags/*]
   paths:
@@ -16,6 +16,8 @@ trigger:
     - project/go-api/pkg/hal/**
     - scripts/build-arm.sh
     - docker/builder/**
+  target:
+    - lib
 
 image_pull_secrets:
   - dockerconfigjson
