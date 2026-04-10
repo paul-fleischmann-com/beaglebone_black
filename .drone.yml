@@ -8,7 +8,8 @@ name: 1-libraries
 
 trigger:
   event: [push, pull_request, custom]
-  branch: [main]
+  branch:
+    exclude: [refs/tags/*]
   paths:
     - project/c-lib/**
     - project/rust-lib/**
@@ -167,7 +168,8 @@ name: 2-embedded-sw
 
 trigger:
   event: [push, pull_request, custom]
-  branch: [main]
+  branch:
+    exclude: [refs/tags/*]
   paths:
     - project/go-api/**
     - project/c-lib/**
@@ -316,7 +318,8 @@ name: 3-tools
 
 trigger:
   event: [push, pull_request, custom]
-  branch: [main]
+  branch:
+    exclude: [refs/tags/*]
   paths:
     - tools/**
 
@@ -531,7 +534,8 @@ name: 4-webapp
 
 trigger:
   event: [push, pull_request, custom]
-  branch: [main]
+  branch:
+    exclude: [refs/tags/*]
   paths:
     - tools/web-gui/**
 
@@ -878,7 +882,8 @@ name: 7-reports
 
 trigger:
   event: [push, pull_request, custom]
-  branch: [main]
+  branch:
+    exclude: [refs/tags/*]
   paths:
     - project/**
     - tests/**
@@ -1186,7 +1191,8 @@ name: 8-bausteinsicht
 
 trigger:
   event: [push, pull_request, custom]
-  branch: [main]
+  branch:
+    exclude: [refs/tags/*]
   paths:
     - arch/model/**
 
@@ -1325,7 +1331,8 @@ name: 9-build-container
 
 trigger:
   event: [push, custom]
-  branch: [main, container_build]
+  branch:
+    exclude: [refs/tags/*]
   paths:
     - docker/builder/**
     - docker/bausteinsicht/**
@@ -1828,7 +1835,8 @@ depends_on:
 
 trigger:
   event: [push, pull_request, custom]
-  branch: [main,container_build]
+  branch:
+    exclude: [refs/tags/*]
 
 steps:
   - name: generate-dashboard
