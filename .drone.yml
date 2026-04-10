@@ -983,6 +983,7 @@ steps:
     environment:
       STEP: strictdoc-export
       CMD: |
+        apt-get install -y -q zip
         pip install strictdoc
         mkdir -p reports/strictdoc
         strictdoc export . --formats html --output-dir reports/strictdoc || true

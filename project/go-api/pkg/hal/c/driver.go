@@ -19,7 +19,7 @@ import (
 )
 
 type CDriver struct {
-	bme280 C.struct bme280_dev
+	bme280 C.struct_bme280_dev
 	uart   C.uart_dev_t
 	cfg    *config.Config
 }
