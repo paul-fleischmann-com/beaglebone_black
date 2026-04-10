@@ -20,9 +20,28 @@ trigger:
 image_pull_secrets:
   - dockerconfigjson
 
+volumes:
+  - name: go-mod-cache
+    host:
+      path: /var/cache/drone/go/pkg/mod
+  - name: go-build-cache
+    host:
+      path: /var/cache/drone/go/build
+  - name: cargo-registry
+    host:
+      path: /var/cache/drone/cargo/registry
+  - name: cargo-git
+    host:
+      path: /var/cache/drone/cargo/git
+
 steps:
   - name: build-libraries
     image: ghcr.io/paulefl/generic-builder:latest
+    volumes:
+      - name: cargo-registry
+        path: /usr/local/cargo/registry
+      - name: cargo-git
+        path: /usr/local/cargo/git
     environment:
       SRC: /drone/src
       OUTPUT: /drone/src/bin
@@ -34,6 +53,11 @@ steps:
   - name: test-c-lib-pytest
     image: ghcr.io/paulefl/generic-builder:latest
     depends_on: [build-libraries]
+    volumes:
+      - name: go-mod-cache
+        path: /go/pkg/mod
+      - name: go-build-cache
+        path: /root/.cache/go-build
     environment:
       STEP: test-c-lib-pytest
       CMD: |
@@ -47,6 +71,11 @@ steps:
   - name: test-c-lib-go
     image: ghcr.io/paulefl/generic-builder:latest
     depends_on: [build-libraries]
+    volumes:
+      - name: go-mod-cache
+        path: /go/pkg/mod
+      - name: go-build-cache
+        path: /root/.cache/go-build
     environment:
       STEP: test-c-lib-go
       CMD: |
@@ -58,6 +87,11 @@ steps:
   - name: test-c-lib-cgo
     image: golang:1.24
     depends_on: [build-libraries]
+    volumes:
+      - name: go-mod-cache
+        path: /go/pkg/mod
+      - name: go-build-cache
+        path: /root/.cache/go-build
     environment:
       CGO_ENABLED: "1"
       STEP: test-c-lib-cgo
@@ -72,6 +106,11 @@ steps:
   - name: test-rust-lib
     image: ghcr.io/paulefl/generic-builder:latest
     depends_on: [build-libraries]
+    volumes:
+      - name: cargo-registry
+        path: /usr/local/cargo/registry
+      - name: cargo-git
+        path: /usr/local/cargo/git
     environment:
       STEP: test-rust-lib
       CMD: cargo test --manifest-path project/rust-lib/Cargo.toml
@@ -81,6 +120,11 @@ steps:
   - name: test-go
     image: ghcr.io/paulefl/generic-builder:latest
     depends_on: [build-libraries]
+    volumes:
+      - name: go-mod-cache
+        path: /go/pkg/mod
+      - name: go-build-cache
+        path: /root/.cache/go-build
     environment:
       COVERPKG: ./pkg/hal/,./pkg/hal/mock/,./pkg/hal/config/
       TEST_PACKAGES: ./pkg/hal/ ./pkg/hal/mock/ ./pkg/hal/config/
@@ -180,9 +224,28 @@ trigger:
 image_pull_secrets:
   - dockerconfigjson
 
+volumes:
+  - name: go-mod-cache
+    host:
+      path: /var/cache/drone/go/pkg/mod
+  - name: go-build-cache
+    host:
+      path: /var/cache/drone/go/build
+  - name: cargo-registry
+    host:
+      path: /var/cache/drone/cargo/registry
+  - name: cargo-git
+    host:
+      path: /var/cache/drone/cargo/git
+
 steps:
   - name: test-hal-unit
     image: golang:1.24
+    volumes:
+      - name: go-mod-cache
+        path: /go/pkg/mod
+      - name: go-build-cache
+        path: /root/.cache/go-build
     environment:
       STEP: test-hal-unit
       CMD: "(cd project/go-api && go test ./pkg/hal/ ./pkg/hal/mock/ ./pkg/hal/config/ -v -count=1)"
@@ -191,6 +254,11 @@ steps:
 
   - name: lint-go
     image: golang:1.24
+    volumes:
+      - name: go-mod-cache
+        path: /go/pkg/mod
+      - name: go-build-cache
+        path: /root/.cache/go-build
     environment:
       STEP: lint-go
       CMD: make lint
@@ -200,6 +268,15 @@ steps:
   - name: build-go-api
     image: ghcr.io/paulefl/generic-builder:latest
     depends_on: [test-hal-unit]
+    volumes:
+      - name: go-mod-cache
+        path: /go/pkg/mod
+      - name: go-build-cache
+        path: /root/.cache/go-build
+      - name: cargo-registry
+        path: /usr/local/cargo/registry
+      - name: cargo-git
+        path: /usr/local/cargo/git
     environment:
       SRC: /drone/src
       OUTPUT: /drone/src/bin
@@ -324,9 +401,22 @@ trigger:
   paths:
     - tools/**
 
+volumes:
+  - name: go-mod-cache
+    host:
+      path: /var/cache/drone/go/pkg/mod
+  - name: go-build-cache
+    host:
+      path: /var/cache/drone/go/build
+
 steps:
   - name: lint-cli
     image: golang:1.24
+    volumes:
+      - name: go-mod-cache
+        path: /go/pkg/mod
+      - name: go-build-cache
+        path: /root/.cache/go-build
     environment:
       STEP: lint-cli
       CMD: |
@@ -337,6 +427,11 @@ steps:
 
   - name: lint-tui
     image: golang:1.24
+    volumes:
+      - name: go-mod-cache
+        path: /go/pkg/mod
+      - name: go-build-cache
+        path: /root/.cache/go-build
     environment:
       STEP: lint-tui
       CMD: "(cd tools/tui && go mod tidy && go vet ./...)"
@@ -346,6 +441,11 @@ steps:
   - name: build-cli-linux-amd64
     image: golang:1.24
     depends_on: [lint-cli]
+    volumes:
+      - name: go-mod-cache
+        path: /go/pkg/mod
+      - name: go-build-cache
+        path: /root/.cache/go-build
     environment:
       GOOS: linux
       GOARCH: amd64
@@ -358,6 +458,11 @@ steps:
   - name: build-cli-linux-arm
     image: golang:1.24
     depends_on: [lint-cli]
+    volumes:
+      - name: go-mod-cache
+        path: /go/pkg/mod
+      - name: go-build-cache
+        path: /root/.cache/go-build
     environment:
       GOOS: linux
       GOARCH: arm
@@ -371,6 +476,11 @@ steps:
   - name: build-cli-darwin-amd64
     image: golang:1.24
     depends_on: [lint-cli]
+    volumes:
+      - name: go-mod-cache
+        path: /go/pkg/mod
+      - name: go-build-cache
+        path: /root/.cache/go-build
     environment:
       GOOS: darwin
       GOARCH: amd64
@@ -383,6 +493,11 @@ steps:
   - name: build-cli-darwin-arm64
     image: golang:1.24
     depends_on: [lint-cli]
+    volumes:
+      - name: go-mod-cache
+        path: /go/pkg/mod
+      - name: go-build-cache
+        path: /root/.cache/go-build
     environment:
       GOOS: darwin
       GOARCH: arm64
@@ -395,6 +510,11 @@ steps:
   - name: build-cli-windows-amd64
     image: golang:1.24
     depends_on: [lint-cli]
+    volumes:
+      - name: go-mod-cache
+        path: /go/pkg/mod
+      - name: go-build-cache
+        path: /root/.cache/go-build
     environment:
       GOOS: windows
       GOARCH: amd64
@@ -407,6 +527,11 @@ steps:
   - name: build-tui-linux-amd64
     image: golang:1.24
     depends_on: [lint-tui]
+    volumes:
+      - name: go-mod-cache
+        path: /go/pkg/mod
+      - name: go-build-cache
+        path: /root/.cache/go-build
     environment:
       GOOS: linux
       GOARCH: amd64
@@ -419,6 +544,11 @@ steps:
   - name: build-tui-linux-armv7
     image: golang:1.24
     depends_on: [lint-tui]
+    volumes:
+      - name: go-mod-cache
+        path: /go/pkg/mod
+      - name: go-build-cache
+        path: /root/.cache/go-build
     environment:
       GOOS: linux
       GOARCH: arm
@@ -432,6 +562,11 @@ steps:
   - name: build-tui-darwin-amd64
     image: golang:1.24
     depends_on: [lint-tui]
+    volumes:
+      - name: go-mod-cache
+        path: /go/pkg/mod
+      - name: go-build-cache
+        path: /root/.cache/go-build
     environment:
       GOOS: darwin
       GOARCH: amd64
@@ -630,9 +765,28 @@ trigger:
 image_pull_secrets:
   - dockerconfigjson
 
+volumes:
+  - name: go-mod-cache
+    host:
+      path: /var/cache/drone/go/pkg/mod
+  - name: go-build-cache
+    host:
+      path: /var/cache/drone/go/build
+  - name: cargo-registry
+    host:
+      path: /var/cache/drone/cargo/registry
+  - name: cargo-git
+    host:
+      path: /var/cache/drone/cargo/git
+
 steps:
   - name: build-arm
     image: ghcr.io/paulefl/generic-builder:latest
+    volumes:
+      - name: cargo-registry
+        path: /usr/local/cargo/registry
+      - name: cargo-git
+        path: /usr/local/cargo/git
     environment:
       SRC: /drone/src
       OUTPUT: /drone/src/bin
@@ -644,6 +798,11 @@ steps:
 
   - name: build-cli
     image: golang:1.24
+    volumes:
+      - name: go-mod-cache
+        path: /go/pkg/mod
+      - name: go-build-cache
+        path: /root/.cache/go-build
     environment:
       STEP: build-cli
       CMD: |
@@ -659,6 +818,11 @@ steps:
 
   - name: build-tui
     image: golang:1.24
+    volumes:
+      - name: go-mod-cache
+        path: /go/pkg/mod
+      - name: go-build-cache
+        path: /root/.cache/go-build
     environment:
       STEP: build-tui
       CMD: |
@@ -891,9 +1055,28 @@ trigger:
     - scripts/**
     - docs/**
 
+volumes:
+  - name: go-mod-cache
+    host:
+      path: /var/cache/drone/go/pkg/mod
+  - name: go-build-cache
+    host:
+      path: /var/cache/drone/go/build
+  - name: pip-cache
+    host:
+      path: /var/cache/drone/pip
+  - name: gem-cache
+    host:
+      path: /var/cache/drone/gem
+
 steps:
   - name: go-tests-with-coverage
     image: golang:1.24
+    volumes:
+      - name: go-mod-cache
+        path: /go/pkg/mod
+      - name: go-build-cache
+        path: /root/.cache/go-build
     environment:
       STEP: go-tests-with-coverage
       CMD: |
@@ -924,6 +1107,9 @@ steps:
 
   - name: python-tests
     image: python:3.12-alpine
+    volumes:
+      - name: pip-cache
+        path: /root/.cache/pip
     environment:
       STEP: python-tests
       CMD: |
@@ -935,6 +1121,9 @@ steps:
 
   - name: python-security
     image: python:3.12-alpine
+    volumes:
+      - name: pip-cache
+        path: /root/.cache/pip
     environment:
       STEP: python-security
       CMD: |
@@ -969,6 +1158,9 @@ steps:
 
   - name: adoc-build
     image: asciidoctor/docker-asciidoctor:latest
+    volumes:
+      - name: gem-cache
+        path: /usr/local/bundle
     environment:
       STEP: adoc-build
       CMD: |
@@ -981,6 +1173,9 @@ steps:
   - name: strictdoc-export
     image: python:3.12-slim
     depends_on: [go-tests-with-coverage]
+    volumes:
+      - name: pip-cache
+        path: /root/.cache/pip
     environment:
       STEP: strictdoc-export
       CMD: |
@@ -1032,6 +1227,9 @@ steps:
   - name: strictdoc-coverage-gate
     image: python:3.12-slim
     depends_on: [strictdoc-export]
+    volumes:
+      - name: pip-cache
+        path: /root/.cache/pip
     environment:
       STEP: strictdoc-coverage-gate
       CMD: |
@@ -1055,6 +1253,9 @@ steps:
   - name: sonarqube-report
     image: python:3.12-alpine
     depends_on: [go-tests-with-coverage, c-coverage, python-security]
+    volumes:
+      - name: pip-cache
+        path: /root/.cache/pip
     environment:
       STEP: sonarqube-report
       CMD: |
