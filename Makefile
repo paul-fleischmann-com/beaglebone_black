@@ -114,8 +114,12 @@ upload-allure:
 	@mkdir -p ~/.ssh
 	@echo "$$SSH_KEY" > ~/.ssh/id_ed25519
 	@chmod 600 ~/.ssh/id_ed25519
-	cat allure-report.zip | ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 -i ~/.ssh/id_ed25519 \
-		deploy@192.168.2.55 "mkdir -p /var/www/downloads/$(PIPELINE)/ && cat > /var/www/downloads/$(PIPELINE)/allure-report.zip"
+	@for i in 1 2 3 4 5; do \
+		cat allure-report.zip | ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 -i ~/.ssh/id_ed25519 \
+			deploy@192.168.2.55 "mkdir -p /var/www/downloads/$(PIPELINE)/ && cat > /var/www/downloads/$(PIPELINE)/allure-report.zip" \
+			&& exit 0; \
+		echo "Retry $$i/5 ..."; sleep $$i; \
+	done; exit 1
 
 release-candidate:
 	VERSION=$(VERSION) ./scripts/ci-release-candidate.sh
