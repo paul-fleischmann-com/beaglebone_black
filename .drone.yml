@@ -34,6 +34,9 @@ volumes:
   - name: cargo-git
     host:
       path: /var/cache/drone/cargo/git
+  - name: www-downloads
+    host:
+      path: /var/www/downloads
 
 steps:
   - name: build-libraries
@@ -177,30 +180,16 @@ steps:
     when:
       status: [success, failure]
 
-  - name: upload-allure
-    image: appleboy/drone-scp@sha256:fa5bce5d58d4c265e88519bdee0fcd6d5721888c97dd3f3665632b38e7329384
+  - name: publish-allure
+    image: alpine
+    volumes:
+      - name: www-downloads
+        path: /var/www/downloads
     depends_on: [allure-generate]
-    settings:
-      host: 192.168.2.55
-      username: deploy
-      key:
-        from_secret: ssh_key
-      source: allure-report.zip
-      target: /var/www/downloads/1-libraries/
-      mkdir: true
-    when:
-      status: [success, failure]
-
-  - name: unzip-allure
-    image: appleboy/drone-ssh
-    depends_on: [upload-allure]
-    settings:
-      host: 192.168.2.55
-      username: deploy
-      key:
-        from_secret: ssh_key
-      script:
-        - cd /var/www/downloads/1-libraries && unzip -o allure-report.zip
+    commands:
+      - apk add --no-cache unzip -q
+      - mkdir -p /var/www/downloads/1-libraries
+      - unzip -o allure-report.zip -d /var/www/downloads/1-libraries/
     when:
       status: [success, failure]
 
@@ -239,6 +228,9 @@ volumes:
   - name: cargo-git
     host:
       path: /var/cache/drone/cargo/git
+  - name: www-downloads
+    host:
+      path: /var/www/downloads
 
 steps:
   - name: test-hal-unit
@@ -361,30 +353,16 @@ steps:
     when:
       status: [success, failure]
 
-  - name: upload-allure
-    image: appleboy/drone-scp@sha256:fa5bce5d58d4c265e88519bdee0fcd6d5721888c97dd3f3665632b38e7329384
+  - name: publish-allure
+    image: alpine
+    volumes:
+      - name: www-downloads
+        path: /var/www/downloads
     depends_on: [allure-generate]
-    settings:
-      host: 192.168.2.55
-      username: deploy
-      key:
-        from_secret: ssh_key
-      source: allure-report.zip
-      target: /var/www/downloads/2-embedded-sw/
-      mkdir: true
-    when:
-      status: [success, failure]
-
-  - name: unzip-allure
-    image: appleboy/drone-ssh
-    depends_on: [upload-allure]
-    settings:
-      host: 192.168.2.55
-      username: deploy
-      key:
-        from_secret: ssh_key
-      script:
-        - cd /var/www/downloads/2-embedded-sw && unzip -o allure-report.zip
+    commands:
+      - apk add --no-cache unzip -q
+      - mkdir -p /var/www/downloads/2-embedded-sw
+      - unzip -o allure-report.zip -d /var/www/downloads/2-embedded-sw/
     when:
       status: [success, failure]
 
@@ -413,6 +391,9 @@ volumes:
   - name: go-build-cache
     host:
       path: /var/cache/drone/go/build
+  - name: www-downloads
+    host:
+      path: /var/www/downloads
 
 steps:
   - name: lint-cli
@@ -638,28 +619,16 @@ steps:
     when:
       status: [success, failure]
 
-  - name: upload-allure
+  - name: publish-allure
     image: alpine
+    volumes:
+      - name: www-downloads
+        path: /var/www/downloads
     depends_on: [allure-generate]
-    environment:
-      SSH_KEY:
-        from_secret: ssh_key
     commands:
-      - apk add --no-cache openssh-client make -q
-      - make upload-allure PIPELINE=3-tools
-    when:
-      status: [success, failure]
-
-  - name: unzip-allure
-    image: appleboy/drone-ssh
-    depends_on: [upload-allure]
-    settings:
-      host: 192.168.2.55
-      username: deploy
-      key:
-        from_secret: ssh_key
-      script:
-        - cd /var/www/downloads/3-tools && unzip -o allure-report.zip
+      - apk add --no-cache unzip -q
+      - mkdir -p /var/www/downloads/3-tools
+      - unzip -o allure-report.zip -d /var/www/downloads/3-tools/
     when:
       status: [success, failure]
 
@@ -680,6 +649,11 @@ trigger:
     exclude: [refs/tags/*]
   paths:
     - tools/web-gui/**
+
+volumes:
+  - name: www-downloads
+    host:
+      path: /var/www/downloads
 
 steps:
   - name: validate-html
@@ -728,30 +702,16 @@ steps:
     when:
       status: [success, failure]
 
-  - name: upload-allure
-    image: appleboy/drone-scp@sha256:fa5bce5d58d4c265e88519bdee0fcd6d5721888c97dd3f3665632b38e7329384
+  - name: publish-allure
+    image: alpine
+    volumes:
+      - name: www-downloads
+        path: /var/www/downloads
     depends_on: [allure-generate]
-    settings:
-      host: 192.168.2.55
-      username: deploy
-      key:
-        from_secret: ssh_key
-      source: allure-report.zip
-      target: /var/www/downloads/4-webapp/
-      mkdir: true
-    when:
-      status: [success, failure]
-
-  - name: unzip-allure
-    image: appleboy/drone-ssh
-    depends_on: [upload-allure]
-    settings:
-      host: 192.168.2.55
-      username: deploy
-      key:
-        from_secret: ssh_key
-      script:
-        - cd /var/www/downloads/4-webapp && unzip -o allure-report.zip
+    commands:
+      - apk add --no-cache unzip -q
+      - mkdir -p /var/www/downloads/4-webapp
+      - unzip -o allure-report.zip -d /var/www/downloads/4-webapp/
     when:
       status: [success, failure]
 
@@ -785,6 +745,9 @@ volumes:
   - name: cargo-git
     host:
       path: /var/cache/drone/cargo/git
+  - name: www-downloads
+    host:
+      path: /var/www/downloads
 
 steps:
   - name: build-arm
@@ -938,30 +901,16 @@ steps:
     when:
       status: [success, failure]
 
-  - name: upload-allure
-    image: appleboy/drone-scp@sha256:fa5bce5d58d4c265e88519bdee0fcd6d5721888c97dd3f3665632b38e7329384
+  - name: publish-allure
+    image: alpine
+    volumes:
+      - name: www-downloads
+        path: /var/www/downloads
     depends_on: [allure-generate]
-    settings:
-      host: 192.168.2.55
-      username: deploy
-      key:
-        from_secret: ssh_key
-      source: allure-report.zip
-      target: /var/www/downloads/5-release/
-      mkdir: true
-    when:
-      status: [success, failure]
-
-  - name: unzip-allure
-    image: appleboy/drone-ssh
-    depends_on: [upload-allure]
-    settings:
-      host: 192.168.2.55
-      username: deploy
-      key:
-        from_secret: ssh_key
-      script:
-        - cd /var/www/downloads/5-release && unzip -o allure-report.zip
+    commands:
+      - apk add --no-cache unzip -q
+      - mkdir -p /var/www/downloads/5-release
+      - unzip -o allure-report.zip -d /var/www/downloads/5-release/
     when:
       status: [success, failure]
 
@@ -979,6 +928,11 @@ image_pull_secrets:
 trigger:
   event: [cron]
   cron: [nightly]
+
+volumes:
+  - name: www-downloads
+    host:
+      path: /var/www/downloads
 
 steps:
   - name: test-all-backends
@@ -1020,30 +974,16 @@ steps:
     when:
       status: [success, failure]
 
-  - name: upload-allure
-    image: appleboy/drone-scp@sha256:fa5bce5d58d4c265e88519bdee0fcd6d5721888c97dd3f3665632b38e7329384
+  - name: publish-allure
+    image: alpine
+    volumes:
+      - name: www-downloads
+        path: /var/www/downloads
     depends_on: [allure-generate]
-    settings:
-      host: 192.168.2.55
-      username: deploy
-      key:
-        from_secret: ssh_key
-      source: allure-report.zip
-      target: /var/www/downloads/6-nightly/
-      mkdir: true
-    when:
-      status: [success, failure]
-
-  - name: unzip-allure
-    image: appleboy/drone-ssh
-    depends_on: [upload-allure]
-    settings:
-      host: 192.168.2.55
-      username: deploy
-      key:
-        from_secret: ssh_key
-      script:
-        - cd /var/www/downloads/6-nightly && unzip -o allure-report.zip
+    commands:
+      - apk add --no-cache unzip -q
+      - mkdir -p /var/www/downloads/6-nightly
+      - unzip -o allure-report.zip -d /var/www/downloads/6-nightly/
     when:
       status: [success, failure]
 
@@ -1081,6 +1021,9 @@ volumes:
   - name: gem-cache
     host:
       path: /var/cache/drone/gem
+  - name: www-downloads
+    host:
+      path: /var/www/downloads
 
 steps:
   - name: go-tests-with-coverage
@@ -1370,30 +1313,16 @@ steps:
     when:
       status: [success, failure]
 
-  - name: upload-allure
-    image: appleboy/drone-scp@sha256:fa5bce5d58d4c265e88519bdee0fcd6d5721888c97dd3f3665632b38e7329384
+  - name: publish-allure
+    image: alpine
+    volumes:
+      - name: www-downloads
+        path: /var/www/downloads
     depends_on: [allure-generate]
-    settings:
-      host: 192.168.2.55
-      username: deploy
-      key:
-        from_secret: ssh_key
-      source: allure-report.zip
-      target: /var/www/downloads/7-reports/
-      mkdir: true
-    when:
-      status: [success, failure]
-
-  - name: unzip-allure
-    image: appleboy/drone-ssh
-    depends_on: [upload-allure]
-    settings:
-      host: 192.168.2.55
-      username: deploy
-      key:
-        from_secret: ssh_key
-      script:
-        - cd /var/www/downloads/7-reports && unzip -o allure-report.zip
+    commands:
+      - apk add --no-cache unzip -q
+      - mkdir -p /var/www/downloads/7-reports
+      - unzip -o allure-report.zip -d /var/www/downloads/7-reports/
     when:
       status: [success, failure]
 
@@ -1415,6 +1344,10 @@ trigger:
   paths:
     - arch/model/**
 
+volumes:
+  - name: www-downloads
+    host:
+      path: /var/www/downloads
 
 steps:
   - name: validate-model
@@ -1511,30 +1444,16 @@ steps:
     when:
       status: [success, failure]
 
-  - name: upload-allure
-    image: appleboy/drone-scp@sha256:fa5bce5d58d4c265e88519bdee0fcd6d5721888c97dd3f3665632b38e7329384
+  - name: publish-allure
+    image: alpine
+    volumes:
+      - name: www-downloads
+        path: /var/www/downloads
     depends_on: [allure-generate]
-    settings:
-      host: 192.168.2.55
-      username: deploy
-      key:
-        from_secret: ssh_key
-      source: allure-report.zip
-      target: /var/www/downloads/8-bausteinsicht/
-      mkdir: true
-    when:
-      status: [success, failure]
-
-  - name: unzip-allure
-    image: appleboy/drone-ssh
-    depends_on: [upload-allure]
-    settings:
-      host: 192.168.2.55
-      username: deploy
-      key:
-        from_secret: ssh_key
-      script:
-        - cd /var/www/downloads/8-bausteinsicht && unzip -o allure-report.zip
+    commands:
+      - apk add --no-cache unzip -q
+      - mkdir -p /var/www/downloads/8-bausteinsicht
+      - unzip -o allure-report.zip -d /var/www/downloads/8-bausteinsicht/
     when:
       status: [success, failure]
 
@@ -1558,6 +1477,11 @@ trigger:
     - docker/bausteinsicht/**
     - docker/strictdoc/**
     - scripts/build-container.sh
+
+volumes:
+  - name: www-downloads
+    host:
+      path: /var/www/downloads
 
 steps:
   - name: build-generic-builder
@@ -1625,30 +1549,16 @@ steps:
     when:
       status: [success, failure]
 
-  - name: upload-allure
-    image: appleboy/drone-scp@sha256:fa5bce5d58d4c265e88519bdee0fcd6d5721888c97dd3f3665632b38e7329384
+  - name: publish-allure
+    image: alpine
+    volumes:
+      - name: www-downloads
+        path: /var/www/downloads
     depends_on: [allure-generate]
-    settings:
-      host: 192.168.2.55
-      username: deploy
-      key:
-        from_secret: ssh_key
-      source: allure-report.zip
-      target: /var/www/downloads/9-build-container/
-      mkdir: true
-    when:
-      status: [success, failure]
-
-  - name: unzip-allure
-    image: appleboy/drone-ssh
-    depends_on: [upload-allure]
-    settings:
-      host: 192.168.2.55
-      username: deploy
-      key:
-        from_secret: ssh_key
-      script:
-        - cd /var/www/downloads/9-build-container && unzip -o allure-report.zip
+    commands:
+      - apk add --no-cache unzip -q
+      - mkdir -p /var/www/downloads/9-build-container
+      - unzip -o allure-report.zip -d /var/www/downloads/9-build-container/
     when:
       status: [success, failure]
 
@@ -1667,6 +1577,11 @@ trigger:
   event: [tag]
   ref:
     include: [refs/tags/*-toTestOnTarget]
+
+volumes:
+  - name: www-downloads
+    host:
+      path: /var/www/downloads
 
 steps:
   - name: download-release-assets
@@ -1838,30 +1753,16 @@ steps:
     when:
       status: [success, failure]
 
-  - name: upload-allure
-    image: appleboy/drone-scp@sha256:fa5bce5d58d4c265e88519bdee0fcd6d5721888c97dd3f3665632b38e7329384
+  - name: publish-allure
+    image: alpine
+    volumes:
+      - name: www-downloads
+        path: /var/www/downloads
     depends_on: [allure-generate]
-    settings:
-      host: 192.168.2.55
-      username: deploy
-      key:
-        from_secret: ssh_key
-      source: allure-report.zip
-      target: /var/www/downloads/10-integration-tests/
-      mkdir: true
-    when:
-      status: [success, failure]
-
-  - name: unzip-allure
-    image: appleboy/drone-ssh
-    depends_on: [upload-allure]
-    settings:
-      host: 192.168.2.55
-      username: deploy
-      key:
-        from_secret: ssh_key
-      script:
-        - cd /var/www/downloads/10-integration-tests && unzip -o allure-report.zip
+    commands:
+      - apk add --no-cache unzip -q
+      - mkdir -p /var/www/downloads/10-integration-tests
+      - unzip -o allure-report.zip -d /var/www/downloads/10-integration-tests/
     when:
       status: [success, failure]
 
@@ -1879,6 +1780,11 @@ image_pull_secrets:
 trigger:
   event: [promote]
   target: [release-patch, release-minor, release-major]
+
+volumes:
+  - name: www-downloads
+    host:
+      path: /var/www/downloads
 
 steps:
   - name: bump-version
@@ -1926,30 +1832,16 @@ steps:
     when:
       status: [success, failure]
 
-  - name: upload-allure
-    image: appleboy/drone-scp@sha256:fa5bce5d58d4c265e88519bdee0fcd6d5721888c97dd3f3665632b38e7329384
+  - name: publish-allure
+    image: alpine
+    volumes:
+      - name: www-downloads
+        path: /var/www/downloads
     depends_on: [allure-generate]
-    settings:
-      host: 192.168.2.55
-      username: deploy
-      key:
-        from_secret: ssh_key
-      source: allure-report.zip
-      target: /var/www/downloads/11-version-bump/
-      mkdir: true
-    when:
-      status: [success, failure]
-
-  - name: unzip-allure
-    image: appleboy/drone-ssh
-    depends_on: [upload-allure]
-    settings:
-      host: 192.168.2.55
-      username: deploy
-      key:
-        from_secret: ssh_key
-      script:
-        - cd /var/www/downloads/11-version-bump && unzip -o allure-report.zip
+    commands:
+      - apk add --no-cache unzip -q
+      - mkdir -p /var/www/downloads/11-version-bump
+      - unzip -o allure-report.zip -d /var/www/downloads/11-version-bump/
     when:
       status: [success, failure]
 
@@ -1970,6 +1862,11 @@ trigger:
   paths:
     - project/**
     - tools/**
+
+volumes:
+  - name: www-downloads
+    host:
+      path: /var/www/downloads
 
 steps:
   - name: update-changelog
@@ -2017,30 +1914,16 @@ steps:
     when:
       status: [success, failure]
 
-  - name: upload-allure
-    image: appleboy/drone-scp@sha256:fa5bce5d58d4c265e88519bdee0fcd6d5721888c97dd3f3665632b38e7329384
+  - name: publish-allure
+    image: alpine
+    volumes:
+      - name: www-downloads
+        path: /var/www/downloads
     depends_on: [allure-generate]
-    settings:
-      host: 192.168.2.55
-      username: deploy
-      key:
-        from_secret: ssh_key
-      source: allure-report.zip
-      target: /var/www/downloads/12-changelog/
-      mkdir: true
-    when:
-      status: [success, failure]
-
-  - name: unzip-allure
-    image: appleboy/drone-ssh
-    depends_on: [upload-allure]
-    settings:
-      host: 192.168.2.55
-      username: deploy
-      key:
-        from_secret: ssh_key
-      script:
-        - cd /var/www/downloads/12-changelog && unzip -o allure-report.zip
+    commands:
+      - apk add --no-cache unzip -q
+      - mkdir -p /var/www/downloads/12-changelog
+      - unzip -o allure-report.zip -d /var/www/downloads/12-changelog/
     when:
       status: [success, failure]
 
