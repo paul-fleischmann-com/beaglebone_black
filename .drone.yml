@@ -400,7 +400,7 @@ image_pull_secrets:
   - dockerconfigjson
 
 trigger:
-  event: [push, pull_request, custom]
+  event: [push, pull_request, custom, promote]
   branch:
     exclude: [refs/tags/*]
   paths:
