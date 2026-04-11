@@ -109,6 +109,14 @@ build-arm:
 checksums:
 	./scripts/ci-checksums.sh
 
+upload-allure:
+	@if [ -z "$$SSH_KEY" ]; then echo "SSH_KEY not set"; exit 1; fi
+	@mkdir -p ~/.ssh
+	@echo "$$SSH_KEY" > ~/.ssh/id_ed25519
+	@chmod 600 ~/.ssh/id_ed25519
+	ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_ed25519 deploy@192.168.2.55 "mkdir -p /var/www/downloads/$(PIPELINE)/"
+	scp -o StrictHostKeyChecking=no -i ~/.ssh/id_ed25519 allure-report.zip deploy@192.168.2.55:/var/www/downloads/$(PIPELINE)/
+
 release-candidate:
 	VERSION=$(VERSION) ./scripts/ci-release-candidate.sh
 

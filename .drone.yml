@@ -639,16 +639,14 @@ steps:
       status: [success, failure]
 
   - name: upload-allure
-    image: appleboy/drone-scp@sha256:fa5bce5d58d4c265e88519bdee0fcd6d5721888c97dd3f3665632b38e7329384
+    image: alpine
     depends_on: [allure-generate]
-    settings:
-      host: 192.168.2.55
-      username: deploy
-      key:
+    environment:
+      SSH_KEY:
         from_secret: ssh_key
-      source: allure-report.zip
-      target: /var/www/downloads/3-tools/
-      mkdir: true
+    commands:
+      - apk add --no-cache openssh-client make -q
+      - make upload-allure PIPELINE=3-tools
     when:
       status: [success, failure]
 
