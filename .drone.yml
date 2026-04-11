@@ -178,7 +178,7 @@ steps:
       status: [success, failure]
 
   - name: upload-allure
-    image: appleboy/drone-scp
+    image: appleboy/drone-scp@sha256:fa5bce5d58d4c265e88519bdee0fcd6d5721888c97dd3f3665632b38e7329384
     depends_on: [allure-generate]
     settings:
       host: 192.168.2.55
@@ -289,7 +289,7 @@ steps:
       - sh scripts/run-step.sh
 
   - name: deploy-beaglebone
-    image: appleboy/drone-scp
+    image: appleboy/drone-scp@sha256:fa5bce5d58d4c265e88519bdee0fcd6d5721888c97dd3f3665632b38e7329384
     depends_on: [build-go-api]
     settings:
       host:
@@ -362,7 +362,7 @@ steps:
       status: [success, failure]
 
   - name: upload-allure
-    image: appleboy/drone-scp
+    image: appleboy/drone-scp@sha256:fa5bce5d58d4c265e88519bdee0fcd6d5721888c97dd3f3665632b38e7329384
     depends_on: [allure-generate]
     settings:
       host: 192.168.2.55
@@ -639,19 +639,16 @@ steps:
       status: [success, failure]
 
   - name: upload-allure
-    image: alpine
+    image: appleboy/drone-scp@sha256:fa5bce5d58d4c265e88519bdee0fcd6d5721888c97dd3f3665632b38e7329384
     depends_on: [allure-generate]
-    environment:
-      SSH_KEY:
+    settings:
+      host: 192.168.2.55
+      username: deploy
+      key:
         from_secret: ssh_key
-    commands:
-      - apk add --no-cache openssh-client
-      - ls -la allure-report.zip
-      - mkdir -p ~/.ssh
-      - echo "$SSH_KEY" > ~/.ssh/id_ed25519
-      - chmod 600 ~/.ssh/id_ed25519
-      - ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 -i ~/.ssh/id_ed25519 deploy@192.168.2.55 "mkdir -p /var/www/downloads/3-tools/"
-      - scp -o StrictHostKeyChecking=no -i ~/.ssh/id_ed25519 allure-report.zip deploy@192.168.2.55:/var/www/downloads/3-tools/
+      source: allure-report.zip
+      target: /var/www/downloads/3-tools/
+      mkdir: true
     when:
       status: [success, failure]
 
@@ -734,7 +731,7 @@ steps:
       status: [success, failure]
 
   - name: upload-allure
-    image: appleboy/drone-scp
+    image: appleboy/drone-scp@sha256:fa5bce5d58d4c265e88519bdee0fcd6d5721888c97dd3f3665632b38e7329384
     depends_on: [allure-generate]
     settings:
       host: 192.168.2.55
@@ -944,7 +941,7 @@ steps:
       status: [success, failure]
 
   - name: upload-allure
-    image: appleboy/drone-scp
+    image: appleboy/drone-scp@sha256:fa5bce5d58d4c265e88519bdee0fcd6d5721888c97dd3f3665632b38e7329384
     depends_on: [allure-generate]
     settings:
       host: 192.168.2.55
@@ -1026,7 +1023,7 @@ steps:
       status: [success, failure]
 
   - name: upload-allure
-    image: appleboy/drone-scp
+    image: appleboy/drone-scp@sha256:fa5bce5d58d4c265e88519bdee0fcd6d5721888c97dd3f3665632b38e7329384
     depends_on: [allure-generate]
     settings:
       host: 192.168.2.55
@@ -1220,7 +1217,7 @@ steps:
       - sh scripts/run-step.sh
 
   - name: upload
-    image: appleboy/drone-scp
+    image: appleboy/drone-scp@sha256:fa5bce5d58d4c265e88519bdee0fcd6d5721888c97dd3f3665632b38e7329384
     depends_on: [prepare-reports]
     settings:
       host: 192.168.2.55
@@ -1376,7 +1373,7 @@ steps:
       status: [success, failure]
 
   - name: upload-allure
-    image: appleboy/drone-scp
+    image: appleboy/drone-scp@sha256:fa5bce5d58d4c265e88519bdee0fcd6d5721888c97dd3f3665632b38e7329384
     depends_on: [allure-generate]
     settings:
       host: 192.168.2.55
@@ -1517,7 +1514,7 @@ steps:
       status: [success, failure]
 
   - name: upload-allure
-    image: appleboy/drone-scp
+    image: appleboy/drone-scp@sha256:fa5bce5d58d4c265e88519bdee0fcd6d5721888c97dd3f3665632b38e7329384
     depends_on: [allure-generate]
     settings:
       host: 192.168.2.55
@@ -1631,7 +1628,7 @@ steps:
       status: [success, failure]
 
   - name: upload-allure
-    image: appleboy/drone-scp
+    image: appleboy/drone-scp@sha256:fa5bce5d58d4c265e88519bdee0fcd6d5721888c97dd3f3665632b38e7329384
     depends_on: [allure-generate]
     settings:
       host: 192.168.2.55
@@ -1696,7 +1693,7 @@ steps:
       - sh scripts/run-step.sh
 
   - name: deploy-to-bbb
-    image: appleboy/drone-scp
+    image: appleboy/drone-scp@sha256:fa5bce5d58d4c265e88519bdee0fcd6d5721888c97dd3f3665632b38e7329384
     depends_on: [download-release-assets]
     settings:
       host:
@@ -1844,7 +1841,7 @@ steps:
       status: [success, failure]
 
   - name: upload-allure
-    image: appleboy/drone-scp
+    image: appleboy/drone-scp@sha256:fa5bce5d58d4c265e88519bdee0fcd6d5721888c97dd3f3665632b38e7329384
     depends_on: [allure-generate]
     settings:
       host: 192.168.2.55
@@ -1932,7 +1929,7 @@ steps:
       status: [success, failure]
 
   - name: upload-allure
-    image: appleboy/drone-scp
+    image: appleboy/drone-scp@sha256:fa5bce5d58d4c265e88519bdee0fcd6d5721888c97dd3f3665632b38e7329384
     depends_on: [allure-generate]
     settings:
       host: 192.168.2.55
@@ -2023,7 +2020,7 @@ steps:
       status: [success, failure]
 
   - name: upload-allure
-    image: appleboy/drone-scp
+    image: appleboy/drone-scp@sha256:fa5bce5d58d4c265e88519bdee0fcd6d5721888c97dd3f3665632b38e7329384
     depends_on: [allure-generate]
     settings:
       host: 192.168.2.55
@@ -2082,7 +2079,7 @@ steps:
       - bash scripts/allure-dashboard.sh
 
   - name: upload-dashboard
-    image: appleboy/drone-scp
+    image: appleboy/drone-scp@sha256:fa5bce5d58d4c265e88519bdee0fcd6d5721888c97dd3f3665632b38e7329384
     depends_on: [generate-dashboard]
     settings:
       host: 192.168.2.55
