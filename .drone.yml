@@ -41,6 +41,7 @@ volumes:
 steps:
   - name: build-libraries
     image: ghcr.io/paulefl/generic-builder:latest
+    pull: if_not_exists
     volumes:
       - name: cargo-registry
         path: /usr/local/cargo/registry
@@ -56,6 +57,7 @@ steps:
 
   - name: test-c-lib-pytest
     image: ghcr.io/paulefl/generic-builder:latest
+    pull: if_not_exists
     depends_on: [build-libraries]
     volumes:
       - name: go-mod-cache
@@ -74,6 +76,7 @@ steps:
 
   - name: test-c-lib-go
     image: ghcr.io/paulefl/generic-builder:latest
+    pull: if_not_exists
     depends_on: [build-libraries]
     volumes:
       - name: go-mod-cache
@@ -90,6 +93,7 @@ steps:
 
   - name: test-c-lib-cgo
     image: golang:1.24
+    pull: if_not_exists
     depends_on: [build-libraries]
     volumes:
       - name: go-mod-cache
@@ -109,6 +113,7 @@ steps:
 
   - name: test-rust-lib
     image: ghcr.io/paulefl/generic-builder:latest
+    pull: if_not_exists
     depends_on: [build-libraries]
     volumes:
       - name: cargo-registry
@@ -123,6 +128,7 @@ steps:
 
   - name: test-go
     image: ghcr.io/paulefl/generic-builder:latest
+    pull: if_not_exists
     depends_on: [build-libraries]
     volumes:
       - name: go-mod-cache
@@ -155,6 +161,7 @@ steps:
 
   - name: junit-reports-pipe1
     image: ghcr.io/rohit-gohri/drone-junit:v0
+    pull: if_not_exists
     depends_on: [build-libraries, test-c-lib-pytest, test-c-lib-go, test-go]
     settings:
       paths: reports/*.xml
@@ -164,6 +171,7 @@ steps:
 
   - name: generate-junit
     image: alpine
+    pull: if_not_exists
     depends_on: [build-libraries, test-c-lib-pytest, test-c-lib-go, test-c-lib-cgo, test-rust-lib, test-go]
     commands:
       - apk add --no-cache bash
@@ -173,6 +181,7 @@ steps:
 
   - name: allure-generate
     image: eclipse-temurin:17-jre
+    pull: if_not_exists
     depends_on: [generate-junit]
     commands:
       - bash scripts/allure-generate.sh 1-libraries
@@ -182,6 +191,7 @@ steps:
 
   - name: publish-allure
     image: alpine
+    pull: if_not_exists
     volumes:
       - name: www-downloads
         path: /var/www/downloads
@@ -234,6 +244,7 @@ volumes:
 steps:
   - name: test-hal-unit
     image: golang:1.24
+    pull: if_not_exists
     volumes:
       - name: go-mod-cache
         path: /go/pkg/mod
@@ -247,6 +258,7 @@ steps:
 
   - name: lint-go
     image: golang:1.24
+    pull: if_not_exists
     volumes:
       - name: go-mod-cache
         path: /go/pkg/mod
@@ -260,6 +272,7 @@ steps:
 
   - name: build-go-api
     image: ghcr.io/paulefl/generic-builder:latest
+    pull: if_not_exists
     depends_on: [test-hal-unit]
     volumes:
       - name: go-mod-cache
@@ -281,6 +294,7 @@ steps:
 
   - name: deploy-beaglebone
     image: appleboy/drone-scp@sha256:fa5bce5d58d4c265e88519bdee0fcd6d5721888c97dd3f3665632b38e7329384
+    pull: if_not_exists
     depends_on: [build-go-api]
     settings:
       host:
@@ -301,6 +315,7 @@ steps:
 
   - name: restart-service
     image: appleboy/drone-ssh
+    pull: if_not_exists
     depends_on: [deploy-beaglebone]
     settings:
       host:
@@ -320,6 +335,7 @@ steps:
 
   - name: test-hardware-all-backends
     image: python:3.12-alpine
+    pull: if_not_exists
     depends_on: [restart-service]
     environment:
       BEAGLE_HOST:
@@ -336,6 +352,7 @@ steps:
 
   - name: generate-junit
     image: alpine
+    pull: if_not_exists
     depends_on: [test-hal-unit, lint-go, build-go-api, test-hardware-all-backends]
     commands:
       - apk add --no-cache bash
@@ -345,6 +362,7 @@ steps:
 
   - name: allure-generate
     image: eclipse-temurin:17-jre
+    pull: if_not_exists
     depends_on: [generate-junit]
     commands:
       - bash scripts/allure-generate.sh 2-embedded-sw
@@ -354,6 +372,7 @@ steps:
 
   - name: publish-allure
     image: alpine
+    pull: if_not_exists
     volumes:
       - name: www-downloads
         path: /var/www/downloads
@@ -396,6 +415,7 @@ volumes:
 steps:
   - name: lint-cli
     image: golang:1.24
+    pull: if_not_exists
     volumes:
       - name: go-mod-cache
         path: /go/pkg/mod
@@ -411,6 +431,7 @@ steps:
 
   - name: lint-tui
     image: golang:1.24
+    pull: if_not_exists
     volumes:
       - name: go-mod-cache
         path: /go/pkg/mod
@@ -424,6 +445,7 @@ steps:
 
   - name: build-cli-linux-amd64
     image: golang:1.24
+    pull: if_not_exists
     depends_on: [lint-cli]
     volumes:
       - name: go-mod-cache
@@ -441,6 +463,7 @@ steps:
 
   - name: build-cli-linux-arm
     image: golang:1.24
+    pull: if_not_exists
     depends_on: [lint-cli]
     volumes:
       - name: go-mod-cache
@@ -459,6 +482,7 @@ steps:
 
   - name: build-cli-darwin-amd64
     image: golang:1.24
+    pull: if_not_exists
     depends_on: [lint-cli]
     volumes:
       - name: go-mod-cache
@@ -476,6 +500,7 @@ steps:
 
   - name: build-cli-darwin-arm64
     image: golang:1.24
+    pull: if_not_exists
     depends_on: [lint-cli]
     volumes:
       - name: go-mod-cache
@@ -493,6 +518,7 @@ steps:
 
   - name: build-cli-windows-amd64
     image: golang:1.24
+    pull: if_not_exists
     depends_on: [lint-cli]
     volumes:
       - name: go-mod-cache
@@ -510,6 +536,7 @@ steps:
 
   - name: build-tui-linux-amd64
     image: golang:1.24
+    pull: if_not_exists
     depends_on: [lint-tui]
     volumes:
       - name: go-mod-cache
@@ -527,6 +554,7 @@ steps:
 
   - name: build-tui-linux-armv7
     image: golang:1.24
+    pull: if_not_exists
     depends_on: [lint-tui]
     volumes:
       - name: go-mod-cache
@@ -545,6 +573,7 @@ steps:
 
   - name: build-tui-darwin-amd64
     image: golang:1.24
+    pull: if_not_exists
     depends_on: [lint-tui]
     volumes:
       - name: go-mod-cache
@@ -562,6 +591,7 @@ steps:
 
   - name: validate-web-gui
     image: python:3.12-alpine
+    pull: if_not_exists
     environment:
       STEP: validate-web-gui
       CMD: |
@@ -576,6 +606,7 @@ steps:
 
   - name: shellcheck
     image: koalaman/shellcheck-alpine:stable
+    pull: if_not_exists
     environment:
       STEP: shellcheck
       CMD: shellcheck --severity=error scripts/*.sh
@@ -584,6 +615,7 @@ steps:
 
   - name: checksums
     image: alpine
+    pull: if_not_exists
     depends_on:
       - build-cli-linux-amd64
       - build-cli-linux-arm
@@ -601,6 +633,7 @@ steps:
 
   - name: generate-junit
     image: alpine
+    pull: if_not_exists
     depends_on: [lint-cli, lint-tui, build-cli-linux-amd64, build-cli-linux-arm, build-cli-darwin-amd64, build-cli-darwin-arm64, build-cli-windows-amd64, build-tui-linux-amd64, build-tui-linux-armv7, build-tui-darwin-amd64, validate-web-gui, shellcheck, checksums]
     commands:
       - apk add --no-cache bash
@@ -610,6 +643,7 @@ steps:
 
   - name: allure-generate
     image: eclipse-temurin:17-jre
+    pull: if_not_exists
     depends_on: [generate-junit]
     commands:
       - bash scripts/allure-generate.sh 3-tools
@@ -619,6 +653,7 @@ steps:
 
   - name: publish-allure
     image: alpine
+    pull: if_not_exists
     volumes:
       - name: www-downloads
         path: /var/www/downloads
@@ -655,6 +690,7 @@ volumes:
 steps:
   - name: validate-html
     image: python:3.12-alpine
+    pull: if_not_exists
     environment:
       STEP: validate-html
       CMD: |
@@ -669,6 +705,7 @@ steps:
 
   - name: package-web-gui
     image: alpine
+    pull: if_not_exists
     depends_on: [validate-html]
     environment:
       STEP: package-web-gui
@@ -683,6 +720,7 @@ steps:
 
   - name: generate-junit
     image: alpine
+    pull: if_not_exists
     depends_on: [validate-html, package-web-gui]
     commands:
       - apk add --no-cache bash
@@ -692,6 +730,7 @@ steps:
 
   - name: allure-generate
     image: eclipse-temurin:17-jre
+    pull: if_not_exists
     depends_on: [generate-junit]
     commands:
       - bash scripts/allure-generate.sh 4-webapp
@@ -701,6 +740,7 @@ steps:
 
   - name: publish-allure
     image: alpine
+    pull: if_not_exists
     volumes:
       - name: www-downloads
         path: /var/www/downloads
@@ -748,6 +788,7 @@ volumes:
 steps:
   - name: build-arm
     image: ghcr.io/paulefl/generic-builder:latest
+    pull: if_not_exists
     volumes:
       - name: cargo-registry
         path: /usr/local/cargo/registry
@@ -764,6 +805,7 @@ steps:
 
   - name: build-cli
     image: golang:1.24
+    pull: if_not_exists
     volumes:
       - name: go-mod-cache
         path: /go/pkg/mod
@@ -784,6 +826,7 @@ steps:
 
   - name: build-tui
     image: golang:1.24
+    pull: if_not_exists
     volumes:
       - name: go-mod-cache
         path: /go/pkg/mod
@@ -802,6 +845,7 @@ steps:
 
   - name: build-web-gui
     image: alpine
+    pull: if_not_exists
     environment:
       STEP: build-web-gui
       CMD: |
@@ -815,6 +859,7 @@ steps:
 
   - name: checksums
     image: alpine
+    pull: if_not_exists
     depends_on: [build-arm, build-cli, build-tui, build-web-gui]
     environment:
       STEP: checksums
@@ -824,6 +869,7 @@ steps:
 
   - name: build-docker-image
     image: quay.io/podman/stable
+    pull: if_not_exists
     privileged: true
     depends_on: [build-arm]
     environment:
@@ -840,6 +886,7 @@ steps:
 
   - name: create-release
     image: plugins/github-release
+    pull: if_not_exists
     depends_on: [build-docker-image, checksums]
     settings:
       api_key: {from_secret: github_token}
@@ -862,6 +909,7 @@ steps:
 
   - name: create-toTestOnTarget-release
     image: plugins/github-release
+    pull: if_not_exists
     depends_on: [create-release]
     settings:
       api_key: {from_secret: github_token}
@@ -881,6 +929,7 @@ steps:
 
   - name: generate-junit
     image: alpine
+    pull: if_not_exists
     depends_on: [build-arm, build-cli, build-tui, build-web-gui, checksums, build-docker-image]
     commands:
       - apk add --no-cache bash
@@ -890,6 +939,7 @@ steps:
 
   - name: allure-generate
     image: eclipse-temurin:17-jre
+    pull: if_not_exists
     depends_on: [generate-junit]
     commands:
       - bash scripts/allure-generate.sh 5-release
@@ -899,6 +949,7 @@ steps:
 
   - name: publish-allure
     image: alpine
+    pull: if_not_exists
     volumes:
       - name: www-downloads
         path: /var/www/downloads
@@ -932,6 +983,7 @@ volumes:
 steps:
   - name: test-all-backends
     image: python:3.12-alpine
+    pull: if_not_exists
     environment:
       BEAGLE_HOST: {from_secret: beagle_host}
       STEP: test-all-backends
@@ -943,6 +995,7 @@ steps:
 
   - name: notify-slack
     image: plugins/slack
+    pull: if_not_exists
     depends_on: [test-all-backends]
     settings:
       webhook: {from_secret: slack_webhook}
@@ -953,6 +1006,7 @@ steps:
 
   - name: generate-junit
     image: alpine
+    pull: if_not_exists
     depends_on: [test-all-backends]
     commands:
       - apk add --no-cache bash
@@ -962,6 +1016,7 @@ steps:
 
   - name: allure-generate
     image: eclipse-temurin:17-jre
+    pull: if_not_exists
     depends_on: [generate-junit]
     commands:
       - bash scripts/allure-generate.sh 6-nightly
@@ -971,6 +1026,7 @@ steps:
 
   - name: publish-allure
     image: alpine
+    pull: if_not_exists
     volumes:
       - name: www-downloads
         path: /var/www/downloads
@@ -1022,6 +1078,7 @@ volumes:
 steps:
   - name: go-tests-with-coverage
     image: golang:1.24
+    pull: if_not_exists
     volumes:
       - name: go-mod-cache
         path: /go/pkg/mod
@@ -1048,6 +1105,7 @@ steps:
 
   - name: junit-reports-pipe-7
     image: ghcr.io/rohit-gohri/drone-junit:v0
+    pull: if_not_exists
     depends_on: [go-tests-with-coverage]
     settings:
       paths: reports/go-tests-junit.xml
@@ -1057,6 +1115,7 @@ steps:
 
   - name: python-tests
     image: python:3.12-alpine
+    pull: if_not_exists
     volumes:
       - name: pip-cache
         path: /root/.cache/pip
@@ -1071,6 +1130,7 @@ steps:
 
   - name: python-security
     image: python:3.12-alpine
+    pull: if_not_exists
     volumes:
       - name: pip-cache
         path: /root/.cache/pip
@@ -1086,6 +1146,7 @@ steps:
 
   - name: shellcheck
     image: koalaman/shellcheck-alpine:stable
+    pull: if_not_exists
     environment:
       STEP: shellcheck
       CMD: |
@@ -1096,6 +1157,7 @@ steps:
 
   - name: c-coverage
     image: debian:bookworm
+    pull: if_not_exists
     environment:
       STEP: c-coverage
       CMD: |
@@ -1108,6 +1170,7 @@ steps:
 
   - name: adoc-build
     image: asciidoctor/docker-asciidoctor:latest
+    pull: if_not_exists
     volumes:
       - name: gem-cache
         path: /usr/local/bundle
@@ -1122,6 +1185,7 @@ steps:
 
   - name: strictdoc-export
     image: python:3.12-slim
+    pull: if_not_exists
     depends_on: [go-tests-with-coverage]
     volumes:
       - name: pip-cache
@@ -1140,6 +1204,7 @@ steps:
 
   - name: prepare-reports
     image: alpine
+    pull: if_not_exists
     depends_on: [strictdoc-export]
     environment:
       STEP: prepare-reports
@@ -1153,6 +1218,7 @@ steps:
 
   - name: upload
     image: appleboy/drone-scp@sha256:fa5bce5d58d4c265e88519bdee0fcd6d5721888c97dd3f3665632b38e7329384
+    pull: if_not_exists
     depends_on: [prepare-reports]
     settings:
       host: 192.168.2.55
@@ -1164,6 +1230,7 @@ steps:
 
   - name: print-url
     image: alpine
+    pull: if_not_exists
     depends_on: [upload]
     environment:
       STEP: print-url
@@ -1176,6 +1243,7 @@ steps:
 
   - name: strictdoc-coverage-gate
     image: python:3.12-slim
+    pull: if_not_exists
     depends_on: [strictdoc-export]
     volumes:
       - name: pip-cache
@@ -1193,6 +1261,7 @@ steps:
 
   - name: junit-reports-req-coverage
     image: ghcr.io/rohit-gohri/drone-junit:v0
+    pull: if_not_exists
     depends_on: [strictdoc-coverage-gate]
     settings:
       paths: reports/req-coverage-junit.xml
@@ -1202,6 +1271,7 @@ steps:
 
   - name: sonarqube-report
     image: python:3.12-alpine
+    pull: if_not_exists
     depends_on: [go-tests-with-coverage, c-coverage, python-security]
     volumes:
       - name: pip-cache
@@ -1218,6 +1288,7 @@ steps:
 
   - name: sonarcloud-scan
     image: sonarsource/sonar-scanner-cli:latest
+    pull: if_not_exists
     depends_on: [go-tests-with-coverage, c-coverage, python-security]
     environment:
       STEP: sonarcloud-scan
@@ -1237,6 +1308,7 @@ steps:
 
   - name: collect-and-report
     image: python:3.12-slim
+    pull: if_not_exists
     depends_on:
       - go-tests-with-coverage
       - python-tests
@@ -1254,6 +1326,7 @@ steps:
 
   - name: quality-gates
     image: python:3.12-alpine
+    pull: if_not_exists
     depends_on: [collect-and-report]
     environment:
       STEP: quality-gates
@@ -1263,6 +1336,7 @@ steps:
 
   - name: package-artifacts
     image: alpine
+    pull: if_not_exists
     depends_on:
       - collect-and-report
       - adoc-build
@@ -1279,6 +1353,7 @@ steps:
 
   - name: notify
     image: plugins/slack
+    pull: if_not_exists
     depends_on: [quality-gates, package-artifacts]
     settings:
       webhook: {from_secret: slack_webhook}
@@ -1291,6 +1366,7 @@ steps:
 
   - name: generate-junit
     image: alpine
+    pull: if_not_exists
     depends_on: [go-tests-with-coverage, python-tests, python-security, shellcheck, c-coverage, adoc-build, strictdoc-export, prepare-reports, print-url, strictdoc-coverage-gate, sonarqube-report, sonarcloud-scan, collect-and-report, quality-gates, package-artifacts]
     commands:
       - apk add --no-cache bash
@@ -1300,6 +1376,7 @@ steps:
 
   - name: allure-generate
     image: eclipse-temurin:17-jre
+    pull: if_not_exists
     depends_on: [generate-junit]
     commands:
       - bash scripts/allure-generate.sh 7-reports
@@ -1309,6 +1386,7 @@ steps:
 
   - name: publish-allure
     image: alpine
+    pull: if_not_exists
     volumes:
       - name: www-downloads
         path: /var/www/downloads
@@ -1345,6 +1423,7 @@ volumes:
 steps:
   - name: validate-model
     image: ghcr.io/paulefl/bausteinsicht:latest
+    pull: if_not_exists
     environment:
       STEP: validate-model
       CMD: bausteinsicht validate --model arch/model/beaglebone_black.jsonc
@@ -1353,6 +1432,7 @@ steps:
 
   - name: export-plantuml
     image: ghcr.io/paulefl/bausteinsicht:latest
+    pull: if_not_exists
     depends_on: [validate-model]
     environment:
       STEP: export-plantuml
@@ -1364,6 +1444,7 @@ steps:
 
   - name: export-mermaid
     image: ghcr.io/paulefl/bausteinsicht:latest
+    pull: if_not_exists
     depends_on: [validate-model]
     environment:
       STEP: export-mermaid
@@ -1375,6 +1456,7 @@ steps:
 
   - name: export-table
     image: ghcr.io/paulefl/bausteinsicht:latest
+    pull: if_not_exists
     depends_on: [validate-model]
     environment:
       STEP: export-table
@@ -1386,6 +1468,7 @@ steps:
 
   - name: export-png
     image: ghcr.io/paulefl/bausteinsicht:latest
+    pull: if_not_exists
     depends_on: [export-plantuml, export-mermaid, export-table]
     environment:
       STEP: export-png
@@ -1398,6 +1481,7 @@ steps:
 
   - name: commit-exports
     image: alpine/git
+    pull: if_not_exists
     depends_on: [export-png]
     environment:
       GIT_TOKEN: {from_secret: git_token}
@@ -1421,6 +1505,7 @@ steps:
 
   - name: generate-junit
     image: alpine
+    pull: if_not_exists
     depends_on: [validate-model, export-plantuml, export-mermaid, export-table, export-png, commit-exports]
     commands:
       - apk add --no-cache bash
@@ -1430,6 +1515,7 @@ steps:
 
   - name: allure-generate
     image: eclipse-temurin:17-jre
+    pull: if_not_exists
     depends_on: [generate-junit]
     commands:
       - bash scripts/allure-generate.sh 8-bausteinsicht
@@ -1439,6 +1525,7 @@ steps:
 
   - name: publish-allure
     image: alpine
+    pull: if_not_exists
     volumes:
       - name: www-downloads
         path: /var/www/downloads
@@ -1478,6 +1565,7 @@ volumes:
 steps:
   - name: build-generic-builder
     image: quay.io/podman/stable
+    pull: if_not_exists
     privileged: true
     environment:
       REGISTRY_USER:  {from_secret: registry_user}
@@ -1490,6 +1578,7 @@ steps:
 
   - name: clone-bausteinsicht-repo
     image: alpine/git
+    pull: if_not_exists
     environment:
       GIT_TOKEN: {from_secret: Bau_token}
       STEP: clone-bausteinsicht-repo
@@ -1499,6 +1588,7 @@ steps:
 
   - name: build-bausteinsicht
     image: quay.io/podman/stable
+    pull: if_not_exists
     privileged: true
     depends_on: [clone-bausteinsicht-repo]
     environment:
@@ -1514,6 +1604,7 @@ steps:
 
   - name: build-strictdoc
     image: quay.io/podman/stable
+    pull: if_not_exists
     privileged: true
     environment:
       REGISTRY_USER:  {from_secret: registry_user}
@@ -1525,6 +1616,7 @@ steps:
 
   - name: generate-junit
     image: alpine
+    pull: if_not_exists
     depends_on: [build-generic-builder, build-bausteinsicht, build-strictdoc, clone-bausteinsicht-repo]
     commands:
       - apk add --no-cache bash
@@ -1534,6 +1626,7 @@ steps:
 
   - name: allure-generate
     image: eclipse-temurin:17-jre
+    pull: if_not_exists
     depends_on: [generate-junit]
     commands:
       - bash scripts/allure-generate.sh 9-build-container
@@ -1543,6 +1636,7 @@ steps:
 
   - name: publish-allure
     image: alpine
+    pull: if_not_exists
     volumes:
       - name: www-downloads
         path: /var/www/downloads
@@ -1577,6 +1671,7 @@ volumes:
 steps:
   - name: download-release-assets
     image: alpine
+    pull: if_not_exists
     environment:
       GIT_TOKEN: {from_secret: git_token}
       STEP: download-release-assets
@@ -1598,6 +1693,7 @@ steps:
 
   - name: deploy-to-bbb
     image: appleboy/drone-scp@sha256:fa5bce5d58d4c265e88519bdee0fcd6d5721888c97dd3f3665632b38e7329384
+    pull: if_not_exists
     depends_on: [download-release-assets]
     settings:
       host:
@@ -1615,6 +1711,7 @@ steps:
 
   - name: restart-bbb-service
     image: appleboy/drone-ssh
+    pull: if_not_exists
     depends_on: [deploy-to-bbb]
     settings:
       host:
@@ -1630,6 +1727,7 @@ steps:
 
   - name: test-hardware
     image: python:3.12-alpine
+    pull: if_not_exists
     depends_on: [restart-bbb-service]
     environment:
       BEAGLE_HOST:
@@ -1643,6 +1741,7 @@ steps:
 
   - name: test-api
     image: python:3.12-alpine
+    pull: if_not_exists
     depends_on: [restart-bbb-service]
     environment:
       BEAGLE_HOST:
@@ -1656,6 +1755,7 @@ steps:
 
   - name: test-uart-on-bbb
     image: python:3.12-alpine
+    pull: if_not_exists
     depends_on: [restart-bbb-service]
     environment:
       BEAGLE_HOST:
@@ -1672,6 +1772,7 @@ steps:
 
   - name: test-cli-on-bbb
     image: appleboy/drone-ssh
+    pull: if_not_exists
     depends_on: [restart-bbb-service]
     settings:
       host:
@@ -1688,6 +1789,7 @@ steps:
 
   - name: test-cli-remote
     image: python:3.12-alpine
+    pull: if_not_exists
     depends_on: [restart-bbb-service]
     environment:
       BEAGLE_HOST:
@@ -1703,6 +1805,7 @@ steps:
 
   - name: promote-to-stable
     image: alpine
+    pull: if_not_exists
     depends_on:
       - test-hardware
       - test-api
@@ -1728,6 +1831,7 @@ steps:
 
   - name: generate-junit
     image: alpine
+    pull: if_not_exists
     depends_on: [download-release-assets, test-hardware, test-api, test-uart-on-bbb, test-cli-remote, promote-to-stable]
     commands:
       - apk add --no-cache bash
@@ -1737,6 +1841,7 @@ steps:
 
   - name: allure-generate
     image: eclipse-temurin:17-jre
+    pull: if_not_exists
     depends_on: [generate-junit]
     commands:
       - bash scripts/allure-generate.sh 10-integration-tests
@@ -1746,6 +1851,7 @@ steps:
 
   - name: publish-allure
     image: alpine
+    pull: if_not_exists
     volumes:
       - name: www-downloads
         path: /var/www/downloads
@@ -1779,6 +1885,7 @@ volumes:
 steps:
   - name: bump-version
     image: alpine/git
+    pull: if_not_exists
     environment:
       GIT_TOKEN: {from_secret: git_token}
       GIT_USER:  {from_secret: git_user}
@@ -1806,6 +1913,7 @@ steps:
 
   - name: generate-junit
     image: alpine
+    pull: if_not_exists
     depends_on: [bump-version]
     commands:
       - apk add --no-cache bash
@@ -1815,6 +1923,7 @@ steps:
 
   - name: allure-generate
     image: eclipse-temurin:17-jre
+    pull: if_not_exists
     depends_on: [generate-junit]
     commands:
       - bash scripts/allure-generate.sh 11-version-bump
@@ -1824,6 +1933,7 @@ steps:
 
   - name: publish-allure
     image: alpine
+    pull: if_not_exists
     volumes:
       - name: www-downloads
         path: /var/www/downloads
@@ -1860,6 +1970,7 @@ volumes:
 steps:
   - name: update-changelog
     image: alpine/git
+    pull: if_not_exists
     environment:
       GIT_TOKEN: {from_secret: git_token}
       GIT_USER:  {from_secret: git_user}
@@ -1887,6 +1998,7 @@ steps:
 
   - name: generate-junit
     image: alpine
+    pull: if_not_exists
     depends_on: [update-changelog]
     commands:
       - apk add --no-cache bash
@@ -1896,6 +2008,7 @@ steps:
 
   - name: allure-generate
     image: eclipse-temurin:17-jre
+    pull: if_not_exists
     depends_on: [generate-junit]
     commands:
       - bash scripts/allure-generate.sh 12-changelog
@@ -1905,6 +2018,7 @@ steps:
 
   - name: publish-allure
     image: alpine
+    pull: if_not_exists
     volumes:
       - name: www-downloads
         path: /var/www/downloads
@@ -1944,11 +2058,13 @@ trigger:
 steps:
   - name: generate-dashboard
     image: eclipse-temurin:17-jre
+    pull: if_not_exists
     commands:
       - bash scripts/allure-dashboard.sh
 
   - name: upload-dashboard
     image: appleboy/drone-scp@sha256:fa5bce5d58d4c265e88519bdee0fcd6d5721888c97dd3f3665632b38e7329384
+    pull: if_not_exists
     depends_on: [generate-dashboard]
     settings:
       host: 192.168.2.55
@@ -1963,6 +2079,7 @@ steps:
 
   - name: unzip-dashboard
     image: appleboy/drone-ssh
+    pull: if_not_exists
     depends_on: [upload-dashboard]
     settings:
       host: 192.168.2.55
@@ -1997,6 +2114,7 @@ volumes:
 steps:
   - name: prune-images
     image: docker:cli
+    pull: if_not_exists
     volumes:
       - name: docker-sock
         path: /var/run/docker.sock
