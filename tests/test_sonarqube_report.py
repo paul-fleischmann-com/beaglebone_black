@@ -6,7 +6,7 @@ import tempfile
 from unittest.mock import patch, MagicMock
 from io import BytesIO
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "scripts"))
 from sonarqube_report import build_report, SEVERITY_EMOJI, TYPE_LABEL
 
 
