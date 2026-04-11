@@ -19,8 +19,6 @@ trigger:
     - project/go-api/pkg/hal/**
     - scripts/build-arm.sh
     - docker/builder/**
-  target:
-    - lib
 
 
 volumes:
@@ -767,6 +765,9 @@ kind: pipeline
 type: docker
 name: 5-release
 
+image_pull_secrets:
+  - dockerconfigjson
+
 trigger:
   event: [tag]
   ref:
@@ -974,6 +975,8 @@ kind: pipeline
 type: docker
 name: 6-nightly
 
+image_pull_secrets:
+  - dockerconfigjson
 
 trigger:
   event: [cron]
@@ -1054,6 +1057,8 @@ kind: pipeline
 type: docker
 name: 7-reports
 
+image_pull_secrets:
+  - dockerconfigjson
 
 trigger:
   event: [push, pull_request, custom]
@@ -1402,6 +1407,9 @@ kind: pipeline
 type: docker
 name: 8-bausteinsicht
 
+image_pull_secrets:
+  - dockerconfigjson
+
 trigger:
   event: [push, pull_request, custom]
   branch:
@@ -1540,6 +1548,8 @@ kind: pipeline
 type: docker
 name: 9-build-container
 
+image_pull_secrets:
+  - dockerconfigjson
 
 trigger:
   event: [push, custom]
@@ -1652,6 +1662,8 @@ kind: pipeline
 type: docker
 name: 10-integration-tests
 
+image_pull_secrets:
+  - dockerconfigjson
 
 trigger:
   event: [tag]
@@ -1863,6 +1875,8 @@ kind: pipeline
 type: docker
 name: 11-version-bump
 
+image_pull_secrets:
+  - dockerconfigjson
 
 trigger:
   event: [promote]
@@ -1949,6 +1963,8 @@ kind: pipeline
 type: docker
 name: 12-changelog
 
+image_pull_secrets:
+  - dockerconfigjson
 
 trigger:
   event: [push, pull_request, custom]
@@ -2038,6 +2054,8 @@ kind: pipeline
 type: docker
 name: 13-dashboard
 
+image_pull_secrets:
+  - dockerconfigjson
 
 depends_on:
   - 1-libraries
@@ -2095,6 +2113,8 @@ kind: pipeline
 type: docker
 name: 14-cleanup
 
+image_pull_secrets:
+  - dockerconfigjson
 
 trigger:
   event: [cron]
