@@ -6,6 +6,9 @@ kind: pipeline
 type: docker
 name: 1-libraries
 
+image_pull_secrets:
+  - dockerconfigjson
+
 trigger:
   event: [push, pull_request, custom, promote]
   branch:
@@ -211,6 +214,9 @@ kind: pipeline
 type: docker
 name: 2-embedded-sw
 
+image_pull_secrets:
+  - dockerconfigjson
+
 trigger:
   event: [push, pull_request, custom]
   branch:
@@ -392,6 +398,8 @@ kind: pipeline
 type: docker
 name: 3-tools
 
+image_pull_secrets:
+  - dockerconfigjson
 
 trigger:
   event: [push, pull_request, custom]
@@ -667,6 +675,8 @@ kind: pipeline
 type: docker
 name: 4-webapp
 
+image_pull_secrets:
+  - dockerconfigjson
 
 trigger:
   event: [push, pull_request, custom]
