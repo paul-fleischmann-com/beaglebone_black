@@ -187,9 +187,8 @@ steps:
         path: /var/www/downloads
     depends_on: [allure-generate]
     commands:
-      - apk add --no-cache unzip -q
-      - mkdir -p /var/www/downloads/1-libraries
-      - unzip -o allure-report.zip -d /var/www/downloads/1-libraries/
+      - apk add --no-cache make unzip -q
+      - make publish-allure PIPELINE=1-libraries
     when:
       status: [success, failure]
 
@@ -360,9 +359,8 @@ steps:
         path: /var/www/downloads
     depends_on: [allure-generate]
     commands:
-      - apk add --no-cache unzip -q
-      - mkdir -p /var/www/downloads/2-embedded-sw
-      - unzip -o allure-report.zip -d /var/www/downloads/2-embedded-sw/
+      - apk add --no-cache make unzip -q
+      - make publish-allure PIPELINE=2-embedded-sw
     when:
       status: [success, failure]
 
@@ -626,9 +624,8 @@ steps:
         path: /var/www/downloads
     depends_on: [allure-generate]
     commands:
-      - apk add --no-cache unzip -q
-      - mkdir -p /var/www/downloads/3-tools
-      - unzip -o allure-report.zip -d /var/www/downloads/3-tools/
+      - apk add --no-cache make unzip -q
+      - make publish-allure PIPELINE=3-tools
     when:
       status: [success, failure]
 
@@ -709,9 +706,8 @@ steps:
         path: /var/www/downloads
     depends_on: [allure-generate]
     commands:
-      - apk add --no-cache unzip -q
-      - mkdir -p /var/www/downloads/4-webapp
-      - unzip -o allure-report.zip -d /var/www/downloads/4-webapp/
+      - apk add --no-cache make unzip -q
+      - make publish-allure PIPELINE=4-webapp
     when:
       status: [success, failure]
 
@@ -908,9 +904,8 @@ steps:
         path: /var/www/downloads
     depends_on: [allure-generate]
     commands:
-      - apk add --no-cache unzip -q
-      - mkdir -p /var/www/downloads/5-release
-      - unzip -o allure-report.zip -d /var/www/downloads/5-release/
+      - apk add --no-cache make unzip -q
+      - make publish-allure PIPELINE=5-release
     when:
       status: [success, failure]
 
@@ -981,9 +976,8 @@ steps:
         path: /var/www/downloads
     depends_on: [allure-generate]
     commands:
-      - apk add --no-cache unzip -q
-      - mkdir -p /var/www/downloads/6-nightly
-      - unzip -o allure-report.zip -d /var/www/downloads/6-nightly/
+      - apk add --no-cache make unzip -q
+      - make publish-allure PIPELINE=6-nightly
     when:
       status: [success, failure]
 
@@ -1320,9 +1314,8 @@ steps:
         path: /var/www/downloads
     depends_on: [allure-generate]
     commands:
-      - apk add --no-cache unzip -q
-      - mkdir -p /var/www/downloads/7-reports
-      - unzip -o allure-report.zip -d /var/www/downloads/7-reports/
+      - apk add --no-cache make unzip -q
+      - make publish-allure PIPELINE=7-reports
     when:
       status: [success, failure]
 
@@ -1451,9 +1444,8 @@ steps:
         path: /var/www/downloads
     depends_on: [allure-generate]
     commands:
-      - apk add --no-cache unzip -q
-      - mkdir -p /var/www/downloads/8-bausteinsicht
-      - unzip -o allure-report.zip -d /var/www/downloads/8-bausteinsicht/
+      - apk add --no-cache make unzip -q
+      - make publish-allure PIPELINE=8-bausteinsicht
     when:
       status: [success, failure]
 
@@ -1556,9 +1548,8 @@ steps:
         path: /var/www/downloads
     depends_on: [allure-generate]
     commands:
-      - apk add --no-cache unzip -q
-      - mkdir -p /var/www/downloads/9-build-container
-      - unzip -o allure-report.zip -d /var/www/downloads/9-build-container/
+      - apk add --no-cache make unzip -q
+      - make publish-allure PIPELINE=9-build-container
     when:
       status: [success, failure]
 
@@ -1760,9 +1751,8 @@ steps:
         path: /var/www/downloads
     depends_on: [allure-generate]
     commands:
-      - apk add --no-cache unzip -q
-      - mkdir -p /var/www/downloads/10-integration-tests
-      - unzip -o allure-report.zip -d /var/www/downloads/10-integration-tests/
+      - apk add --no-cache make unzip -q
+      - make publish-allure PIPELINE=10-integration-tests
     when:
       status: [success, failure]
 
@@ -1839,9 +1829,8 @@ steps:
         path: /var/www/downloads
     depends_on: [allure-generate]
     commands:
-      - apk add --no-cache unzip -q
-      - mkdir -p /var/www/downloads/11-version-bump
-      - unzip -o allure-report.zip -d /var/www/downloads/11-version-bump/
+      - apk add --no-cache make unzip -q
+      - make publish-allure PIPELINE=11-version-bump
     when:
       status: [success, failure]
 
@@ -1921,9 +1910,8 @@ steps:
         path: /var/www/downloads
     depends_on: [allure-generate]
     commands:
-      - apk add --no-cache unzip -q
-      - mkdir -p /var/www/downloads/12-changelog
-      - unzip -o allure-report.zip -d /var/www/downloads/12-changelog/
+      - apk add --no-cache make unzip -q
+      - make publish-allure PIPELINE=12-changelog
     when:
       status: [success, failure]
 
