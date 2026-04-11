@@ -111,6 +111,7 @@ checksums:
 
 publish-allure:
 	@if [ -z "$(PIPELINE)" ]; then echo "PIPELINE not set"; exit 1; fi
+	chmod -R 777 /var/www/downloads/$(PIPELINE) 2>/dev/null || true
 	rm -rf /var/www/downloads/$(PIPELINE)
 	mkdir -p /var/www/downloads/$(PIPELINE)
 	unzip -o allure-report.zip -d /var/www/downloads/$(PIPELINE)/
