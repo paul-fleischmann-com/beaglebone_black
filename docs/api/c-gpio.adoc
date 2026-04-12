@@ -1,0 +1,160 @@
+= GPIO Treiber — C API Referenz
+:author: BeagleBone Black Project
+:revdate: 2026-04-12
+:doctype: article
+:toc: left
+:toc-title: Inhaltsverzeichnis
+:toclevels: 3
+:sectnums:
+:icons: font
+:source-highlighter: rouge
+:rouge-style: monokai
+:lang: de
+
+== Übersicht
+
+Der GPIO-Treiber steuert digitale Ein-/Ausgangspins des BeagleBone Black über das Linux sysfs-Interface.
+Pins werden über `/sys/class/gpio/` exportiert und konfiguriert.
+
+Quelle: `project/c/include/gpio.h`
+
+== Typdefinitionen
+
+=== gpio_direction_t
+
+Richtung eines GPIO-Pins.
+
+[source,c]
+----
+typedef enum {
+    GPIO_INPUT  = 0,
+    GPIO_OUTPUT = 1
+} gpio_direction_t;
+----
+
+[cols="1,1,3", options="header"]
+|===
+| Wert | Konstante | Beschreibung
+| `0` | `GPIO_INPUT` | Pin als Eingang konfigurieren
+| `1` | `GPIO_OUTPUT` | Pin als Ausgang konfigurieren
+|===
+
+== Funktionen
+
+=== gpio_export
+
+Exportiert einen GPIO-Pin ins sysfs-Interface. Muss vor der ersten Verwendung aufgerufen werden.
+
+[source,c]
+----
+int gpio_export(uint32_t pin);
+----
+
+[cols="1,1,3", options="header"]
+|===
+| Parameter | Typ | Beschreibung
+| pin | uint32_t | GPIO-Pin-Nummer (BBB-Nummerierung, z.B. 66 für P8_7)
+|===
+
+*Rückgabe:* `0` bei Erfolg, `-1` bei Fehler (z.B. sysfs nicht verfügbar)
+
+=== gpio_unexport
+
+Entfernt einen GPIO-Pin aus dem sysfs-Interface und gibt die Ressource frei.
+
+[source,c]
+----
+int gpio_unexport(uint32_t pin);
+----
+
+[cols="1,1,3", options="header"]
+|===
+| Parameter | Typ | Beschreibung
+| pin | uint32_t | GPIO-Pin-Nummer
+|===
+
+*Rückgabe:* `0` bei Erfolg, `-1` bei Fehler
+
+=== gpio_set_direction
+
+Konfiguriert die Richtung eines GPIO-Pins (Eingang oder Ausgang).
+
+[source,c]
+----
+int gpio_set_direction(uint32_t pin, gpio_direction_t dir);
+----
+
+[cols="1,1,3", options="header"]
+|===
+| Parameter | Typ | Beschreibung
+| pin | uint32_t | GPIO-Pin-Nummer
+| dir | gpio_direction_t | `GPIO_INPUT` oder `GPIO_OUTPUT`
+|===
+
+*Rückgabe:* `0` bei Erfolg, `-1` bei Fehler
+
+=== gpio_read
+
+Liest den aktuellen Wert eines GPIO-Pins.
+
+[source,c]
+----
+int gpio_read(uint32_t pin, int *value);
+----
+
+[cols="1,1,3", options="header"]
+|===
+| Parameter | Typ | Beschreibung
+| pin | uint32_t | GPIO-Pin-Nummer
+| value | int* | Zeiger auf Ausgabevariable: `0` = LOW, `1` = HIGH
+|===
+
+*Rückgabe:* `0` bei Erfolg, `-1` bei Fehler
+
+=== gpio_write
+
+Setzt den Ausgangswert eines als Ausgang konfigurierten GPIO-Pins.
+
+[source,c]
+----
+int gpio_write(uint32_t pin, int value);
+----
+
+[cols="1,1,3", options="header"]
+|===
+| Parameter | Typ | Beschreibung
+| pin | uint32_t | GPIO-Pin-Nummer
+| value | int | `0` = LOW, `1` = HIGH
+|===
+
+*Rückgabe:* `0` bei Erfolg, `-1` bei Fehler
+
+== Verwendungsbeispiel
+
+[source,c]
+----
+#include "gpio.h"
+
+// Pin exportieren und als Ausgang setzen
+gpio_export(66);
+gpio_set_direction(66, GPIO_OUTPUT);
+
+// Pin HIGH setzen
+gpio_write(66, 1);
+
+// Pin lesen
+int value;
+gpio_read(66, &value);
+printf("Pin 66: %s\n", value ? "HIGH" : "LOW");
+
+// Aufräumen
+gpio_unexport(66);
+----
+
+== Fehlerbehandlung
+
+Alle Funktionen geben `-1` zurück wenn:
+
+* Der Pin nicht exportiert wurde
+* Die sysfs-Einträge (`/sys/class/gpio/`) nicht verfügbar sind
+* Keine Schreibrechte auf die sysfs-Dateien bestehen (Root-Rechte nötig)

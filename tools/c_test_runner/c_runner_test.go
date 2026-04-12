@@ -34,13 +34,8 @@ func repoRoot() string {
 	return filepath.Join(filepath.Dir(f), "..", "..")
 }
 
-func cLibDir() string   { return filepath.Join(repoRoot(), "c-lib") }
-func testBin() string   { return filepath.Join(repoRoot(), "project", "c", "test", "test_runner") }
-func resultsDir() string {
-	d := filepath.Join(repoRoot(), "allure-results")
-	_ = os.MkdirAll(d, 0o755)
-	return d
-}
+func cLibDir() string { return filepath.Join(repoRoot(), "c-lib") }
+func testBin() string { return filepath.Join(repoRoot(), "project", "c", "test", "test_runner") }
 
 // ── Unity parser ──────────────────────────────────────────────────────────────
 
@@ -168,14 +163,14 @@ func writeResult(r unityResult, raw string) {
 	result := allure.NewResult(r.Name, "c-unity/"+r.Name)
 	result.Status = toAllureStatus(r.Status)
 	result.WithLabels(
-		allure.Label{Name: "epic",      Value: "C Hardware Drivers"},
-		allure.Label{Name: "feature",   Value: m.feature},
-		allure.Label{Name: "story",     Value: m.story},
-		allure.Label{Name: "severity",  Value: m.severity},
-		allure.Label{Name: "owner",     Value: "Adrian"},
-		allure.Label{Name: "framework", Value: "Unity"},
-		allure.Label{Name: "language",  Value: "C"},
-		allure.Label{Name: "priority",  Value: "high"},
+		&allure.Label{Name: "epic", Value: "C Hardware Drivers"},
+		&allure.Label{Name: "feature", Value: m.feature},
+		&allure.Label{Name: "story", Value: m.story},
+		&allure.Label{Name: "severity", Value: m.severity},
+		&allure.Label{Name: "owner", Value: "Adrian"},
+		&allure.Label{Name: "framework", Value: "Unity"},
+		&allure.Label{Name: "language", Value: "C"},
+		&allure.Label{Name: "priority", Value: "high"},
 	)
 	desc := r.Msg
 	if desc == "" {
@@ -184,20 +179,17 @@ func writeResult(r unityResult, raw string) {
 	}
 	result.Description = desc
 	if r.Msg != "" {
-		result.StatusDetails = &allure.StatusDetail{Message: r.Msg}
+		result.StatusDetails = allure.StatusDetail{Message: r.Msg}
 	}
 
 	// Steps: source → execute → assert
-	locStep := allure.NewSimpleInnerStep(
-		fmt.Sprintf("Source: %s:%d", filepath.Base(r.File), r.Line), allure.Passed)
-	locStep.Start, locStep.Stop = now, now+1
+	locStep := allure.NewStep(
+		fmt.Sprintf("Source: %s:%d", filepath.Base(r.File), r.Line), allure.Passed, now, now+1, nil)
 
-	execStep := allure.NewSimpleInnerStep(stepLabel(r.Name), toAllureStatus(r.Status))
-	execStep.Start, execStep.Stop = now+1, now+2
+	execStep := allure.NewStep(stepLabel(r.Name), toAllureStatus(r.Status), now+1, now+2, nil)
 
-	assertStep := allure.NewSimpleInnerStep(
-		fmt.Sprintf("Assert → %s", r.Status), toAllureStatus(r.Status))
-	assertStep.Start, assertStep.Stop = now+2, now+3
+	assertStep := allure.NewStep(
+		fmt.Sprintf("Assert → %s", r.Status), toAllureStatus(r.Status), now+2, now+3, nil)
 
 	result.Steps = []*allure.Step{locStep, execStep, assertStep}
 	result.Start, result.Stop = now, now+3
@@ -216,7 +208,7 @@ func writeResult(r unityResult, raw string) {
 		}
 	}
 
-	_ = result.Print(resultsDir())
+	_ = result.Print()
 }
 
 // ── Core helper — Go-Äquivalent zu Python _run_unity_test() ──────────────────

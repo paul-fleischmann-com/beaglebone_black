@@ -1,0 +1,206 @@
+{
+  "$schema": "https://raw.githubusercontent.com/docToolchain/Bausteinsicht/main/schema/bausteinsicht.schema.json",
+  "config": {
+    "metadata": true,
+    "legend": true,
+    "author": "BeagleBone Black Project",
+    "repo": "https://github.com/paulefl/beaglebone_black"
+  },
+  "specification": {
+    "elements": {
+      "actor": {
+        "notation": "Akteur",
+        "description": "Person oder Rolle, die mit dem System interagiert"
+      },
+      "client_tool": {
+        "notation": "Client Tool",
+        "description": "Werkzeug für die Interaktion mit der API"
+      },
+      "component": {
+        "notation": "Komponente",
+        "description": "Logisches Modul innerhalb eines Tools",
+        "container": true
+      },
+      "system": {
+        "notation": "Externes System",
+        "description": "Externes System oder Dienst",
+        "container": true
+      }
+    },
+    "relationships": {
+      "uses": {
+        "notation": "verwendet"
+      },
+      "calls": {
+        "notation": "HTTP REST"
+      }
+    }
+  },
+  "model": {
+    // ── Akteur ────────────────────────────────────────────────────────────────
+    "developer": {
+      "kind": "actor",
+      "title": "Entwickler / Operator",
+      "description": "Verwendet bbcli zur Steuerung und Überwachung des BeagleBone Black über die Kommandozeile"
+    },
+
+    // ── CLI Tool ──────────────────────────────────────────────────────────────
+    "bbcli": {
+      "kind": "client_tool",
+      "title": "bbcli",
+      "description": "Kommandozeilen-Tool (bbcli) zur Steuerung des BeagleBone Black über die REST API. Einstiegspunkt: main() delegiert an cmd.Execute(). Globale Flags: --host (default: 192.168.7.2), --port (default: 5000), --config, --verbose. Konfiguration via ~/.bbcli.yaml oder Umgebungsvariablen (Viper AutomaticEnv). Cross-compiled für mehrere Plattformen. Quelle: tools/cli/",
+      "technology": "Go 1.23 / github.com/spf13/cobra v1.10.2, github.com/spf13/viper v1.21.0",
+      "children": {
+        // ── Eingangspunkt ────────────────────────────────────────────────────
+        "root": {
+          "kind": "component",
+          "title": "Root Command",
+          "description": "Cobra-Root-Command `bbcli`. Registriert alle Subcommands per init(). Initialisiert Viper-Konfiguration (initConfig): liest ~/.bbcli.yaml oder per --config angegebene Datei. Stellt Hilfsfunktion apiURL() bereit → http://{host}:{port}. Quelle: tools/cli/cmd/root.go",
+          "technology": "Go / cobra.Command + viper"
+        },
+
+        // ── Subcommands ──────────────────────────────────────────────────────
+        "bme280-cmd": {
+          "kind": "component",
+          "title": "bme280 Command",
+          "description": "Subcommands für den BME280-Umgebungssensor: `read` (GET /api/v1/bme280 → gibt Temperatur °C, Luftfeuchtigkeit %, Luftdruck hPa, Höhe m und Backend aus), `stream` (polling alle 2 Sekunden mit einzeiliger Live-Ausgabe via time.Tick, läuft bis Ctrl+C). Quelle: tools/cli/cmd/bme280.go",
+          "technology": "Go / net/http, encoding/json, time"
+        },
+        "gpio-cmd": {
+          "kind": "component",
+          "title": "gpio Command",
+          "description": "Subcommands für GPIO-Pin-Steuerung: `read [pin]` (GET /api/v1/gpio/{pin} → zeigt HIGH/LOW-Status mit Farbsymbol), `write [pin] [0|1]` (POST /api/v1/gpio/{pin} mit JSON-Body {\"value\": int}, validiert Wert 0 oder 1). Quelle: tools/cli/cmd/gpio.go",
+          "technology": "Go / net/http, encoding/json, strconv"
+        },
+        "backend-cmd": {
+          "kind": "component",
+          "title": "backend Command",
+          "description": "Subcommands zur Verwaltung des HAL-Backends: `get` (GET /health → zeigt aktuelles Backend und Driver-Name), `set [c|rust|auto]` (POST /api/v1/backend mit JSON-Body {\"backend\": string}, ValidArgs: c, rust, auto). Quelle: tools/cli/cmd/backend.go",
+          "technology": "Go / net/http, encoding/json"
+        },
+        "system-cmd": {
+          "kind": "component",
+          "title": "system Command",
+          "description": "Subcommands für Systemverwaltung: `status` (GET /health → formatierte Status-Box mit Status, Backend und Driver), `restart` (POST /api/v1/system/restart, ohne --force-Flag mit Bestätigungsabfrage, wartet danach bis zu 5 Sekunden auf Wiederherstellung via GET /health). Quelle: tools/cli/cmd/system.go",
+          "technology": "Go / net/http, time, fmt.Scanln"
+        },
+        "completion-cmd": {
+          "kind": "component",
+          "title": "completion Command",
+          "description": "Generiert Shell-Completion-Skripte für bash, zsh, fish, powershell via Cobra-Einbauffunktionen (GenBashCompletion, GenZshCompletion, GenFishCompletion, GenPowerShellCompletionWithDesc). Ausgabe auf stdout. Quelle: tools/cli/cmd/completion.go",
+          "technology": "Go / cobra"
+        }
+      }
+    },
+
+    // ── Externes System ───────────────────────────────────────────────────────
+    "go-api": {
+      "kind": "system",
+      "title": "REST API Server",
+      "description": "HTTP-Server auf Port 5000 auf dem BeagleBone Black. Empfängt alle HTTP-Aufrufe von bbcli. Endpunkte: GET /health, GET /api/v1/bme280, GET|POST /api/v1/gpio/{pin}, POST /api/v1/backend, POST /api/v1/system/restart. Quelle: project/go-api/",
+      "technology": "Go / gorilla/mux, Port 5000"
+    }
+  },
+  "relationships": [
+    // ── Akteur → CLI ──────────────────────────────────────────────────────────
+    {
+      "from": "developer",
+      "to": "bbcli",
+      "label": "führt aus",
+      "kind": "uses"
+    },
+
+    // ── CLI intern: Subcommands registrieren sich beim Root ───────────────────
+    {
+      "from": "bbcli.bme280-cmd",
+      "to": "bbcli.root",
+      "label": "registriert sich bei (init)",
+      "kind": "uses"
+    },
+    {
+      "from": "bbcli.gpio-cmd",
+      "to": "bbcli.root",
+      "label": "registriert sich bei (init)",
+      "kind": "uses"
+    },
+    {
+      "from": "bbcli.backend-cmd",
+      "to": "bbcli.root",
+      "label": "registriert sich bei (init)",
+      "kind": "uses"
+    },
+    {
+      "from": "bbcli.system-cmd",
+      "to": "bbcli.root",
+      "label": "registriert sich bei (init)",
+      "kind": "uses"
+    },
+    {
+      "from": "bbcli.completion-cmd",
+      "to": "bbcli.root",
+      "label": "registriert sich bei (init)",
+      "kind": "uses"
+    },
+
+    // ── Subcommands → REST API ────────────────────────────────────────────────
+    {
+      "from": "bbcli.bme280-cmd",
+      "to": "go-api",
+      "label": "GET /api/v1/bme280",
+      "kind": "calls"
+    },
+    {
+      "from": "bbcli.gpio-cmd",
+      "to": "go-api",
+      "label": "GET|POST /api/v1/gpio/{pin}",
+      "kind": "calls"
+    },
+    {
+      "from": "bbcli.backend-cmd",
+      "to": "go-api",
+      "label": "GET /health, POST /api/v1/backend",
+      "kind": "calls"
+    },
+    {
+      "from": "bbcli.system-cmd",
+      "to": "go-api",
+      "label": "GET /health, POST /api/v1/system/restart",
+      "kind": "calls"
+    }
+  ],
+  "views": {
+    // Überblick: Akteur, CLI-Tool, REST API
+    "context": {
+      "title": "bbcli Systemkontext",
+      "include": [
+        "developer",
+        "bbcli",
+        "go-api"
+      ],
+      "description": "Systemkontext: bbcli zwischen Entwickler und REST API Server auf dem BeagleBone Black",
+      "layout": "layered"
+    },
+
+    // Alle Elemente und Beziehungen
+    "full": {
+      "title": "bbcli vollständige Ansicht",
+      "include": [
+        "**"
+      ],
+      "description": "Alle Komponenten und Beziehungen des bbcli Tools inklusive externem REST API Server",
+      "layout": "layered"
+    },
+
+    // Interne Kommandostruktur
+    "commands": {
+      "title": "bbcli Kommandostruktur",
+      "scope": "bbcli",
+      "include": [
+        "bbcli.*",
+        "go-api"
+      ],
+      "description": "Interne Kommando-Hierarchie: Root Command, alle Subcommands und deren API-Endpunkte",
+      "layout": "layered"
+    }
+  }
+}

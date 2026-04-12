@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+
+### Dokumentation
+
+- Neuer Claude Agent `@adoc-generator` generiert AsciiDoc-Dokumentation aus Go/C/Rust/Python-Code (#215)
+- AsciiDoc API-Referenz für HAL Interface, C GPIO/UART/SPI-Treiber und Rust FFI-Exports unter `docs/api/`
+
 ### Infrastruktur & Tooling
 
 - Use container script instead of inline podman commands 

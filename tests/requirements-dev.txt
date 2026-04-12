@@ -1,6 +1,7 @@
 pytest
 pytest-timeout
 pytest-json-report
+allure-pytest
 requests
 strictdoc>=0.0.50
 defusedxml
