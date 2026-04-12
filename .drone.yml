@@ -1193,12 +1193,13 @@ steps:
     environment:
       STEP: strictdoc-export
       CMD: |
+        apt-get update -qq
         apt-get install -y -q zip
         pip install strictdoc
         mkdir -p reports/strictdoc
         strictdoc export . --formats html --output-dir reports/strictdoc || true
         find reports/strictdoc -name "*.html" | head -10 || true
-        zip -r strictdoc-output.zip build/
+        zip -r strictdoc-output.zip reports/strictdoc/
     commands:
       - sh scripts/run-step.sh
 
