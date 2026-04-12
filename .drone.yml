@@ -1260,6 +1260,19 @@ steps:
     commands:
       - sh scripts/run-step.sh
 
+  - name: traceability-check
+    image: python:3.12-slim
+    pull: if_not_exists
+    depends_on: [strictdoc-coverage-gate]
+    environment:
+      STEP: traceability-check
+      CMD: |
+        python3 scripts/gen_traceability_matrix.py \
+          --output reports/traceability_matrix.md || true
+        python3 scripts/gen_traceability_matrix.py --check || true
+    commands:
+      - sh scripts/run-step.sh
+
   - name: junit-reports-req-coverage
     image: ghcr.io/rohit-gohri/drone-junit:v0
     pull: if_not_exists
@@ -1342,6 +1355,7 @@ steps:
       - collect-and-report
       - adoc-build
       - strictdoc-coverage-gate
+      - traceability-check
       - sonarqube-report
     environment:
       STEP: package-artifacts
@@ -1368,10 +1382,10 @@ steps:
   - name: generate-junit
     image: alpine
     pull: if_not_exists
-    depends_on: [go-tests-with-coverage, python-tests, python-security, shellcheck, c-coverage, adoc-build, strictdoc-export, prepare-reports, print-url, strictdoc-coverage-gate, sonarqube-report, sonarcloud-scan, collect-and-report, quality-gates, package-artifacts]
+    depends_on: [go-tests-with-coverage, python-tests, python-security, shellcheck, c-coverage, adoc-build, strictdoc-export, prepare-reports, print-url, strictdoc-coverage-gate, traceability-check, sonarqube-report, sonarcloud-scan, collect-and-report, quality-gates, package-artifacts]
     commands:
       - apk add --no-cache bash
-      - sh scripts/generate-junit.sh 7-reports go-tests-with-coverage python-tests python-security shellcheck c-coverage adoc-build strictdoc-export prepare-reports print-url strictdoc-coverage-gate sonarqube-report sonarcloud-scan collect-and-report quality-gates package-artifacts
+      - sh scripts/generate-junit.sh 7-reports go-tests-with-coverage python-tests python-security shellcheck c-coverage adoc-build strictdoc-export prepare-reports print-url strictdoc-coverage-gate traceability-check sonarqube-report sonarcloud-scan collect-and-report quality-gates package-artifacts
     when:
       status: [success, failure]
 
