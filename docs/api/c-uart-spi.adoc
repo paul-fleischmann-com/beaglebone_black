@@ -1,0 +1,241 @@
+= UART & SPI Treiber — C API Referenz
+:author: BeagleBone Black Project
+:revdate: 2026-04-12
+:doctype: article
+:toc: left
+:toc-title: Inhaltsverzeichnis
+:toclevels: 3
+:sectnums:
+:icons: font
+:source-highlighter: rouge
+:rouge-style: monokai
+:lang: de
+
+== Übersicht
+
+Dieses Dokument beschreibt die C-Treiber für UART (serielle Schnittstelle) und SPI (Serial Peripheral Interface) des BeagleBone Black.
+
+Quellen:
+
+* `project/c/include/uart.h`
+* `project/c/include/spi.h`
+
+== UART Treiber
+
+=== Typdefinitionen
+
+==== uart_dev_t
+
+Handle für eine geöffnete UART-Verbindung.
+
+[source,c]
+----
+typedef struct {
+    int      fd;        // Dateideskriptor
+    char     port[64];  // Gerätepfad z.B. "/dev/ttyO1"
+    uint32_t baud;      // Baudrate z.B. 115200
+} uart_dev_t;
+----
+
+=== Funktionen
+
+==== uart_open
+
+Öffnet und konfiguriert die serielle Schnittstelle mit der angegebenen Baudrate.
+
+[source,c]
+----
+int uart_open(uart_dev_t *dev, const char *port, uint32_t baud);
+----
+
+[cols="1,1,3", options="header"]
+|===
+| Parameter | Typ | Beschreibung
+| dev | uart_dev_t* | Zeiger auf UART-Handle (wird befüllt)
+| port | const char* | Gerätepfad z.B. `"/dev/ttyO1"`
+| baud | uint32_t | Baudrate z.B. `115200`
+|===
+
+*Rückgabe:* `0` bei Erfolg, `-1` bei Fehler
+
+==== uart_write
+
+Sendet Bytes über die serielle Schnittstelle.
+
+[source,c]
+----
+int uart_write(uart_dev_t *dev, const uint8_t *buf, size_t len);
+----
+
+[cols="1,1,3", options="header"]
+|===
+| Parameter | Typ | Beschreibung
+| dev | uart_dev_t* | Geöffnetes UART-Handle
+| buf | const uint8_t* | Zu sendende Bytes
+| len | size_t | Anzahl der Bytes
+|===
+
+*Rückgabe:* Anzahl gesendeter Bytes, `-1` bei Fehler
+
+==== uart_read
+
+Empfängt Bytes von der seriellen Schnittstelle mit Timeout.
+
+[source,c]
+----
+int uart_read(uart_dev_t *dev, uint8_t *buf, size_t len, int timeout_ms);
+----
+
+[cols="1,1,3", options="header"]
+|===
+| Parameter | Typ | Beschreibung
+| dev | uart_dev_t* | Geöffnetes UART-Handle
+| buf | uint8_t* | Empfangspuffer
+| len | size_t | Maximale Anzahl zu lesender Bytes
+| timeout_ms | int | Timeout in Millisekunden
+|===
+
+*Rückgabe:* Anzahl empfangener Bytes, `0` bei Timeout, `-1` bei Fehler
+
+==== uart_flush
+
+Leert den Sende- und Empfangspuffer der seriellen Schnittstelle.
+
+[source,c]
+----
+int uart_flush(uart_dev_t *dev);
+----
+
+*Rückgabe:* `0` bei Erfolg, `-1` bei Fehler
+
+==== uart_close
+
+Schließt die serielle Schnittstelle und gibt den Dateideskriptor frei.
+
+[source,c]
+----
+void uart_close(uart_dev_t *dev);
+----
+
+=== Verwendungsbeispiel
+
+[source,c]
+----
+#include "uart.h"
+
+uart_dev_t dev;
+
+// Port öffnen
+if (uart_open(&dev, "/dev/ttyO1", 115200) != 0) {
+    fprintf(stderr, "UART öffnen fehlgeschlagen\n");
+    return -1;
+}
+
+// Senden
+uint8_t msg[] = "Hello BBB";
+uart_write(&dev, msg, sizeof(msg));
+
+// Empfangen mit 500ms Timeout
+uint8_t buf[256];
+int n = uart_read(&dev, buf, sizeof(buf), 500);
+if (n > 0) {
+    printf("Empfangen: %.*s\n", n, buf);
+}
+
+uart_close(&dev);
+----
+
+'''
+
+== SPI Treiber
+
+=== Typdefinitionen
+
+==== spi_dev_t
+
+Handle für ein geöffnetes SPI-Gerät.
+
+[source,c]
+----
+typedef struct {
+    int      fd;          // Dateideskriptor
+    char     device[64];  // Gerätepfad z.B. "/dev/spidev0.0"
+    uint32_t speed;       // Taktfrequenz in Hz
+    uint8_t  mode;        // SPI-Modus (0–3)
+    uint8_t  bits;        // Bits pro Wort (typisch 8)
+} spi_dev_t;
+----
+
+=== Funktionen
+
+==== spi_open
+
+Öffnet das SPI-Gerät und konfiguriert Modus, Taktfrequenz und Wortbreite.
+
+[source,c]
+----
+int spi_open(spi_dev_t *dev, const char *device, uint32_t speed, uint8_t mode);
+----
+
+[cols="1,1,3", options="header"]
+|===
+| Parameter | Typ | Beschreibung
+| dev | spi_dev_t* | Zeiger auf SPI-Handle (wird befüllt)
+| device | const char* | Gerätepfad z.B. `"/dev/spidev0.0"`
+| speed | uint32_t | Taktfrequenz in Hz z.B. `1000000` (1 MHz)
+| mode | uint8_t | SPI-Modus `0`–`3` (CPOL/CPHA)
+|===
+
+*Rückgabe:* `0` bei Erfolg, `-1` bei Fehler
+
+==== spi_transfer
+
+Führt einen bidirektionalen Full-Duplex Transfer durch (Senden und Empfangen gleichzeitig).
+
+[source,c]
+----
+int spi_transfer(spi_dev_t *dev, const uint8_t *tx, uint8_t *rx, size_t len);
+----
+
+[cols="1,1,3", options="header"]
+|===
+| Parameter | Typ | Beschreibung
+| dev | spi_dev_t* | Geöffnetes SPI-Handle
+| tx | const uint8_t* | Sendepuffer (len Bytes)
+| rx | uint8_t* | Empfangspuffer (len Bytes)
+| len | size_t | Anzahl der Bytes für den Transfer
+|===
+
+*Rückgabe:* `0` bei Erfolg, `-1` bei Fehler
+
+==== spi_close
+
+Schließt das SPI-Gerät und gibt den Dateideskriptor frei.
+
+[source,c]
+----
+void spi_close(spi_dev_t *dev);
+----
+
+=== Verwendungsbeispiel
+
+[source,c]
+----
+#include "spi.h"
+
+spi_dev_t dev;
+
+// SPI öffnen: 1 MHz, Modus 0
+if (spi_open(&dev, "/dev/spidev0.0", 1000000, 0) != 0) {
+    fprintf(stderr, "SPI öffnen fehlgeschlagen\n");
+    return -1;
+}
+
+// Transfer: 3 Bytes senden und empfangen
+uint8_t tx[] = {0x01, 0x02, 0x03};
+uint8_t rx[3] = {0};
+spi_transfer(&dev, tx, rx, sizeof(tx));
+printf("RX: %02x %02x %02x\n", rx[0], rx[1], rx[2]);
+
+spi_close(&dev);
+----

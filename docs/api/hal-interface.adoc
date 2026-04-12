@@ -1,0 +1,333 @@
+= HAL HardwareDriver Interface — API Referenz
+:author: BeagleBone Black Project
+:revdate: 2026-04-12
+:doctype: article
+:toc: left
+:toc-title: Inhaltsverzeichnis
+:toclevels: 3
+:sectnums:
+:icons: font
+:source-highlighter: rouge
+:rouge-style: monokai
+:lang: de
+
+== Übersicht
+
+Das `HardwareDriver` Interface definiert die Hardware Abstraction Layer (HAL) des BeagleBone Black.
+Es entkoppelt den REST API Server von der konkreten Hardware-Implementierung.
+Alle drei Backends (C, Rust, Mock) implementieren dieses Interface vollständig.
+
+Quelle: `project/go-api/pkg/hal/interface.go`
+
+Anforderungs-Links: `SWR-001`, `SWR-004`
+
+== Backends
+
+Das aktive Backend wird über die Umgebungsvariable `HW_BACKEND` gesteuert:
+
+[cols="1,3", options="header"]
+|===
+| Wert | Beschreibung
+| `c` | C Shared Library via CGO (`libhardware.so`)
+| `rust` | Rust Shared Library via FFI (`libhardware_rs.so`)
+| `auto` | Versucht C zuerst, fällt bei Fehler auf Rust zurück (Standard)
+|===
+
+[source,go]
+----
+const (
+    BackendC    Backend = "c"
+    BackendRust Backend = "rust"
+    BackendAuto Backend = "auto"
+)
+----
+
+== Interface-Definition
+
+[source,go]
+----
+type HardwareDriver interface {
+    Name() string
+    Backend() Backend
+    Init() error
+    Close()
+
+    BME280Read() (*BME280Data, error)
+
+    GPIOExport(pin uint32) error
+    GPIOSetDirection(pin uint32, out bool) error
+    GPIORead(pin uint32) (*GPIOData, error)
+    GPIOWrite(pin uint32, value int) error
+
+    UARTOpen(port string, baud uint32) error
+    UARTWrite(data []byte) (int, error)
+    UARTRead(timeoutMs int) (*UARTData, error)
+    UARTClose()
+
+    SPITransfer(dev string, speed uint32, tx []byte) (*SPIData, error)
+}
+----
+
+== Datentypen
+
+=== BME280Data
+
+Messwerte des BME280 Umgebungssensors (Temperatur, Luftfeuchtigkeit, Luftdruck, Höhe).
+
+[source,go]
+----
+type BME280Data struct {
+    Temperature float64   `json:"temperature"`
+    Humidity    float64   `json:"humidity"`
+    Pressure    float64   `json:"pressure"`
+    Altitude    float64   `json:"altitude"`
+    Timestamp   time.Time `json:"timestamp"`
+    Backend     string    `json:"backend"`
+}
+----
+
+=== GPIOData
+
+Aktueller Zustand eines GPIO-Pins.
+
+[source,go]
+----
+type GPIOData struct {
+    Pin     uint32 `json:"pin"`
+    Value   int    `json:"value"`
+    Backend string `json:"backend"`
+}
+----
+
+=== UARTData
+
+Empfangene Daten von der seriellen Schnittstelle.
+
+[source,go]
+----
+type UARTData struct {
+    Data    []byte `json:"data"`
+    Length  int    `json:"length"`
+    Backend string `json:"backend"`
+}
+----
+
+=== SPIData
+
+Antwortdaten nach einem SPI-Transfer.
+
+[source,go]
+----
+type SPIData struct {
+    RxBuf   []byte `json:"rx_buf"`
+    Length  int    `json:"length"`
+    Backend string `json:"backend"`
+}
+----
+
+== Methoden
+
+=== Name
+
+Gibt den Namen des aktiven Backends zurück (z.B. `"c-driver"`, `"rust-driver"`).
+
+[source,go]
+----
+Name() string
+----
+
+=== Backend
+
+Gibt den Backend-Typ zurück (`c`, `rust` oder `auto`).
+
+[source,go]
+----
+Backend() Backend
+----
+
+=== Init
+
+Initialisiert den Hardware-Treiber. Muss vor dem ersten Hardware-Zugriff aufgerufen werden.
+
+[source,go]
+----
+Init() error
+----
+
+=== Close
+
+Gibt alle Hardware-Ressourcen frei.
+
+[source,go]
+----
+Close()
+----
+
+=== BME280Read
+
+Liest aktuelle Messwerte vom BME280 Umgebungssensor (I2C-1, Adresse 0x76).
+
+[source,go]
+----
+BME280Read() (*BME280Data, error)
+----
+
+[cols="1,1,3", options="header"]
+|===
+| Rückgabe | Typ | Beschreibung
+| data | *BME280Data | Temperatur (°C), Luftfeuchtigkeit (%), Luftdruck (hPa), Höhe (m)
+| error | error | nil bei Erfolg, Fehlerbeschreibung bei Hardware-Fehler
+|===
+
+=== GPIOExport
+
+Exportiert einen GPIO-Pin über das Linux sysfs-Interface.
+
+[source,go]
+----
+GPIOExport(pin uint32) error
+----
+
+[cols="1,1,3", options="header"]
+|===
+| Parameter | Typ | Beschreibung
+| pin | uint32 | GPIO-Pin-Nummer (BBB-Nummerierung)
+|===
+
+=== GPIOSetDirection
+
+Setzt die Richtung eines GPIO-Pins (Eingang oder Ausgang).
+
+[source,go]
+----
+GPIOSetDirection(pin uint32, out bool) error
+----
+
+[cols="1,1,3", options="header"]
+|===
+| Parameter | Typ | Beschreibung
+| pin | uint32 | GPIO-Pin-Nummer
+| out | bool | `true` = Ausgang, `false` = Eingang
+|===
+
+=== GPIORead
+
+Liest den aktuellen Wert eines GPIO-Pins.
+
+[source,go]
+----
+GPIORead(pin uint32) (*GPIOData, error)
+----
+
+=== GPIOWrite
+
+Setzt den Ausgangswert eines GPIO-Pins.
+
+[source,go]
+----
+GPIOWrite(pin uint32, value int) error
+----
+
+[cols="1,1,3", options="header"]
+|===
+| Parameter | Typ | Beschreibung
+| pin | uint32 | GPIO-Pin-Nummer
+| value | int | `0` = LOW, `1` = HIGH
+|===
+
+=== UARTOpen
+
+Öffnet und konfiguriert die serielle Schnittstelle.
+
+[source,go]
+----
+UARTOpen(port string, baud uint32) error
+----
+
+[cols="1,1,3", options="header"]
+|===
+| Parameter | Typ | Beschreibung
+| port | string | Gerätepfad z.B. `/dev/ttyO1`
+| baud | uint32 | Baudrate z.B. `115200`
+|===
+
+=== UARTWrite
+
+Sendet Daten über die serielle Schnittstelle.
+
+[source,go]
+----
+UARTWrite(data []byte) (int, error)
+----
+
+=== UARTRead
+
+Empfängt Daten von der seriellen Schnittstelle mit Timeout.
+
+[source,go]
+----
+UARTRead(timeoutMs int) (*UARTData, error)
+----
+
+[cols="1,1,3", options="header"]
+|===
+| Parameter | Typ | Beschreibung
+| timeoutMs | int | Timeout in Millisekunden
+|===
+
+=== UARTClose
+
+Schließt die serielle Schnittstelle und gibt Ressourcen frei.
+
+[source,go]
+----
+UARTClose()
+----
+
+=== SPITransfer
+
+Führt einen bidirektionalen SPI Full-Duplex Transfer durch.
+
+[source,go]
+----
+SPITransfer(dev string, speed uint32, tx []byte) (*SPIData, error)
+----
+
+[cols="1,1,3", options="header"]
+|===
+| Parameter | Typ | Beschreibung
+| dev | string | SPI-Gerätepfad z.B. `/dev/spidev0.0`
+| speed | uint32 | Taktfrequenz in Hz z.B. `1000000` (1 MHz)
+| tx | []byte | Zu sendende Bytes
+|===
+
+== Verwendungsbeispiel
+
+[source,go]
+----
+// Backend über Umgebungsvariable wählen (default: auto)
+os.Setenv("HW_BACKEND", "c")
+
+driver, err := loader.NewDriver(cfg)
+if err != nil {
+    log.Fatal(err)
+}
+defer driver.Close()
+
+if err := driver.Init(); err != nil {
+    log.Fatal(err)
+}
+
+// BME280 auslesen
+data, err := driver.BME280Read()
+if err != nil {
+    log.Printf("Sensor-Fehler: %v", err)
+} else {
+    fmt.Printf("Temperatur: %.2f °C\n", data.Temperature)
+}
+
+// GPIO setzen
+driver.GPIOExport(66)
+driver.GPIOSetDirection(66, true) // Ausgang
+driver.GPIOWrite(66, 1)           // HIGH
+----
