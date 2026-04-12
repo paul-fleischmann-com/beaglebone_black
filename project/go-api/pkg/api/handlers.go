@@ -1,3 +1,4 @@
+// [SDOC_LINK: SWR-007]
 // Package api provides the HTTP handler logic for the BeagleBone Black REST API.
 // Handlers are methods on Server, accepting a hal.HardwareDriver interface —
 // this makes them testable without CGO or real hardware.

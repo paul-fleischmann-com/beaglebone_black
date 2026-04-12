@@ -24,6 +24,8 @@ GO_API="$REPO_ROOT/project/go-api"
 COVERAGE_OUT="$GO_API/coverage.out"
 COVERAGE_PAK="./pkg/hal/,./pkg/hal/mock/,./pkg/hal/config/,./pkg/hal/c/,./pkg/hal/loader/,./pkg/hal/rust/,./pkg/api/"
 COVERAGE_HTML="$GO_API/coverage.html"
+COVERAGE_REPORT_DIR="$REPO_ROOT/reports/coverage"
+COVERAGE_REPORT_HTML="$COVERAGE_REPORT_DIR/index.html"
 
 # Quality Gates (aus CLAUDE.md)
 MIN_COVERAGE_AVG=75   # % Durchschnitt
@@ -139,7 +141,7 @@ check_coverage() {
         fi
     fi
 
-    # HTML-Report
+    # HTML-Report (lokal)
     if $MODE_HTML; then
         (cd "$GO_API" && go tool cover -html="$COVERAGE_OUT" -o "$COVERAGE_HTML")
         success "HTML-Report: $COVERAGE_HTML"
@@ -147,6 +149,13 @@ check_coverage() {
             xdg-open "$COVERAGE_HTML" 2>/dev/null &
         fi
     fi
+
+    # reports/coverage/ — ASPICE SWE.4 Work Product (immer bei -cover)
+    mkdir -p "$COVERAGE_REPORT_DIR"
+    (cd "$GO_API" && go tool cover -html="$COVERAGE_OUT" -o "$COVERAGE_REPORT_HTML")
+    # Func-Summary als Text
+    (cd "$GO_API" && go tool cover -func="$COVERAGE_OUT") > "$COVERAGE_REPORT_DIR/coverage_func.txt"
+    success "Coverage-Report: $COVERAGE_REPORT_HTML"
 }
 
 # ── Main ──────────────────────────────────────────────────────────────────────

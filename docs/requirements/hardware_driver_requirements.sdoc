@@ -11,7 +11,7 @@ STATEMENT: Der BME280-Treiber muss Temperatur (°C), Luftfeuchtigkeit (%) und Lu
 STATUS: Active
 RELATIONS:
 - TYPE: Parent
-  VALUE: SYS-004
+  VALUE: SWR-001
 - TYPE: File
   VALUE: project/c/include/bme280.h
 - TYPE: File
@@ -26,7 +26,7 @@ STATEMENT: Der GPIO-Treiber muss digitale Pins lesen, schreiben und die Richtung
 STATUS: Active
 RELATIONS:
 - TYPE: Parent
-  VALUE: SYS-004
+  VALUE: SWR-001
 - TYPE: File
   VALUE: project/c/include/gpio.h
 - TYPE: File
@@ -41,7 +41,7 @@ STATEMENT: Der UART-Treiber muss Datenpakete senden und empfangen sowie die Verb
 STATUS: Active
 RELATIONS:
 - TYPE: Parent
-  VALUE: SYS-004
+  VALUE: SWR-001
 - TYPE: File
   VALUE: project/c/include/uart.h
 - TYPE: File
@@ -56,7 +56,7 @@ STATEMENT: Der SPI-Treiber muss bidirektionale Datentransfers (Loopback) unterst
 STATUS: Active
 RELATIONS:
 - TYPE: Parent
-  VALUE: SYS-004
+  VALUE: SWR-001
 - TYPE: File
   VALUE: project/c/include/spi.h
 - TYPE: File

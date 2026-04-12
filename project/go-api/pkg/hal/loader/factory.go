@@ -1,3 +1,5 @@
+// [SDOC_LINK: SWR-002]
+// [SDOC_LINK: SWR-005]
 // Package loader creates HAL driver instances based on configuration.
 // It is intentionally separate from package hal to break the import cycle:
 //

@@ -25,7 +25,9 @@
     "Validation":       { "status": "planned", "date": null },
     "Maintenance":      { "status": "planned", "date": null }
   },
-  "open_work_products": [],
-  "next_phase_gate": null,
+  "open_work_products": [
+    "SWE.1: Anforderungsklassifikation — REQUIREMENT_TYPE-Feld in grammar.sgra + alle SWR-* klassifizieren — #236"
+  ],
+  "next_phase_gate": "2026-04-12",
   "last_updated": "2026-04-12"
 }

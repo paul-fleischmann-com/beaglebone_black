@@ -39,6 +39,7 @@ reports/*.md
 reports/shell-syntax.txt
 reports/test_results.json
 reports/output/
+reports/coverage/
 tooling/
 arch/.cache/
 docs/output/
