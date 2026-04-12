@@ -1,0 +1,71 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Claude Workflow State",
+  "description": "Persistenter Projektstatus für Waterfall/ASPICE/Agile Workflow",
+  "type": "object",
+  "required": ["current_phase", "current_sprint", "aspice_target_level", "process_status", "phase_gates"],
+  "properties": {
+    "current_phase": {
+      "type": "string",
+      "enum": ["Requirements", "Design", "Implementation", "Integration", "Verification", "Validation", "Maintenance"],
+      "description": "Aktuelle Waterfall-Phase"
+    },
+    "current_sprint": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Aktueller Agile Sprint (entspricht GitHub Milestone)"
+    },
+    "aspice_target_level": {
+      "type": "integer",
+      "enum": [1, 2, 3],
+      "description": "Angestrebtes ASPICE Capability Level"
+    },
+    "process_status": {
+      "type": "object",
+      "description": "Status aller ASPICE Prozessbereiche",
+      "properties": {
+        "SWE.1": { "$ref": "#/definitions/processStatus" },
+        "SWE.2": { "$ref": "#/definitions/processStatus" },
+        "SWE.3": { "$ref": "#/definitions/processStatus" },
+        "SWE.4": { "$ref": "#/definitions/processStatus" },
+        "SWE.5": { "$ref": "#/definitions/processStatus" },
+        "SWE.6": { "$ref": "#/definitions/processStatus" },
+        "MAN.3": { "$ref": "#/definitions/processStatus" },
+        "SUP.1": { "$ref": "#/definitions/processStatus" },
+        "SUP.8": { "$ref": "#/definitions/processStatus" },
+        "SUP.9": { "$ref": "#/definitions/processStatus" },
+        "SUP.10": { "$ref": "#/definitions/processStatus" }
+      }
+    },
+    "phase_gates": {
+      "type": "object",
+      "description": "Phasen-Gate Status für jede Waterfall-Phase",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "status": { "type": "string", "enum": ["planned", "active", "passed", "failed"] },
+          "date": { "type": ["string", "null"] }
+        }
+      }
+    },
+    "open_work_products": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Liste offener ASPICE Work Products"
+    },
+    "next_phase_gate": {
+      "type": ["string", "null"],
+      "description": "Datum des nächsten Phasen-Gates (ISO 8601)"
+    },
+    "last_updated": {
+      "type": "string",
+      "description": "Datum der letzten Aktualisierung (ISO 8601)"
+    }
+  },
+  "definitions": {
+    "processStatus": {
+      "type": "string",
+      "enum": ["planned", "in_progress", "active", "complete"]
+    }
+  }
+}
