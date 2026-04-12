@@ -9,6 +9,7 @@ UID: SWR-001
 TITLE: HAL Interface Definition
 STATEMENT: Der HardwareDriver Interface muss alle Hardware-Operationen (BME280, GPIO, UART, SPI) abstrakt definieren, sodass verschiedene Backends austauschbar sind.
 STATUS: Active
+REQUIREMENT_TYPE: functional
 PRIORITY: High
 RELATIONS:
 - TYPE: Parent
@@ -23,6 +24,7 @@ UID: SWR-002
 TITLE: Backend-Auswahl per Umgebungsvariable
 STATEMENT: Das System muss über die Umgebungsvariable HW_BACKEND die Auswahl des Hardware-Backends (c, rust, auto) ermöglichen. Der Standardwert ist auto.
 STATUS: Active
+REQUIREMENT_TYPE: functional
 PRIORITY: High
 RELATIONS:
 - TYPE: Parent
@@ -37,6 +39,7 @@ UID: SWR-003
 TITLE: Mock Driver für Tests
 STATEMENT: Der Mock Driver muss das HardwareDriver Interface vollständig implementieren und darf keine echte Hardware benötigen.
 STATUS: Active
+REQUIREMENT_TYPE: functional
 PRIORITY: Medium
 RELATIONS:
 - TYPE: Parent
@@ -51,6 +54,7 @@ UID: SWR-004
 TITLE: Hardware-Zugriff nur in C und Rust
 STATEMENT: Hardware-Zugriffe dürfen ausschließlich in C und Rust implementiert werden. Go darf nicht direkt auf Hardware zugreifen.
 STATUS: Active
+REQUIREMENT_TYPE: constraint
 PRIORITY: High
 RELATIONS:
 - TYPE: Parent
@@ -69,6 +73,7 @@ UID: SWR-005
 TITLE: Auto-Fallback Mechanismus
 STATEMENT: Im Backend-Modus auto muss das System zunächst das C-Backend versuchen und bei Fehler automatisch auf das Rust-Backend zurückfallen.
 STATUS: Active
+REQUIREMENT_TYPE: functional
 PRIORITY: Medium
 RELATIONS:
 - TYPE: Parent
@@ -79,10 +84,65 @@ RELATIONS:
   VALUE: project/go-api/pkg/hal/hal_test.go
 
 [SW_REQUIREMENT]
+UID: SWR-009
+TITLE: ARM v7 Architektur-Kompatibilität
+STATEMENT: Die Software muss für die ARM v7 (ARMv7-A) Architektur kompiliert und auf einem ARM Cortex-A8 Prozessor mit 512 MB RAM ausführbar sein. Go-Binaries müssen mit GOARCH=arm GOARM=7, C-Code mit arm-linux-gnueabihf und Rust-Code mit armv7-unknown-linux-musleabihf gebaut werden.
+STATUS: Active
+REQUIREMENT_TYPE: non-functional
+PRIORITY: High
+RELATIONS:
+- TYPE: Parent
+  VALUE: SYS-001
+- TYPE: File
+  VALUE: Makefile
+
+[SW_REQUIREMENT]
+UID: SWR-010
+TITLE: Linux-Betriebssystem-Kompatibilität
+STATEMENT: Die Software muss unter Linux (Debian) betrieben werden können und darf keine betriebssystemspezifischen Abhängigkeiten außerhalb des Linux-Kernel-ABIs verwenden. Systemaufrufe und Dateisystemzugriffe müssen POSIX-kompatibel sein.
+STATUS: Active
+REQUIREMENT_TYPE: non-functional
+PRIORITY: High
+RELATIONS:
+- TYPE: Parent
+  VALUE: SYS-002
+- TYPE: File
+  VALUE: project/go-api/cmd/main.go
+
+[SW_REQUIREMENT]
+UID: SWR-011
+TITLE: HTTP-Server Port-Bindung
+STATEMENT: Der REST API Server muss auf Port 5000 lauschen und über das Netzwerk erreichbar sein. Der Port muss konfigurierbar sein, der Standardwert ist 5000.
+STATUS: Active
+REQUIREMENT_TYPE: functional
+PRIORITY: High
+RELATIONS:
+- TYPE: Parent
+  VALUE: SYS-003
+- TYPE: File
+  VALUE: project/go-api/cmd/main.go
+- TYPE: File
+  VALUE: project/go-api/pkg/api/server.go
+
+[SW_REQUIREMENT]
+UID: SWR-012
+TITLE: Cross-Compilation Toolchain
+STATEMENT: Das Build-System muss eine vollständige Cross-Compilation von x86-64 Entwicklungsumgebung nach ARM v7 ermöglichen. Dies umfasst Go (CGO_ENABLED=1, GOOS=linux, GOARCH=arm, GOARM=7), C (arm-linux-gnueabihf-gcc) und Rust (armv7-unknown-linux-musleabihf via cross).
+STATUS: Active
+REQUIREMENT_TYPE: non-functional
+PRIORITY: High
+RELATIONS:
+- TYPE: Parent
+  VALUE: SYS-005
+- TYPE: File
+  VALUE: Makefile
+
+[SW_REQUIREMENT]
 UID: SWR-008
 TITLE: Keine flag.Parse() in Library-Packages
 STATEMENT: Library-Packages dürfen flag.Parse() nicht aufrufen und keine Flags im globalen flag.CommandLine registrieren. Konfigurationswerte müssen ausschließlich über Umgebungsvariablen oder Dependency Injection übergeben werden.
 STATUS: Active
+REQUIREMENT_TYPE: constraint
 PRIORITY: High
 RELATIONS:
 - TYPE: Parent
@@ -108,6 +168,7 @@ UID: SWR-007
 TITLE: BME280 Stream Flusher-Prüfung
 STATEMENT: Der BME280StreamHandler muss vor dem Streaming prüfen ob der ResponseWriter das http.Flusher-Interface implementiert. Falls nicht, muss HTTP 500 zurückgegeben werden anstatt einen Panic auszulösen.
 STATUS: Active
+REQUIREMENT_TYPE: functional
 PRIORITY: High
 RELATIONS:
 - TYPE: Parent
@@ -133,6 +194,7 @@ UID: SWR-006
 TITLE: HTTP-Server Timeouts
 STATEMENT: Der HTTP-Server muss ReadTimeout, WriteTimeout und IdleTimeout konfigurieren, um auf eingebetteten Systemen Ressourcenerschöpfung durch hängende Verbindungen zu verhindern. ReadTimeout >= 5s, WriteTimeout >= 10s, IdleTimeout >= 30s.
 STATUS: Active
+REQUIREMENT_TYPE: non-functional
 PRIORITY: High
 RELATIONS:
 - TYPE: Parent

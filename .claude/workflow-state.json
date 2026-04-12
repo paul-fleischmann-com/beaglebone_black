@@ -1,0 +1,31 @@
+{
+  "$schema": "./workflow-state.schema.json",
+  "current_phase": "Implementation",
+  "current_sprint": 1,
+  "aspice_target_level": 2,
+  "process_status": {
+    "SWE.1": "in_progress",
+    "SWE.2": "in_progress",
+    "SWE.3": "planned",
+    "SWE.4": "in_progress",
+    "SWE.5": "planned",
+    "SWE.6": "planned",
+    "MAN.3": "active",
+    "SUP.1": "active",
+    "SUP.8": "active",
+    "SUP.9": "active",
+    "SUP.10": "active"
+  },
+  "phase_gates": {
+    "Requirements":     { "status": "passed",  "date": null },
+    "Design":           { "status": "passed",  "date": null },
+    "Implementation":   { "status": "active",  "date": null },
+    "Integration":      { "status": "planned", "date": null },
+    "Verification":     { "status": "planned", "date": null },
+    "Validation":       { "status": "planned", "date": null },
+    "Maintenance":      { "status": "planned", "date": null }
+  },
+  "open_work_products": [],
+  "next_phase_gate": "2026-04-12",
+  "last_updated": "2026-04-12"
+}

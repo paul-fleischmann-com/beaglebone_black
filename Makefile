@@ -1,3 +1,5 @@
+# [SDOC_LINK: SWR-009]
+# [SDOC_LINK: SWR-012]
 # ── Version ───────────────────────────────────────────────────────────────────
 # Source of truth for the project version.
 # Bump manually ONLY when creating an official GitHub Release (git tag vX.Y.Z).
@@ -54,6 +56,12 @@ lint:
 test-python:
 	pytest tests/api/ -v --timeout=10
 
+
+traceability:
+	python3 scripts/gen_traceability_matrix.py
+
+traceability-check:
+	python3 scripts/gen_traceability_matrix.py --check
 
 test-report:
 	./scripts/report.sh
@@ -130,4 +138,4 @@ clean:
 version:
 	@echo "$(VERSION)"
 
-.PHONY: all c-lib rust-lib go-api cli cli-arm test test-ci test-cover lint test-python test-report test-report-open deploy clean req-tracing version adoc-build adoc-summary build-arm checksums release-candidate prepend-changelog install-java install-asciidoctor setup-env
+.PHONY: all c-lib rust-lib go-api cli cli-arm test test-ci test-cover lint test-python test-report test-report-open traceability traceability-check deploy clean req-tracing version adoc-build adoc-summary build-arm checksums release-candidate prepend-changelog install-java install-asciidoctor setup-env

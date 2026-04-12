@@ -1,3 +1,5 @@
+// [SDOC_LINK: SWR-010]
+// [SDOC_LINK: SWR-011]
 package main
 
 import (
