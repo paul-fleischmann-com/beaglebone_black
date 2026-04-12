@@ -4,21 +4,37 @@
 
 INPUT=$(cat 2>/dev/null || echo "")
 
-COMMAND=$(echo "$INPUT" | python3 -c "
-import json, sys
+echo "$INPUT" | python3 -c "
+import json, sys, re
+
 try:
     d = json.load(sys.stdin)
-    print(d.get('tool_input', {}).get('command', ''))
+    cmd = d.get('tool_input', {}).get('command', '')
 except Exception:
-    pass
-" 2>/dev/null)
+    sys.exit(0)
 
-# Nur blockieren wenn EXAKT 'git commit' UND '--no-verify' im Kommando
-case "$COMMAND" in
-  *"git commit"*"--no-verify"*)
-    echo "BLOCKED: 'git commit --no-verify' ist nicht erlaubt. Pre-commit Hooks dürfen nicht umgangen werden." >&2
+# Teile den Command in Subcommands auf (&&, ||, ;)
+parts = re.split(r'\s*(?:&&|\|\||;)\s*', cmd)
+
+for part in parts:
+    part = part.strip()
+    # Prüfe ob dieser Subcommand ein 'git commit' ist
+    if not re.match(r'git\s+commit\b', part):
+        continue
+    # Schneide alles nach dem ersten -m / --message ab (Commit-Nachricht)
+    msg_match = re.search(r'\s(?:-m|--message)\b', part)
+    args_part = part[:msg_match.start()] if msg_match else part
+    # Prüfe ob --no-verify als Flag in den Argumenten vorkommt
+    if re.search(r'(?:^|\s)--no-verify(?:\s|$)', args_part):
+        sys.exit(2)
+
+sys.exit(0)
+" 2>/dev/null
+
+EXIT=$?
+if [ $EXIT -eq 2 ]; then
+    echo "BLOCKED: 'git commit --no-verify' ist nicht erlaubt. Pre-commit Hooks duerfen nicht umgangen werden." >&2
     exit 2
-    ;;
-esac
+fi
 
 exit 0
