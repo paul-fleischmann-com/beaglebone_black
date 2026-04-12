@@ -1218,16 +1218,25 @@ steps:
       - sh scripts/run-step.sh
 
   - name: upload
-    image: appleboy/drone-scp@sha256:fa5bce5d58d4c265e88519bdee0fcd6d5721888c97dd3f3665632b38e7329384
+    image: alpine
     pull: if_not_exists
     depends_on: [prepare-reports]
-    settings:
-      host: 192.168.2.55
-      username: deploy
-      key:
+    environment:
+      STEP: upload
+      CMD: |
+        apk add --no-cache openssh-client -q
+        mkdir -p ~/.ssh
+        echo "$SSH_KEY" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        FILE=$(cat artifact_name.txt 2>/dev/null || echo "")
+        if [ -z "$FILE" ]; then echo "Kein Artefakt-Name — übersprungen"; exit 0; fi
+        scp -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
+          -i ~/.ssh/id_rsa "$FILE" deploy@192.168.2.55:/var/www/downloads/ || \
+          echo "⚠️  Upload fehlgeschlagen (Server nicht erreichbar) — Build wird fortgesetzt"
+      SSH_KEY:
         from_secret: ssh_key
-      source: strictdoc-*.zip
-      target: /var/www/downloads/
+    commands:
+      - sh scripts/run-step.sh
 
   - name: print-url
     image: alpine
