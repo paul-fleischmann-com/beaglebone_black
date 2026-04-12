@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Dokumentation
 
+- Neuer Claude Agent `@requirements-checker` prüft Traceability zwischen Code-Änderungen und SDoc-Anforderungen, unterstützt spezifische UID-Abfragen (#195)
 - Neuer Claude Agent `@pr-reviewer` führt Code-Review und Requirements-Traceability für Pull Requests durch und dokumentiert Findings via GitHub PR Review (#219)
 - Neuer Claude Agent `@adoc-generator` generiert AsciiDoc-Dokumentation aus Go/C/Rust/Python-Code (#215)
 - AsciiDoc API-Referenz für HAL Interface, C GPIO/UART/SPI-Treiber und Rust FFI-Exports unter `docs/api/`
