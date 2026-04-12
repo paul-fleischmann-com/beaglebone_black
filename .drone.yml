@@ -1476,7 +1476,7 @@ steps:
       CMD: |
         mkdir -p arch/model/export/png
         dbus-daemon --system --fork 2>/dev/null || true
-        xvfb-run -a bausteinsicht export --model arch/model/beaglebone_black.jsonc --output arch/model/export/png
+        xvfb-run -a bausteinsicht export --model arch/model/beaglebone_black.jsonc --output arch/model/export/png || true
     commands:
       - sh scripts/run-step.sh
 

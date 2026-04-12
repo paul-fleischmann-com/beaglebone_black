@@ -11,7 +11,11 @@ VERSION_FILE=$4
 VERSION=$(cat "$VERSION_FILE" | tr -d '[:space:]')
 FULL_IMAGE="ghcr.io/$REGISTRY_USER/$IMAGE"
 
-podman login ghcr.io -u "$REGISTRY_USER" -p "$REGISTRY_TOKEN"
+if [ -z "${REGISTRY_USER:-}" ] || [ -z "${REGISTRY_TOKEN:-}" ]; then
+  echo "ERROR: REGISTRY_USER oder REGISTRY_TOKEN nicht gesetzt (Drone Secrets prüfen: registry_user, Bau_token)"
+  exit 1
+fi
+printf '%s' "$REGISTRY_TOKEN" | podman login ghcr.io -u "$REGISTRY_USER" --password-stdin
 
 INSPECT=$(podman manifest inspect "$FULL_IMAGE:$VERSION" 2>&1 || true)
 if echo "$INSPECT" | grep -q 'schemaVersion'; then
