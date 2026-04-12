@@ -9,6 +9,7 @@ UID: HW-DRV-001
 TITLE: BME280 Messwerte
 STATEMENT: Der BME280-Treiber muss Temperatur (°C), Luftfeuchtigkeit (%) und Luftdruck (hPa) auslesen und zurückgeben können.
 STATUS: Active
+REQUIREMENT_TYPE: functional
 RELATIONS:
 - TYPE: Parent
   VALUE: SWR-001
@@ -24,6 +25,7 @@ UID: HW-DRV-002
 TITLE: GPIO Lesen und Schreiben
 STATEMENT: Der GPIO-Treiber muss digitale Pins lesen, schreiben und die Richtung (Input/Output) konfigurieren können.
 STATUS: Active
+REQUIREMENT_TYPE: functional
 RELATIONS:
 - TYPE: Parent
   VALUE: SWR-001
@@ -39,6 +41,7 @@ UID: HW-DRV-003
 TITLE: UART Senden und Empfangen
 STATEMENT: Der UART-Treiber muss Datenpakete senden und empfangen sowie die Verbindung ordnungsgemäß schließen können.
 STATUS: Active
+REQUIREMENT_TYPE: functional
 RELATIONS:
 - TYPE: Parent
   VALUE: SWR-001
@@ -54,6 +57,7 @@ UID: HW-DRV-004
 TITLE: SPI Loopback Transfer
 STATEMENT: Der SPI-Treiber muss bidirektionale Datentransfers (Loopback) unterstützen und übertragene Bytes korrekt zurückliefern.
 STATUS: Active
+REQUIREMENT_TYPE: functional
 RELATIONS:
 - TYPE: Parent
   VALUE: SWR-001

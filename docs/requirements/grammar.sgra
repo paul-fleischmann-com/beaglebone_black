@@ -31,6 +31,9 @@ ELEMENTS:
   - TITLE: STATUS
     TYPE: SingleChoice(Draft, Active, Obsolete)
     REQUIRED: False
+  - TITLE: REQUIREMENT_TYPE
+    TYPE: SingleChoice(functional, non-functional, constraint)
+    REQUIRED: False
   - TITLE: PRIORITY
     TYPE: SingleChoice(High, Medium, Low)
     REQUIRED: False
@@ -50,6 +53,9 @@ ELEMENTS:
     REQUIRED: False
   - TITLE: STATUS
     TYPE: SingleChoice(Draft, Active, Obsolete)
+    REQUIRED: False
+  - TITLE: REQUIREMENT_TYPE
+    TYPE: SingleChoice(functional, non-functional, constraint)
     REQUIRED: False
   RELATIONS:
   - TYPE: Parent
