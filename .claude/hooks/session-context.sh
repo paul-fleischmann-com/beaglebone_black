@@ -25,3 +25,8 @@ Waterfall-Phase: $PHASE | Sprint: $SPRINT | ASPICE Target: Level $LEVEL
 Offene Work Products: $OPEN_WP
 Tipp: /workflow-status für vollständigen Überblick | @workflow-manager für Details
 EOF
+
+REMINDERS=".claude/hooks/session-reminders.txt"
+if [ -f "$REMINDERS" ]; then
+  cat "$REMINDERS"
+fi

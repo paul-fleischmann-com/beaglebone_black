@@ -1,0 +1,7 @@
+[Projekt-Konventionen]
+Drone CI: $VAR statt ${VAR} in unquotierten command-Feldern (Drone-Parser-Limitierung)
+Drone CI: Podman login via -p "$TOKEN", nicht echo | --password-stdin (ioctl-Fehler)
+Hardware-Regel: Hardware-Zugriff nur in C und Rust — nie direkt in Go
+Commits: kein Co-Authored-By: Claude in Commit-Messages
+Commit-Format: type(scope): description (feat, fix, docs, test, refactor, ci)
+Hooks: Exit 2 für blockierende Hooks (nicht Exit 1)
