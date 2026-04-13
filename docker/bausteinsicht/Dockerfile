@@ -45,5 +45,5 @@ COPY drawio-export /usr/local/bin/drawio-export
 RUN chmod +x /usr/local/bin/drawio-export
 
 WORKDIR /workspace
-CMD ["sh", "-c", "echo 'Container Version: $APP_VERSION'"]
+CMD ["sh", "-c", "echo 'Container Version von bausteinsicht : $APP_VERSION'"]
 ENTRYPOINT ["/bin/bash"]
