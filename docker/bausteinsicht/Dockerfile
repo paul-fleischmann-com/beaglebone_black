@@ -17,7 +17,7 @@ RUN go build -o /usr/local/bin/bausteinsicht ./cmd/...
 # ── Stage 2: Runtime ──────────────────────────────
 FROM debian:bookworm
 
-ARG DRAWIO_VERSION=26.0.4
+ARG DRAWIO_VERSION=29.5.2
 ARG VERSION=unknown
 
 LABEL org.opencontainers.image.version=$VERSION
@@ -31,20 +31,18 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y --no-install-recommends \
     wget xvfb xauth libgbm1 dbus libx11-xcb1 libxcb-dri3-0 \
     libxkbcommon0 libxcomposite1 libxrandr2 libxdamage1 \
-    libasound2 libpangocairo-1.0-0 libatk1.0-0 libcups2 \
-    && wget -q "https://github.com/jgraph/drawio-desktop/releases/download/v${DRAWIO_VERSION}/drawio-amd64-${DRAWIO_VERSION}.deb" \
-    && dpkg --ignore-scripts -i ./drawio-amd64-${DRAWIO_VERSION}.deb || true \
-    && apt-get install -f -y \
-    && echo "=== drawio installed files ===" \
-    && dpkg -L drawio 2>/dev/null || true \
-    && DRAWIO_BIN=$(find /opt /usr/lib /usr/share -name 'drawio' -type f 2>/dev/null | head -1) \
-    && echo "Found drawio at: $DRAWIO_BIN" \
-    && ( [ -n "$DRAWIO_BIN" ] && ln -sf "$DRAWIO_BIN" /usr/bin/drawio || echo "ERROR: drawio binary not found" ) \
-    && ls -la /usr/bin/drawio \
-    && rm -f drawio-amd64-${DRAWIO_VERSION}.deb \
-    && rm -rf /var/lib/apt/lists/*
+    libasound2 libpangocairo-1.0-0 libatk1.0-0 libcups2
 
-# drawio-export wrapper script from upstream repo
+ARG DRAWIO_VERSION=29.5.2
+RUN wget -q "https://github.com/jgraph/drawio-desktop/releases/download/v${DRAWIO_VERSION}/drawio-amd64-${DRAWIO_VERSION}.deb" -O /tmp/drawio.deb \
+    && apt-get install -y --no-install-recommends /tmp/drawio.deb \
+    && rm -f /tmp/drawio.deb && rm -rf /var/lib/apt/lists/*
+
+# Wrapper script so `drawio` runs headless via xvfb with dbus
+# -a: auto-pick a free display number (avoids conflicts with existing Xvfb)
+# --no-sandbox: required in container environments without user namespaces
+# --disable-gpu: required in containers without GPU/rendering backend
+# dbus: Electron requires a running system bus for IPC
 COPY drawio-export /usr/local/bin/drawio-export
 RUN chmod +x /usr/local/bin/drawio-export
 

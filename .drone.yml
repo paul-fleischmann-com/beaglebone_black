@@ -61,9 +61,10 @@ steps:
       REGISTRY_TOKEN: {from_secret: Bau_token}
       STEP: build-bausteinsicht
       CMD: |
-        cp -r docker/bausteinsicht/repo         docker/bausteinsicht/repo-src
-        cp    docker/bausteinsicht/repo/.devcontainer/drawio-export docker/bausteinsicht/
-        bash scripts/build-container.sh bausteinsicht docker/bausteinsicht/Dockerfile docker/bausteinsicht docker/bausteinsicht/VERSION
+        cp -r docker/bausteinsicht/repo docker/bausteinsicht/repo-src
+        DOCKERFILE=$(find docker/bausteinsicht/repo -name 'Dockerfile' | head -1)
+        echo "Using Dockerfile: $DOCKERFILE"
+        bash scripts/build-container.sh bausteinsicht "$DOCKERFILE" docker/bausteinsicht docker/bausteinsicht/VERSION
     commands:
       - sh scripts/run-step.sh
 
