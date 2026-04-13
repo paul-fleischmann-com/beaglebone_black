@@ -103,8 +103,9 @@ print(f"**Ø pro Woche:** {total/max(len(weeks),1):.1f}")
 PYEOF
 
 else
-  gh issue list --state closed --limit 100 \
-    --json number,title,closedAt,labels 2>/dev/null | python3 - <<'PYEOF'
+  GH_OUTPUT=$(gh issue list --state closed --limit 100 \
+    --json number,title,closedAt,labels 2>/dev/null)
+  echo "$GH_OUTPUT" | python3 - <<'PYEOF'
 import json, sys
 from datetime import datetime, timedelta
 
