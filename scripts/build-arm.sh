@@ -64,11 +64,15 @@ cp "$OUTPUT/libhardware.so"    "$PROJECT/go-api/libs/" 2>/dev/null || true
 cp "$OUTPUT/libhardware_rs.so" "$PROJECT/go-api/libs/" 2>/dev/null || true
 
 run_step "Build Go API" \
-  sh -c "cd '$PROJECT/go-api' && GOOS=linux GOARCH=arm GOARM=7 CGO_ENABLED=1 CC=arm-linux-gnueabihf-gcc \
+  sh -c "cd '$PROJECT/go-api' && \
+    CGO_CFLAGS='-I$PROJECT/go-api/libs/include' \
+    CGO_LDFLAGS='-L$PROJECT/go-api/libs -lhardware -lhardware_rs' \
+    GOOS=linux GOARCH=arm GOARM=7 CGO_ENABLED=1 CC=arm-linux-gnueabihf-gcc \
     go build -ldflags='-s -w' -o '$OUTPUT/embedded' ./cmd/"
 
 run_step "Build CLI (ARM)" \
-  sh -c "cd '$SRC/tools/cli' && GOOS=linux GOARCH=arm GOARM=7 CGO_ENABLED=0 \
+  sh -c "cd '$SRC/tools/cli' && go mod download && \
+    GOOS=linux GOARCH=arm GOARM=7 CGO_ENABLED=0 \
     go build -o '$OUTPUT/bbcli-linux-arm' ."
 
 # --- write JUnit XML -----------------------------------------------
