@@ -8,6 +8,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 
+### Prozess & Tooling
+
+- Vollständiger Claude Entwicklungsprozess-Workflow (Waterfall + ASPICE Level 2 + Agile Sprint) implementiert (#234)
+  - `/start-story` Skill: User Story → INVEST-Validierung → Requirements → SDoc → GitHub Issue
+  - `@phase-gate-reviewer` Agent: Waterfall Phase-Gate Reviews mit Entry/Exit-Criteria (PASS/CONDITIONAL/FAIL)
+  - `@aspice-process-checker` Agent: ASPICE Level-Bewertung für SWE.1–SWE.6, MAN.3, SUP.1/8/9/10
+  - `@sprint-manager` Agent: Sprint-Planung, Velocity, Backlog-Priorisierung, DoD-Check
+  - `/aspice-assessment`, `/work-product-check`, `/sprint-ceremony`, `/reporting` Skills
+  - `scripts/gen_aspice_report.py`: ASPICE Capability Level Report Generator
+  - `scripts/gen_velocity_report.sh`: Sprint Velocity Report aus GitHub Issues/Milestones
+  - `docs/process/definition-of-done.md`: DoD mit Code-Qualität, ASPICE-Traceability, Hardware-Kriterien
+  - `docs/process/claude-workflow.puml`: PlantUML-Diagramm des vollständigen Claude-Workflows
+  - Makefile-Targets: `aspice-report`, `velocity-report`, `reports`
+
 ### Dokumentation
 
 - Neuer Claude Agent `@requirements-checker` prüft Traceability zwischen Code-Änderungen und SDoc-Anforderungen, unterstützt spezifische UID-Abfragen (#195)
