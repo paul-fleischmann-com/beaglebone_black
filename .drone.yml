@@ -1851,6 +1851,60 @@ steps:
 
 ---
 # ════════════════════════════════════════
+# PIPELINE 15 — Centralized Reporting
+# ════════════════════════════════════════
+kind: pipeline
+type: docker
+name: 15-reporting
+
+image_pull_secrets:
+  - dockerconfigjson
+
+depends_on:
+  - 1-libraries
+  - 2-embedded-sw
+  - 3-tools
+  - 4-webapp
+  - 5-release
+  - 6-nightly
+  - 7-reports
+  - 8-bausteinsicht
+  - 9-build-container
+  - 10-integration-tests
+  - 11-version-bump
+  - 12-changelog
+
+trigger:
+  event: [push, pull_request, custom, tag, promote, cron]
+
+volumes:
+  - name: pipeline-results
+    host:
+      path: /var/cache/drone/pipeline-results
+  - name: www-downloads
+    host:
+      path: /var/www/downloads
+
+steps:
+  - name: report-all
+    image: eclipse-temurin:17-jre
+    pull: if_not_exists
+    volumes:
+      - name: pipeline-results
+        path: /pipeline-results
+      - name: www-downloads
+        path: /var/www/downloads
+    environment:
+      DEPLOY_HOST:
+        from_secret: deploy_host
+    commands:
+      - apt-get update -q && apt-get install -y --no-install-recommends make -q
+      - make report-all
+    when:
+      status: [success, failure]
+
+---
+# ════════════════════════════════════════
 # PIPELINE 13 — Allure Dashboard
 # ════════════════════════════════════════
 kind: pipeline
@@ -1973,57 +2027,3 @@ steps:
       - find /pipeline-results -maxdepth 1 -mindepth 1 -type d -mtime +7 -exec rm -rf {} +
       - echo "=== Remaining builds ==="
       - ls /pipeline-results/
-
----
-# ════════════════════════════════════════
-# PIPELINE 15 — Centralized Reporting
-# ════════════════════════════════════════
-kind: pipeline
-type: docker
-name: 15-reporting
-
-image_pull_secrets:
-  - dockerconfigjson
-
-depends_on:
-  - 1-libraries
-  - 2-embedded-sw
-  - 3-tools
-  - 4-webapp
-  - 5-release
-  - 6-nightly
-  - 7-reports
-  - 8-bausteinsicht
-  - 9-build-container
-  - 10-integration-tests
-  - 11-version-bump
-  - 12-changelog
-
-trigger:
-  event: [push, pull_request, custom, tag, promote, cron]
-
-volumes:
-  - name: pipeline-results
-    host:
-      path: /var/cache/drone/pipeline-results
-  - name: www-downloads
-    host:
-      path: /var/www/downloads
-
-steps:
-  - name: report-all
-    image: eclipse-temurin:17-jre
-    pull: if_not_exists
-    volumes:
-      - name: pipeline-results
-        path: /pipeline-results
-      - name: www-downloads
-        path: /var/www/downloads
-    environment:
-      DEPLOY_HOST:
-        from_secret: deploy_host
-    commands:
-      - apt-get update -q && apt-get install -y --no-install-recommends make -q
-      - make report-all
-    when:
-      status: [success, failure]
