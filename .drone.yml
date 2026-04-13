@@ -1903,41 +1903,14 @@ steps:
     when:
       status: [success, failure]
 
----
-# ════════════════════════════════════════
-# PIPELINE 13 — Allure Dashboard
-# ════════════════════════════════════════
-kind: pipeline
-type: docker
-name: 13-dashboard
-
-image_pull_secrets:
-  - dockerconfigjson
-
-depends_on:
-  - 15-reporting
-
-trigger:
-  event: [push, pull_request, custom]
-  branch:
-    exclude: [refs/tags/*]
-  paths:
-    include:
-      - project/**
-      - scripts/**
-      - docs/**
-      - tests/**
-      - Makefile
-      - .drone.yml
-    exclude:
-      - scripts/build-container.sh
-
-steps:
   - name: generate-dashboard
     image: eclipse-temurin:17-jre
     pull: if_not_exists
+    depends_on: [report-all]
     commands:
       - bash scripts/allure-dashboard.sh
+    when:
+      status: [success, failure]
 
   - name: upload-dashboard
     image: appleboy/drone-scp@sha256:fa5bce5d58d4c265e88519bdee0fcd6d5721888c97dd3f3665632b38e7329384
