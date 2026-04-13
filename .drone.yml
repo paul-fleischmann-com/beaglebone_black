@@ -42,6 +42,9 @@ volumes:
   - name: pipeline-results
     host:
       path: /var/cache/drone/pipeline-results
+  - name: build-cache
+    host:
+      path: /var/cache/drone/build-artifacts
 
 steps:
   - name: build-libraries
@@ -59,6 +62,21 @@ steps:
       CMD: bash scripts/build-arm.sh
     commands:
       - sh scripts/run-step.sh
+
+  - name: save-artifacts
+    image: alpine
+    pull: if_not_exists
+    depends_on: [build-libraries]
+    volumes:
+      - name: build-cache
+        path: /build-cache
+    commands:
+      - mkdir -p /build-cache/$DRONE_BUILD_NUMBER
+      - cp -r bin/ /build-cache/$DRONE_BUILD_NUMBER/
+      - mkdir -p /build-cache/$DRONE_BUILD_NUMBER/go-api-libs
+      - cp project/go-api/libs/*.so /build-cache/$DRONE_BUILD_NUMBER/go-api-libs/ 2>/dev/null || true
+    when:
+      status: [success, failure]
 
   - name: test-c-lib-pytest
     image: ghcr.io/paulefl/generic-builder:latest
@@ -231,6 +249,9 @@ volumes:
   - name: pipeline-results
     host:
       path: /var/cache/drone/pipeline-results
+  - name: build-cache
+    host:
+      path: /var/cache/drone/build-artifacts
 
 steps:
   - name: test-hal-unit
@@ -261,32 +282,22 @@ steps:
     commands:
       - sh scripts/run-step.sh
 
-  - name: build-go-api
-    image: ghcr.io/paulefl/generic-builder:latest
+  - name: restore-artifacts
+    image: alpine
     pull: if_not_exists
     depends_on: [test-hal-unit]
     volumes:
-      - name: go-mod-cache
-        path: /go/pkg/mod
-      - name: go-build-cache
-        path: /root/.cache/go-build
-      - name: cargo-registry
-        path: /usr/local/cargo/registry
-      - name: cargo-git
-        path: /usr/local/cargo/git
-    environment:
-      SRC: /drone/src
-      OUTPUT: /drone/src/bin
-      JUNIT: ""
-      STEP: build-go-api
-      CMD: bash scripts/build-arm.sh
+      - name: build-cache
+        path: /build-cache
     commands:
-      - sh scripts/run-step.sh
+      - mkdir -p bin project/go-api/libs
+      - cp -r /build-cache/$DRONE_BUILD_NUMBER/bin/. bin/
+      - cp /build-cache/$DRONE_BUILD_NUMBER/go-api-libs/*.so project/go-api/libs/ 2>/dev/null || true
 
   - name: deploy-beaglebone
     image: appleboy/drone-scp@sha256:fa5bce5d58d4c265e88519bdee0fcd6d5721888c97dd3f3665632b38e7329384
     pull: if_not_exists
-    depends_on: [build-go-api]
+    depends_on: [restore-artifacts]
     settings:
       host:
         from_secret: beagle_host
@@ -347,7 +358,7 @@ steps:
     volumes:
       - name: pipeline-results
         path: /pipeline-results
-    depends_on: [test-hal-unit, lint-go, build-go-api, test-hardware-all-backends]
+    depends_on: [test-hal-unit, lint-go, restore-artifacts, test-hardware-all-backends]
     commands:
       - sh scripts/save-pipeline-results.sh 2-embedded-sw
     when:
@@ -1972,6 +1983,9 @@ volumes:
   - name: pipeline-results
     host:
       path: /var/cache/drone/pipeline-results
+  - name: build-cache
+    host:
+      path: /var/cache/drone/build-artifacts
 
 steps:
   - name: prune-images
@@ -2005,3 +2019,15 @@ steps:
       - find /pipeline-results -maxdepth 1 -mindepth 1 -type d -mtime +7 -exec rm -rf {} +
       - echo "=== Remaining builds ==="
       - ls /pipeline-results/
+
+  - name: prune-build-artifacts
+    image: alpine
+    pull: if_not_exists
+    volumes:
+      - name: build-cache
+        path: /build-cache
+    commands:
+      - echo "=== Removing build-artifacts older than 1 day ==="
+      - find /build-cache -maxdepth 1 -mindepth 1 -type d -mtime +1 -exec rm -rf {} +
+      - echo "=== Remaining builds ==="
+      - ls /build-cache/
