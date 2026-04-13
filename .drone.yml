@@ -18,7 +18,6 @@ trigger:
     - project/rust-lib/**
     - project/go-api/pkg/hal/**
     - scripts/build-arm.sh
-    - docker/builder/**
 
 
 volumes:
@@ -1053,10 +1052,13 @@ trigger:
   branch:
     exclude: [refs/tags/*]
   paths:
-    - project/**
-    - tests/**
-    - scripts/**
-    - docs/**
+    include:
+      - project/**
+      - tests/**
+      - scripts/**
+      - docs/**
+    exclude:
+      - scripts/build-container.sh
 
 volumes:
   - name: go-mod-cache
