@@ -35,8 +35,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && wget -q "https://github.com/jgraph/drawio-desktop/releases/download/v${DRAWIO_VERSION}/drawio-amd64-${DRAWIO_VERSION}.deb" \
     && dpkg --ignore-scripts -i ./drawio-amd64-${DRAWIO_VERSION}.deb || true \
     && apt-get install -f -y \
-    && ln -sf /opt/drawio/drawio /usr/bin/drawio \
-    && echo "drawio binary: $(ls -la /usr/bin/drawio)" \
+    && echo "=== drawio installed files ===" \
+    && dpkg -L drawio 2>/dev/null || true \
+    && DRAWIO_BIN=$(find /opt /usr/lib /usr/share -name 'drawio' -type f 2>/dev/null | head -1) \
+    && echo "Found drawio at: $DRAWIO_BIN" \
+    && ( [ -n "$DRAWIO_BIN" ] && ln -sf "$DRAWIO_BIN" /usr/bin/drawio || echo "ERROR: drawio binary not found" ) \
+    && ls -la /usr/bin/drawio \
     && rm -f drawio-amd64-${DRAWIO_VERSION}.deb \
     && rm -rf /var/lib/apt/lists/*
 

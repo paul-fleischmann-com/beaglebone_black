@@ -1,5 +1,98 @@
 ---
 # ════════════════════════════════════════
+# PIPELINE 9 — Builder Images
+# ════════════════════════════════════════
+kind: pipeline
+type: docker
+name: 9-build-container
+
+image_pull_secrets:
+  - dockerconfigjson
+
+trigger:
+  event: [push, custom]
+  branch:
+    exclude: [refs/tags/*]
+  paths:
+    - docker/**/VERSION
+    - docker/**/Dockerfile
+    - scripts/build-container.sh
+    - .drone.yml
+
+volumes:
+  - name: www-downloads
+    host:
+      path: /var/www/downloads
+  - name: pipeline-results
+    host:
+      path: /var/cache/drone/pipeline-results
+
+steps:
+  - name: build-generic-builder
+    image: quay.io/podman/stable
+    pull: if_not_exists
+    privileged: true
+    environment:
+      REGISTRY_USER:  {from_secret: registry_user}
+      REGISTRY_TOKEN: {from_secret: Bau_token}
+      FORCE_REBUILD: ${DRONE_BUILD_PARAM_FORCE}
+      STEP: build-generic-builder
+      CMD: bash scripts/build-container.sh generic-builder docker/builder/Dockerfile docker/builder docker/builder/VERSION
+    commands:
+      - sh scripts/run-step.sh
+
+  - name: clone-bausteinsicht-repo
+    image: alpine/git
+    pull: if_not_exists
+    environment:
+      GIT_TOKEN: {from_secret: Bau_token}
+      STEP: clone-bausteinsicht-repo
+      CMD: git clone --depth 1 https://oauth2:$GIT_TOKEN@github.com/docToolchain/Bausteinsicht.git /drone/src/docker/bausteinsicht/repo
+    commands:
+      - sh scripts/run-step.sh
+
+  - name: build-bausteinsicht
+    image: quay.io/podman/stable
+    pull: if_not_exists
+    privileged: true
+    depends_on: [clone-bausteinsicht-repo]
+    environment:
+      REGISTRY_USER:  {from_secret: registry_user}
+      REGISTRY_TOKEN: {from_secret: Bau_token}
+      STEP: build-bausteinsicht
+      CMD: |
+        cp -r docker/bausteinsicht/repo         docker/bausteinsicht/repo-src
+        cp    docker/bausteinsicht/repo/.devcontainer/drawio-export docker/bausteinsicht/
+        bash scripts/build-container.sh bausteinsicht docker/bausteinsicht/Dockerfile docker/bausteinsicht docker/bausteinsicht/VERSION
+    commands:
+      - sh scripts/run-step.sh
+
+  - name: build-strictdoc
+    image: quay.io/podman/stable
+    pull: if_not_exists
+    privileged: true
+    environment:
+      REGISTRY_USER:  {from_secret: registry_user}
+      REGISTRY_TOKEN: {from_secret: Bau_token}
+      STEP: build-strictdoc
+      CMD: bash scripts/build-container.sh strictdoc docker/strictdoc/Dockerfile docker/strictdoc docker/strictdoc/VERSION
+    commands:
+      - sh scripts/run-step.sh
+
+  - name: save-results
+    image: alpine
+    pull: if_not_exists
+    volumes:
+      - name: pipeline-results
+        path: /pipeline-results
+    depends_on: [build-generic-builder, build-bausteinsicht, build-strictdoc, clone-bausteinsicht-repo]
+    commands:
+      - sh scripts/save-pipeline-results.sh 9-build-container
+    when:
+      status: [success, failure]
+
+---
+# ════════════════════════════════════════
 # PIPELINE 1 — C & Rust Libraries
 # ════════════════════════════════════════
 kind: pipeline
@@ -1294,7 +1387,7 @@ volumes:
 steps:
   - name: validate-model
     image: ghcr.io/paulefl/bausteinsicht:latest
-    pull: if_not_exists
+    pull: always
     environment:
       STEP: validate-model
       CMD: bausteinsicht validate --model arch/model/beaglebone_black.jsonc
@@ -1303,7 +1396,7 @@ steps:
 
   - name: export-plantuml
     image: ghcr.io/paulefl/bausteinsicht:latest
-    pull: if_not_exists
+    pull: always
     depends_on: [validate-model]
     environment:
       STEP: export-plantuml
@@ -1315,7 +1408,7 @@ steps:
 
   - name: export-mermaid
     image: ghcr.io/paulefl/bausteinsicht:latest
-    pull: if_not_exists
+    pull: always
     depends_on: [validate-model]
     environment:
       STEP: export-mermaid
@@ -1327,7 +1420,7 @@ steps:
 
   - name: export-table
     image: ghcr.io/paulefl/bausteinsicht:latest
-    pull: if_not_exists
+    pull: always
     depends_on: [validate-model]
     environment:
       STEP: export-table
@@ -1339,7 +1432,7 @@ steps:
 
   - name: export-png
     image: ghcr.io/paulefl/bausteinsicht:latest
-    pull: if_not_exists
+    pull: always
     depends_on: [export-plantuml, export-mermaid, export-table]
     environment:
       STEP: export-png
@@ -1382,99 +1475,6 @@ steps:
     depends_on: [validate-model, export-plantuml, export-mermaid, export-table, export-png, commit-exports]
     commands:
       - sh scripts/save-pipeline-results.sh 8-bausteinsicht
-    when:
-      status: [success, failure]
-
----
-# ════════════════════════════════════════
-# PIPELINE 9 — Builder Images
-# ════════════════════════════════════════
-kind: pipeline
-type: docker
-name: 9-build-container
-
-image_pull_secrets:
-  - dockerconfigjson
-
-trigger:
-  event: [push, custom]
-  branch:
-    exclude: [refs/tags/*]
-  paths:
-    - docker/**/VERSION
-    - docker/**/Dockerfile
-    - scripts/build-container.sh
-    - .drone.yml
-
-volumes:
-  - name: www-downloads
-    host:
-      path: /var/www/downloads
-  - name: pipeline-results
-    host:
-      path: /var/cache/drone/pipeline-results
-
-steps:
-  - name: build-generic-builder
-    image: quay.io/podman/stable
-    pull: if_not_exists
-    privileged: true
-    environment:
-      REGISTRY_USER:  {from_secret: registry_user}
-      REGISTRY_TOKEN: {from_secret: Bau_token}
-      FORCE_REBUILD: ${DRONE_BUILD_PARAM_FORCE}
-      STEP: build-generic-builder
-      CMD: bash scripts/build-container.sh generic-builder docker/builder/Dockerfile docker/builder docker/builder/VERSION
-    commands:
-      - sh scripts/run-step.sh
-
-  - name: clone-bausteinsicht-repo
-    image: alpine/git
-    pull: if_not_exists
-    environment:
-      GIT_TOKEN: {from_secret: Bau_token}
-      STEP: clone-bausteinsicht-repo
-      CMD: git clone --depth 1 https://oauth2:$GIT_TOKEN@github.com/docToolchain/Bausteinsicht.git /drone/src/docker/bausteinsicht/repo
-    commands:
-      - sh scripts/run-step.sh
-
-  - name: build-bausteinsicht
-    image: quay.io/podman/stable
-    pull: if_not_exists
-    privileged: true
-    depends_on: [clone-bausteinsicht-repo]
-    environment:
-      REGISTRY_USER:  {from_secret: registry_user}
-      REGISTRY_TOKEN: {from_secret: Bau_token}
-      STEP: build-bausteinsicht
-      CMD: |
-        cp -r docker/bausteinsicht/repo         docker/bausteinsicht/repo-src
-        cp    docker/bausteinsicht/repo/.devcontainer/drawio-export docker/bausteinsicht/
-        bash scripts/build-container.sh bausteinsicht docker/bausteinsicht/Dockerfile docker/bausteinsicht docker/bausteinsicht/VERSION
-    commands:
-      - sh scripts/run-step.sh
-
-  - name: build-strictdoc
-    image: quay.io/podman/stable
-    pull: if_not_exists
-    privileged: true
-    environment:
-      REGISTRY_USER:  {from_secret: registry_user}
-      REGISTRY_TOKEN: {from_secret: Bau_token}
-      STEP: build-strictdoc
-      CMD: bash scripts/build-container.sh strictdoc docker/strictdoc/Dockerfile docker/strictdoc docker/strictdoc/VERSION
-    commands:
-      - sh scripts/run-step.sh
-
-  - name: save-results
-    image: alpine
-    pull: if_not_exists
-    volumes:
-      - name: pipeline-results
-        path: /pipeline-results
-    depends_on: [build-generic-builder, build-bausteinsicht, build-strictdoc, clone-bausteinsicht-repo]
-    commands:
-      - sh scripts/save-pipeline-results.sh 9-build-container
     when:
       status: [success, failure]
 
