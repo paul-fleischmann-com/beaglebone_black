@@ -58,10 +58,19 @@ test-python:
 
 
 traceability:
-	python3 scripts/gen_traceability_matrix.py
+	python3 scripts/gen_traceability_matrix.py --output docs/requirements/traceability_matrix.md
 
 traceability-check:
 	python3 scripts/gen_traceability_matrix.py --check
+
+aspice-report:
+	python3 scripts/gen_aspice_report.py --output docs/reports/aspice_report.md
+
+velocity-report:
+	bash scripts/gen_velocity_report.sh --output docs/reports/velocity_report.md
+
+reports: traceability aspice-report velocity-report
+	@echo "Alle Reports generiert in docs/reports/"
 
 test-report:
 	./scripts/report.sh
@@ -138,4 +147,4 @@ clean:
 version:
 	@echo "$(VERSION)"
 
-.PHONY: all c-lib rust-lib go-api cli cli-arm test test-ci test-cover lint test-python test-report test-report-open traceability traceability-check deploy clean req-tracing version adoc-build adoc-summary build-arm checksums release-candidate prepend-changelog install-java install-asciidoctor setup-env
+.PHONY: all c-lib rust-lib go-api cli cli-arm test test-ci test-cover lint test-python test-report test-report-open traceability traceability-check aspice-report velocity-report reports deploy clean req-tracing version adoc-build adoc-summary build-arm checksums release-candidate prepend-changelog install-java install-asciidoctor setup-env
