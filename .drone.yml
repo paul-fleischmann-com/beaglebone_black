@@ -14,12 +14,13 @@ trigger:
   branch:
     exclude: [refs/tags/*]
   paths:
-    - project/c-lib/**
-    - project/rust-lib/**
-    - project/go-api/pkg/hal/**
-    - scripts/build-arm.sh
-    - Makefile
-    - .drone.yml
+    include:
+      - project/c-lib/**
+      - project/rust-lib/**
+      - project/go-api/pkg/hal/**
+      - scripts/build-arm.sh
+      - Makefile
+      - .drone.yml
 
 
 volumes:
@@ -38,6 +39,9 @@ volumes:
   - name: www-downloads
     host:
       path: /var/www/downloads
+  - name: pipeline-results
+    host:
+      path: /var/cache/drone/pipeline-results
 
 steps:
   - name: build-libraries
@@ -170,36 +174,15 @@ steps:
     when:
       status: [success, failure]
 
-  - name: generate-junit
-    image: alpine
-    pull: if_not_exists
-    depends_on: [build-libraries, test-c-lib-pytest, test-c-lib-go, test-c-lib-cgo, test-rust-lib, test-go]
-    commands:
-      - apk add --no-cache bash
-      - sh scripts/generate-junit.sh 1-libraries build-libraries test-c-lib-pytest test-c-lib-go test-c-lib-cgo test-rust-lib test-go
-    when:
-      status: [success, failure]
-
-  - name: allure-generate
-    image: eclipse-temurin:17-jre
-    pull: if_not_exists
-    depends_on: [generate-junit]
-    commands:
-      - bash scripts/allure-generate.sh 1-libraries
-      - echo "Allure Report http://192.168.2.55/downloads/1-libraries/allure-report/index.html"
-    when:
-      status: [success, failure]
-
-  - name: publish-allure
+  - name: save-results
     image: alpine
     pull: if_not_exists
     volumes:
-      - name: www-downloads
-        path: /var/www/downloads
-    depends_on: [allure-generate]
+      - name: pipeline-results
+        path: /pipeline-results
+    depends_on: [build-libraries, test-c-lib-pytest, test-c-lib-go, test-c-lib-cgo, test-rust-lib, test-go]
     commands:
-      - apk add --no-cache make unzip -q
-      - make publish-allure PIPELINE=1-libraries
+      - sh scripts/save-pipeline-results.sh 1-libraries
     when:
       status: [success, failure]
 
@@ -211,6 +194,8 @@ kind: pipeline
 type: docker
 name: 2-embedded-sw
 
+depends_on: [1-libraries]
+
 image_pull_secrets:
   - dockerconfigjson
 
@@ -219,12 +204,13 @@ trigger:
   branch:
     exclude: [refs/tags/*]
   paths:
-    - project/go-api/**
-    - project/c-lib/**
-    - project/rust-lib/**
-    - scripts/build-arm.sh
-    - Makefile
-    - .drone.yml
+    include:
+      - project/go-api/**
+      - project/c-lib/**
+      - project/rust-lib/**
+      - scripts/build-arm.sh
+      - Makefile
+      - .drone.yml
 
 
 volumes:
@@ -243,6 +229,9 @@ volumes:
   - name: www-downloads
     host:
       path: /var/www/downloads
+  - name: pipeline-results
+    host:
+      path: /var/cache/drone/pipeline-results
 
 steps:
   - name: test-hal-unit
@@ -353,36 +342,15 @@ steps:
       branch: [main, develop]
       event: [push]
 
-  - name: generate-junit
-    image: alpine
-    pull: if_not_exists
-    depends_on: [test-hal-unit, lint-go, build-go-api, test-hardware-all-backends]
-    commands:
-      - apk add --no-cache bash
-      - sh scripts/generate-junit.sh 2-embedded-sw test-hal-unit lint-go build-go-api test-hardware-all-backends
-    when:
-      status: [success, failure]
-
-  - name: allure-generate
-    image: eclipse-temurin:17-jre
-    pull: if_not_exists
-    depends_on: [generate-junit]
-    commands:
-      - bash scripts/allure-generate.sh 2-embedded-sw
-      - echo "Allure Report http://192.168.2.55/downloads/2-embedded-sw/allure-report/index.html"
-    when:
-      status: [success, failure]
-
-  - name: publish-allure
+  - name: save-results
     image: alpine
     pull: if_not_exists
     volumes:
-      - name: www-downloads
-        path: /var/www/downloads
-    depends_on: [allure-generate]
+      - name: pipeline-results
+        path: /pipeline-results
+    depends_on: [test-hal-unit, lint-go, build-go-api, test-hardware-all-backends]
     commands:
-      - apk add --no-cache make unzip -q
-      - make publish-allure PIPELINE=2-embedded-sw
+      - sh scripts/save-pipeline-results.sh 2-embedded-sw
     when:
       status: [success, failure]
 
@@ -398,13 +366,14 @@ image_pull_secrets:
   - dockerconfigjson
 
 trigger:
-  event: [push, pull_request, custom, promote]
+  event: [push, pull_request, custom, promote, tag]
   branch:
     exclude: [refs/tags/*]
   paths:
-    - tools/**
-    - Makefile
-    - .drone.yml
+    include:
+      - tools/**
+      - Makefile
+      - .drone.yml
 
 volumes:
   - name: go-mod-cache
@@ -416,6 +385,9 @@ volumes:
   - name: www-downloads
     host:
       path: /var/www/downloads
+  - name: pipeline-results
+    host:
+      path: /var/cache/drone/pipeline-results
 
 steps:
   - name: lint-cli
@@ -636,36 +608,15 @@ steps:
     commands:
       - sh scripts/run-step.sh
 
-  - name: generate-junit
-    image: alpine
-    pull: if_not_exists
-    depends_on: [lint-cli, lint-tui, build-cli-linux-amd64, build-cli-linux-arm, build-cli-darwin-amd64, build-cli-darwin-arm64, build-cli-windows-amd64, build-tui-linux-amd64, build-tui-linux-armv7, build-tui-darwin-amd64, validate-web-gui, shellcheck, checksums]
-    commands:
-      - apk add --no-cache bash
-      - sh scripts/generate-junit.sh 3-tools lint-cli lint-tui build-cli-linux-amd64 build-cli-linux-arm build-cli-darwin-amd64 build-cli-darwin-arm64 build-cli-windows-amd64 build-tui-linux-amd64 build-tui-linux-armv7 build-tui-darwin-amd64 validate-web-gui shellcheck checksums
-    when:
-      status: [success, failure]
-
-  - name: allure-generate
-    image: eclipse-temurin:17-jre
-    pull: if_not_exists
-    depends_on: [generate-junit]
-    commands:
-      - bash scripts/allure-generate.sh 3-tools
-      - echo "Allure Report http://192.168.2.55/downloads/3-tools/allure-report/index.html"
-    when:
-      status: [success, failure]
-
-  - name: publish-allure
+  - name: save-results
     image: alpine
     pull: if_not_exists
     volumes:
-      - name: www-downloads
-        path: /var/www/downloads
-    depends_on: [allure-generate]
+      - name: pipeline-results
+        path: /pipeline-results
+    depends_on: [lint-cli, lint-tui, build-cli-linux-amd64, build-cli-linux-arm, build-cli-darwin-amd64, build-cli-darwin-arm64, build-cli-windows-amd64, build-tui-linux-amd64, build-tui-linux-armv7, build-tui-darwin-amd64, validate-web-gui, shellcheck, checksums]
     commands:
-      - apk add --no-cache make unzip -q
-      - make publish-allure PIPELINE=3-tools
+      - sh scripts/save-pipeline-results.sh 3-tools
     when:
       status: [success, failure]
 
@@ -685,14 +636,18 @@ trigger:
   branch:
     exclude: [refs/tags/*]
   paths:
-    - tools/web-gui/**
-    - Makefile
-    - .drone.yml
+    include:
+      - tools/web-gui/**
+      - Makefile
+      - .drone.yml
 
 volumes:
   - name: www-downloads
     host:
       path: /var/www/downloads
+  - name: pipeline-results
+    host:
+      path: /var/cache/drone/pipeline-results
 
 steps:
   - name: validate-html
@@ -725,36 +680,15 @@ steps:
     commands:
       - sh scripts/run-step.sh
 
-  - name: generate-junit
-    image: alpine
-    pull: if_not_exists
-    depends_on: [validate-html, package-web-gui]
-    commands:
-      - apk add --no-cache bash
-      - sh scripts/generate-junit.sh 4-webapp validate-html package-web-gui
-    when:
-      status: [success, failure]
-
-  - name: allure-generate
-    image: eclipse-temurin:17-jre
-    pull: if_not_exists
-    depends_on: [generate-junit]
-    commands:
-      - bash scripts/allure-generate.sh 4-webapp
-      - echo "Allure Report http://192.168.2.55/downloads/4-webapp/allure-report/index.html"
-    when:
-      status: [success, failure]
-
-  - name: publish-allure
+  - name: save-results
     image: alpine
     pull: if_not_exists
     volumes:
-      - name: www-downloads
-        path: /var/www/downloads
-    depends_on: [allure-generate]
+      - name: pipeline-results
+        path: /pipeline-results
+    depends_on: [validate-html, package-web-gui]
     commands:
-      - apk add --no-cache make unzip -q
-      - make publish-allure PIPELINE=4-webapp
+      - sh scripts/save-pipeline-results.sh 4-webapp
     when:
       status: [success, failure]
 
@@ -765,6 +699,8 @@ steps:
 kind: pipeline
 type: docker
 name: 5-release
+
+depends_on: [3-tools]
 
 image_pull_secrets:
   - dockerconfigjson
@@ -791,6 +727,9 @@ volumes:
   - name: www-downloads
     host:
       path: /var/www/downloads
+  - name: pipeline-results
+    host:
+      path: /var/cache/drone/pipeline-results
 
 steps:
   - name: build-arm
@@ -810,7 +749,7 @@ steps:
     commands:
       - sh scripts/run-step.sh
 
-  - name: build-cli
+  - name: build-tools
     image: golang:1.24
     pull: if_not_exists
     volumes:
@@ -819,7 +758,7 @@ steps:
       - name: go-build-cache
         path: /root/.cache/go-build
     environment:
-      STEP: build-cli
+      STEP: build-tools
       CMD: |
         mkdir -p bin
         cd tools/cli
@@ -828,22 +767,7 @@ steps:
         GOOS=darwin GOARCH=amd64        CGO_ENABLED=0 go build -ldflags="-s -w" -o ../../bin/bbcli-darwin-amd64 .
         GOOS=darwin GOARCH=arm64        CGO_ENABLED=0 go build -ldflags="-s -w" -o ../../bin/bbcli-darwin-arm64 .
         GOOS=windows GOARCH=amd64       CGO_ENABLED=0 go build -ldflags="-s -w" -o ../../bin/bbcli-windows-amd64.exe .
-    commands:
-      - sh scripts/run-step.sh
-
-  - name: build-tui
-    image: golang:1.24
-    pull: if_not_exists
-    volumes:
-      - name: go-mod-cache
-        path: /go/pkg/mod
-      - name: go-build-cache
-        path: /root/.cache/go-build
-    environment:
-      STEP: build-tui
-      CMD: |
-        mkdir -p bin
-        cd tools/tui
+        cd ../tui
         GOOS=linux  GOARCH=amd64       CGO_ENABLED=0 go build -ldflags="-s -w" -o ../../bin/bbtui-linux-amd64 .
         GOOS=linux  GOARCH=arm GOARM=7 CGO_ENABLED=0 go build -ldflags="-s -w" -o ../../bin/bbtui-linux-armv7 .
         GOOS=darwin GOARCH=amd64       CGO_ENABLED=0 go build -ldflags="-s -w" -o ../../bin/bbtui-darwin-amd64 .
@@ -867,7 +791,7 @@ steps:
   - name: checksums
     image: alpine
     pull: if_not_exists
-    depends_on: [build-arm, build-cli, build-tui, build-web-gui]
+    depends_on: [build-arm, build-tools, build-web-gui]
     environment:
       STEP: checksums
       CMD: "(cd bin && sha256sum embedded bbcli-* bbtui-* bbweb-gui.zip > checksums.sha256 && cat checksums.sha256)"
@@ -934,36 +858,15 @@ steps:
       tag: "$DRONE_TAG-toTestOnTarget"
       prerelease: true
 
-  - name: generate-junit
-    image: alpine
-    pull: if_not_exists
-    depends_on: [build-arm, build-cli, build-tui, build-web-gui, checksums, build-docker-image]
-    commands:
-      - apk add --no-cache bash
-      - sh scripts/generate-junit.sh 5-release build-arm build-cli build-tui build-web-gui checksums build-docker-image
-    when:
-      status: [success, failure]
-
-  - name: allure-generate
-    image: eclipse-temurin:17-jre
-    pull: if_not_exists
-    depends_on: [generate-junit]
-    commands:
-      - bash scripts/allure-generate.sh 5-release
-      - echo "Allure Report http://192.168.2.55/downloads/5-release/allure-report/index.html"
-    when:
-      status: [success, failure]
-
-  - name: publish-allure
+  - name: save-results
     image: alpine
     pull: if_not_exists
     volumes:
-      - name: www-downloads
-        path: /var/www/downloads
-    depends_on: [allure-generate]
+      - name: pipeline-results
+        path: /pipeline-results
+    depends_on: [build-arm, build-tools, build-web-gui, checksums, build-docker-image]
     commands:
-      - apk add --no-cache make unzip -q
-      - make publish-allure PIPELINE=5-release
+      - sh scripts/save-pipeline-results.sh 5-release
     when:
       status: [success, failure]
 
@@ -986,6 +889,9 @@ volumes:
   - name: www-downloads
     host:
       path: /var/www/downloads
+  - name: pipeline-results
+    host:
+      path: /var/cache/drone/pipeline-results
 
 steps:
   - name: test-all-backends
@@ -1011,36 +917,15 @@ steps:
     when:
       status: [success, failure]
 
-  - name: generate-junit
-    image: alpine
-    pull: if_not_exists
-    depends_on: [test-all-backends]
-    commands:
-      - apk add --no-cache bash
-      - sh scripts/generate-junit.sh 6-nightly test-all-backends
-    when:
-      status: [success, failure]
-
-  - name: allure-generate
-    image: eclipse-temurin:17-jre
-    pull: if_not_exists
-    depends_on: [generate-junit]
-    commands:
-      - bash scripts/allure-generate.sh 6-nightly
-      - echo "Allure Report http://192.168.2.55/downloads/6-nightly/allure-report/index.html"
-    when:
-      status: [success, failure]
-
-  - name: publish-allure
+  - name: save-results
     image: alpine
     pull: if_not_exists
     volumes:
-      - name: www-downloads
-        path: /var/www/downloads
-    depends_on: [allure-generate]
+      - name: pipeline-results
+        path: /pipeline-results
+    depends_on: [test-all-backends]
     commands:
-      - apk add --no-cache make unzip -q
-      - make publish-allure PIPELINE=6-nightly
+      - sh scripts/save-pipeline-results.sh 6-nightly
     when:
       status: [success, failure]
 
@@ -1086,6 +971,9 @@ volumes:
   - name: www-downloads
     host:
       path: /var/www/downloads
+  - name: pipeline-results
+    host:
+      path: /var/cache/drone/pipeline-results
 
 steps:
   - name: go-tests-with-coverage
@@ -1235,18 +1123,20 @@ steps:
     depends_on: [prepare-reports]
     environment:
       STEP: upload
+      DEPLOY_HOST:
+        from_secret: deploy_host
+      DEPLOY_USER:
+        from_secret: deploy_user
+      SSH_KEY:
+        from_secret: ssh_key
       CMD: |
         apk add --no-cache openssh-client -q
-        mkdir -p ~/.ssh
-        echo "$SSH_KEY" > ~/.ssh/id_rsa
-        chmod 600 ~/.ssh/id_rsa
+        sh scripts/ci-ssh-setup.sh
         FILE=$(cat artifact_name.txt 2>/dev/null || echo "")
         if [ -z "$FILE" ]; then echo "Kein Artefakt-Name — übersprungen"; exit 0; fi
         scp -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
-          -i ~/.ssh/id_rsa "$FILE" deploy@192.168.2.55:/var/www/downloads/ || \
+          -i ~/.ssh/id_rsa "$FILE" $DEPLOY_USER@$DEPLOY_HOST:/var/www/downloads/ || \
           echo "⚠️  Upload fehlgeschlagen (Server nicht erreichbar) — Build wird fortgesetzt"
-      SSH_KEY:
-        from_secret: ssh_key
     commands:
       - sh scripts/run-step.sh
 
@@ -1256,10 +1146,12 @@ steps:
     depends_on: [upload]
     environment:
       STEP: print-url
+      DEPLOY_HOST:
+        from_secret: deploy_host
       CMD: |
         SHA8=$(echo "$DRONE_COMMIT_SHA" | head -c8)
         echo "Download URL:"
-        echo "http://192.168.2.55/downloads/strictdoc-$SHA8.zip"
+        echo "http://$DEPLOY_HOST/downloads/strictdoc-$SHA8.zip"
     commands:
       - sh scripts/run-step.sh
 
@@ -1400,36 +1292,15 @@ steps:
       branch: [main, develop]
       event:  [push, tag]
 
-  - name: generate-junit
-    image: alpine
-    pull: if_not_exists
-    depends_on: [go-tests-with-coverage, python-tests, python-security, shellcheck, c-coverage, adoc-build, strictdoc-export, prepare-reports, print-url, strictdoc-coverage-gate, traceability-check, sonarqube-report, sonarcloud-scan, collect-and-report, quality-gates, package-artifacts]
-    commands:
-      - apk add --no-cache bash
-      - sh scripts/generate-junit.sh 7-reports go-tests-with-coverage python-tests python-security shellcheck c-coverage adoc-build strictdoc-export prepare-reports print-url strictdoc-coverage-gate traceability-check sonarqube-report sonarcloud-scan collect-and-report quality-gates package-artifacts
-    when:
-      status: [success, failure]
-
-  - name: allure-generate
-    image: eclipse-temurin:17-jre
-    pull: if_not_exists
-    depends_on: [generate-junit]
-    commands:
-      - bash scripts/allure-generate.sh 7-reports
-      - echo "Allure Report http://192.168.2.55/downloads/7-reports/allure-report/index.html"
-    when:
-      status: [success, failure]
-
-  - name: publish-allure
+  - name: save-results
     image: alpine
     pull: if_not_exists
     volumes:
-      - name: www-downloads
-        path: /var/www/downloads
-    depends_on: [allure-generate]
+      - name: pipeline-results
+        path: /pipeline-results
+    depends_on: [go-tests-with-coverage, python-tests, python-security, shellcheck, c-coverage, adoc-build, strictdoc-export, prepare-reports, print-url, strictdoc-coverage-gate, traceability-check, sonarqube-report, sonarcloud-scan, collect-and-report, quality-gates, package-artifacts]
     commands:
-      - apk add --no-cache make unzip -q
-      - make publish-allure PIPELINE=7-reports
+      - sh scripts/save-pipeline-results.sh 7-reports
     when:
       status: [success, failure]
 
@@ -1449,13 +1320,17 @@ trigger:
   branch:
     exclude: [refs/tags/*]
   paths:
-    - arch/model/**
-    - .drone.yml
+    include:
+      - arch/model/**
+      - .drone.yml
 
 volumes:
   - name: www-downloads
     host:
       path: /var/www/downloads
+  - name: pipeline-results
+    host:
+      path: /var/cache/drone/pipeline-results
 
 steps:
   - name: validate-model
@@ -1525,8 +1400,7 @@ steps:
       GIT_USER:  {from_secret: git_user}
       STEP: commit-exports
       CMD: |
-        git config user.name "drone-ci[bot]"
-        git config user.email "drone-ci[bot]@noreply"
+        sh scripts/ci-git-setup.sh
         git add arch/model/export/
         if git diff --staged --quiet; then
           echo "Keine Änderungen in arch/model/export"
@@ -1540,36 +1414,15 @@ steps:
       event: [push]
       branch: [main, develop]
 
-  - name: generate-junit
-    image: alpine
-    pull: if_not_exists
-    depends_on: [validate-model, export-plantuml, export-mermaid, export-table, export-png, commit-exports]
-    commands:
-      - apk add --no-cache bash
-      - sh scripts/generate-junit.sh 8-bausteinsicht validate-model export-plantuml export-mermaid export-table export-png commit-exports
-    when:
-      status: [success, failure]
-
-  - name: allure-generate
-    image: eclipse-temurin:17-jre
-    pull: if_not_exists
-    depends_on: [generate-junit]
-    commands:
-      - bash scripts/allure-generate.sh 8-bausteinsicht
-      - echo "Allure Report http://192.168.2.55/downloads/8-bausteinsicht/allure-report/index.html"
-    when:
-      status: [success, failure]
-
-  - name: publish-allure
+  - name: save-results
     image: alpine
     pull: if_not_exists
     volumes:
-      - name: www-downloads
-        path: /var/www/downloads
-    depends_on: [allure-generate]
+      - name: pipeline-results
+        path: /pipeline-results
+    depends_on: [validate-model, export-plantuml, export-mermaid, export-table, export-png, commit-exports]
     commands:
-      - apk add --no-cache make unzip -q
-      - make publish-allure PIPELINE=8-bausteinsicht
+      - sh scripts/save-pipeline-results.sh 8-bausteinsicht
     when:
       status: [success, failure]
 
@@ -1599,6 +1452,9 @@ volumes:
   - name: www-downloads
     host:
       path: /var/www/downloads
+  - name: pipeline-results
+    host:
+      path: /var/cache/drone/pipeline-results
 
 steps:
   - name: build-generic-builder
@@ -1652,36 +1508,15 @@ steps:
     commands:
       - sh scripts/run-step.sh
 
-  - name: generate-junit
-    image: alpine
-    pull: if_not_exists
-    depends_on: [build-generic-builder, build-bausteinsicht, build-strictdoc, clone-bausteinsicht-repo]
-    commands:
-      - apk add --no-cache bash
-      - sh scripts/generate-junit.sh 9-build-container build-generic-builder clone-bausteinsicht-repo build-bausteinsicht build-strictdoc
-    when:
-      status: [success, failure]
-
-  - name: allure-generate
-    image: eclipse-temurin:17-jre
-    pull: if_not_exists
-    depends_on: [generate-junit]
-    commands:
-      - bash scripts/allure-generate.sh 9-build-container
-      - echo "Allure Report http://192.168.2.55/downloads/9-build-container/allure-report/index.html"
-    when:
-      status: [success, failure]
-
-  - name: publish-allure
+  - name: save-results
     image: alpine
     pull: if_not_exists
     volumes:
-      - name: www-downloads
-        path: /var/www/downloads
-    depends_on: [allure-generate]
+      - name: pipeline-results
+        path: /pipeline-results
+    depends_on: [build-generic-builder, build-bausteinsicht, build-strictdoc, clone-bausteinsicht-repo]
     commands:
-      - apk add --no-cache make unzip -q
-      - make publish-allure PIPELINE=9-build-container
+      - sh scripts/save-pipeline-results.sh 9-build-container
     when:
       status: [success, failure]
 
@@ -1705,6 +1540,9 @@ volumes:
   - name: www-downloads
     host:
       path: /var/www/downloads
+  - name: pipeline-results
+    host:
+      path: /var/cache/drone/pipeline-results
 
 steps:
   - name: download-release-assets
@@ -1867,36 +1705,15 @@ steps:
     commands:
       - sh scripts/run-step.sh
 
-  - name: generate-junit
-    image: alpine
-    pull: if_not_exists
-    depends_on: [download-release-assets, test-hardware, test-api, test-uart-on-bbb, test-cli-remote, promote-to-stable]
-    commands:
-      - apk add --no-cache bash
-      - sh scripts/generate-junit.sh 10-integration-tests download-release-assets test-hardware test-api test-uart-on-bbb test-cli-remote promote-to-stable
-    when:
-      status: [success, failure]
-
-  - name: allure-generate
-    image: eclipse-temurin:17-jre
-    pull: if_not_exists
-    depends_on: [generate-junit]
-    commands:
-      - bash scripts/allure-generate.sh 10-integration-tests
-      - echo "Allure Report http://192.168.2.55/downloads/10-integration-tests/allure-report/index.html"
-    when:
-      status: [success, failure]
-
-  - name: publish-allure
+  - name: save-results
     image: alpine
     pull: if_not_exists
     volumes:
-      - name: www-downloads
-        path: /var/www/downloads
-    depends_on: [allure-generate]
+      - name: pipeline-results
+        path: /pipeline-results
+    depends_on: [download-release-assets, test-hardware, test-api, test-uart-on-bbb, test-cli-remote, promote-to-stable]
     commands:
-      - apk add --no-cache make unzip -q
-      - make publish-allure PIPELINE=10-integration-tests
+      - sh scripts/save-pipeline-results.sh 10-integration-tests
     when:
       status: [success, failure]
 
@@ -1919,6 +1736,9 @@ volumes:
   - name: www-downloads
     host:
       path: /var/www/downloads
+  - name: pipeline-results
+    host:
+      path: /var/cache/drone/pipeline-results
 
 steps:
   - name: bump-version
@@ -1939,8 +1759,7 @@ steps:
         esac
         NEW="${MAJOR}.${MINOR}.${PATCH}"
         sed -i "s/^VERSION = .*/VERSION = $NEW/" Makefile
-        git config user.name "drone-ci[bot]"
-        git config user.email "drone-ci[bot]@noreply"
+        sh scripts/ci-git-setup.sh
         git add Makefile CHANGELOG.md
         git commit -m "chore(release): bump version to ${NEW} [skip ci]"
         git tag "v${NEW}"
@@ -1949,36 +1768,15 @@ steps:
     commands:
       - sh scripts/run-step.sh
 
-  - name: generate-junit
-    image: alpine
-    pull: if_not_exists
-    depends_on: [bump-version]
-    commands:
-      - apk add --no-cache bash
-      - sh scripts/generate-junit.sh 11-version-bump bump-version
-    when:
-      status: [success, failure]
-
-  - name: allure-generate
-    image: eclipse-temurin:17-jre
-    pull: if_not_exists
-    depends_on: [generate-junit]
-    commands:
-      - bash scripts/allure-generate.sh 11-version-bump
-      - echo "Allure Report http://192.168.2.55/downloads/11-version-bump/allure-report/index.html"
-    when:
-      status: [success, failure]
-
-  - name: publish-allure
+  - name: save-results
     image: alpine
     pull: if_not_exists
     volumes:
-      - name: www-downloads
-        path: /var/www/downloads
-    depends_on: [allure-generate]
+      - name: pipeline-results
+        path: /pipeline-results
+    depends_on: [bump-version]
     commands:
-      - apk add --no-cache make unzip -q
-      - make publish-allure PIPELINE=11-version-bump
+      - sh scripts/save-pipeline-results.sh 11-version-bump
     when:
       status: [success, failure]
 
@@ -1997,15 +1795,19 @@ trigger:
   event: [push, pull_request, custom]
   branch: [main]
   paths:
-    - project/**
-    - tools/**
-    - Makefile
-    - .drone.yml
+    include:
+      - project/**
+      - tools/**
+      - Makefile
+      - .drone.yml
 
 volumes:
   - name: www-downloads
     host:
       path: /var/www/downloads
+  - name: pipeline-results
+    host:
+      path: /var/cache/drone/pipeline-results
 
 steps:
   - name: update-changelog
@@ -2024,8 +1826,7 @@ steps:
         chmod +x /usr/local/bin/git-cliff
         git-cliff --unreleased --output unreleased.md
         make prepend-changelog
-        git config user.name "drone-ci[bot]"
-        git config user.email "drone-ci[bot]@noreply"
+        sh scripts/ci-git-setup.sh
         git add CHANGELOG.md
         if git diff --cached --quiet; then
           echo "Keine Changelog-Änderungen"
@@ -2036,36 +1837,15 @@ steps:
     commands:
       - sh scripts/run-step.sh
 
-  - name: generate-junit
-    image: alpine
-    pull: if_not_exists
-    depends_on: [update-changelog]
-    commands:
-      - apk add --no-cache bash
-      - sh scripts/generate-junit.sh 12-changelog update-changelog
-    when:
-      status: [success, failure]
-
-  - name: allure-generate
-    image: eclipse-temurin:17-jre
-    pull: if_not_exists
-    depends_on: [generate-junit]
-    commands:
-      - bash scripts/allure-generate.sh 12-changelog
-      - echo "Allure Report http://192.168.2.55/downloads/12-changelog/allure-report/index.html"
-    when:
-      status: [success, failure]
-
-  - name: publish-allure
+  - name: save-results
     image: alpine
     pull: if_not_exists
     volumes:
-      - name: www-downloads
-        path: /var/www/downloads
-    depends_on: [allure-generate]
+      - name: pipeline-results
+        path: /pipeline-results
+    depends_on: [update-changelog]
     commands:
-      - apk add --no-cache make unzip -q
-      - make publish-allure PIPELINE=12-changelog
+      - sh scripts/save-pipeline-results.sh 12-changelog
     when:
       status: [success, failure]
 
@@ -2081,14 +1861,7 @@ image_pull_secrets:
   - dockerconfigjson
 
 depends_on:
-  - 1-libraries
-  - 2-embedded-sw
-  - 3-tools
-  - 4-webapp
-  - 7-reports
-  - 8-bausteinsicht
-  - 9-build-container
-  - 12-changelog
+  - 15-reporting
 
 trigger:
   event: [push, pull_request, custom]
@@ -2117,8 +1890,10 @@ steps:
     pull: if_not_exists
     depends_on: [generate-dashboard]
     settings:
-      host: 192.168.2.55
-      username: deploy
+      host:
+        from_secret: deploy_host
+      username:
+        from_secret: deploy_user
       key:
         from_secret: ssh_key
       source: allure-dashboard.zip
@@ -2132,8 +1907,10 @@ steps:
     pull: if_not_exists
     depends_on: [upload-dashboard]
     settings:
-      host: 192.168.2.55
-      username: deploy
+      host:
+        from_secret: deploy_host
+      username:
+        from_secret: deploy_user
       key:
         from_secret: ssh_key
       script:
@@ -2160,6 +1937,9 @@ volumes:
   - name: docker-sock
     host:
       path: /var/run/docker.sock
+  - name: pipeline-results
+    host:
+      path: /var/cache/drone/pipeline-results
 
 steps:
   - name: prune-images
@@ -2181,3 +1961,69 @@ steps:
       - docker network prune -f
       - echo "=== Docker disk usage after ==="
       - docker system df
+
+  - name: prune-pipeline-results
+    image: alpine
+    pull: if_not_exists
+    volumes:
+      - name: pipeline-results
+        path: /pipeline-results
+    commands:
+      - echo "=== Removing pipeline-results older than 7 days ==="
+      - find /pipeline-results -maxdepth 1 -mindepth 1 -type d -mtime +7 -exec rm -rf {} +
+      - echo "=== Remaining builds ==="
+      - ls /pipeline-results/
+
+---
+# ════════════════════════════════════════
+# PIPELINE 15 — Centralized Reporting
+# ════════════════════════════════════════
+kind: pipeline
+type: docker
+name: 15-reporting
+
+image_pull_secrets:
+  - dockerconfigjson
+
+depends_on:
+  - 1-libraries
+  - 2-embedded-sw
+  - 3-tools
+  - 4-webapp
+  - 5-release
+  - 6-nightly
+  - 7-reports
+  - 8-bausteinsicht
+  - 9-build-container
+  - 10-integration-tests
+  - 11-version-bump
+  - 12-changelog
+
+trigger:
+  event: [push, pull_request, custom, tag, promote, cron]
+
+volumes:
+  - name: pipeline-results
+    host:
+      path: /var/cache/drone/pipeline-results
+  - name: www-downloads
+    host:
+      path: /var/www/downloads
+
+steps:
+  - name: report-all
+    image: eclipse-temurin:17-jre
+    pull: if_not_exists
+    volumes:
+      - name: pipeline-results
+        path: /pipeline-results
+      - name: www-downloads
+        path: /var/www/downloads
+    environment:
+      DEPLOY_HOST:
+        from_secret: deploy_host
+    commands:
+      - apt-get update -q && apt-get install -y --no-install-recommends make -q
+      - make report-all
+    when:
+      status: [success, failure]

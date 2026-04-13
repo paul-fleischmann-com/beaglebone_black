@@ -134,6 +134,9 @@ publish-allure:
 	unzip -o allure-report.zip -d /var/www/downloads/$(PIPELINE)/
 	cp allure-report.zip /var/www/downloads/$(PIPELINE)/allure-report.zip
 
+report-all:
+	bash scripts/run-all-reports.sh
+
 release-candidate:
 	VERSION=$(VERSION) ./scripts/ci-release-candidate.sh
 
@@ -186,6 +189,7 @@ info:
 	@echo ""
 	@echo "CI & Release"
 	@echo "  publish-allure   Publish Allure report (PIPELINE=<name> required)"
+	@echo "  report-all       Run reporting chain for all pipelines (CI: Pipeline 15)"
 	@echo "  checksums        Generate build artifact checksums"
 	@echo "  release-candidate  Create release candidate"
 	@echo "  prepend-changelog  Prepend latest changelog entry"
@@ -202,4 +206,4 @@ info:
 	@echo "  info             Show this help"
 	@echo ""
 
-.PHONY: all c-lib rust-lib go-api cli cli-arm test test-ci test-cover lint test-python test-report test-report-open traceability traceability-check aspice-report velocity-report reports deploy clean req-tracing version adoc-build adoc-summary build-arm checksums release-candidate prepend-changelog install-java install-asciidoctor setup-env info
+.PHONY: all c-lib rust-lib go-api cli cli-arm test test-ci test-cover lint test-python test-report test-report-open traceability traceability-check aspice-report velocity-report reports deploy clean req-tracing version adoc-build adoc-summary build-arm checksums release-candidate prepend-changelog install-java install-asciidoctor setup-env info publish-allure report-all

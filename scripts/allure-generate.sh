@@ -7,7 +7,7 @@ PIPELINE=${1:-unknown}
 ALLURE_VERSION=2.27.0
 RESULTS_DIR=allure-results
 REPORT_DIR=allure-report
-HISTORY_BASE_URL="http://192.168.2.55/downloads/$PIPELINE/allure-report/history"
+HISTORY_BASE_URL="http://${DEPLOY_HOST:-192.168.2.55}/downloads/$PIPELINE/allure-report/history"
 
 mkdir -p "$RESULTS_DIR" "$REPORT_DIR"
 
