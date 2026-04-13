@@ -1233,72 +1233,13 @@ steps:
       branch: [main, develop]
       event: [push]
 
-  - name: collect-and-report
-    image: python:3.12-slim
-    pull: if_not_exists
-    depends_on:
-      - go-tests-with-coverage
-      - python-tests
-      - c-coverage
-      - adoc-build
-    environment:
-      STEP: collect-and-report
-      CMD: |
-        pip install reportlab jinja2 --quiet
-        python3 scripts/collect_results.py --workspace reports --output reports/test_results.json || true
-        python3 scripts/generate_reports.py --output reports/summary --results reports/test_results.json --trend reports/test_trend.json || true
-        ls -lh reports/ || true
-    commands:
-      - sh scripts/run-step.sh
-
-  - name: quality-gates
-    image: python:3.12-alpine
-    pull: if_not_exists
-    depends_on: [collect-and-report]
-    environment:
-      STEP: quality-gates
-      CMD: "python3 scripts/collect_results.py --check-gates --results reports/test_results.json --min-success-rate 90 --min-avg-coverage 75 --min-file-coverage 50 || true"
-    commands:
-      - sh scripts/run-step.sh
-
-  - name: package-artifacts
-    image: alpine
-    pull: if_not_exists
-    depends_on:
-      - collect-and-report
-      - adoc-build
-      - strictdoc-coverage-gate
-      - traceability-check
-      - sonarqube-report
-    environment:
-      STEP: package-artifacts
-      CMD: |
-        apk add --no-cache zip
-        (cd reports && zip -r ../reports-$DRONE_BUILD_NUMBER.zip . 2>/dev/null || true)
-        echo "Artifacts gepackt"
-    commands:
-      - sh scripts/run-step.sh
-
-  - name: notify
-    image: plugins/slack
-    pull: if_not_exists
-    depends_on: [quality-gates, package-artifacts]
-    settings:
-      webhook: {from_secret: slack_webhook}
-      channel: builds
-      template: "Build {{build.number}} — {{build.status}} {{build.link}}"
-    when:
-      status: [success, failure]
-      branch: [main, develop]
-      event:  [push, tag]
-
   - name: save-results
     image: alpine
     pull: if_not_exists
     volumes:
       - name: pipeline-results
         path: /pipeline-results
-    depends_on: [go-tests-with-coverage, python-tests, python-security, shellcheck, c-coverage, adoc-build, strictdoc-export, prepare-reports, print-url, strictdoc-coverage-gate, traceability-check, sonarqube-report, sonarcloud-scan, collect-and-report, quality-gates, package-artifacts]
+    depends_on: [go-tests-with-coverage, python-tests, python-security, shellcheck, c-coverage, adoc-build, strictdoc-export, prepare-reports, print-url, strictdoc-coverage-gate, traceability-check, sonarqube-report, sonarcloud-scan]
     commands:
       - sh scripts/save-pipeline-results.sh 7-reports
     when:
@@ -1902,6 +1843,55 @@ steps:
       - make report-all
     when:
       status: [success, failure]
+
+  - name: collect-and-report
+    image: python:3.12-slim
+    pull: if_not_exists
+    depends_on: [report-all]
+    volumes:
+      - name: pipeline-results
+        path: /pipeline-results
+    commands:
+      - cp -r /pipeline-results/$DRONE_BUILD_NUMBER/7-reports/reports reports 2>/dev/null || true
+      - pip install reportlab jinja2 --quiet
+      - python3 scripts/collect_results.py --workspace reports --output reports/test_results.json || true
+      - python3 scripts/generate_reports.py --output reports/summary --results reports/test_results.json --trend reports/test_trend.json || true
+      - ls -lh reports/ || true
+    when:
+      status: [success, failure]
+
+  - name: quality-gates
+    image: python:3.12-alpine
+    pull: if_not_exists
+    depends_on: [collect-and-report]
+    commands:
+      - python3 scripts/collect_results.py --check-gates --results reports/test_results.json --min-success-rate 90 --min-avg-coverage 75 --min-file-coverage 50 || true
+    when:
+      status: [success, failure]
+
+  - name: package-artifacts
+    image: alpine
+    pull: if_not_exists
+    depends_on: [collect-and-report]
+    commands:
+      - apk add --no-cache zip
+      - (cd reports && zip -r ../reports-$DRONE_BUILD_NUMBER.zip . 2>/dev/null || true)
+      - echo "Artifacts gepackt"
+    when:
+      status: [success, failure]
+
+  - name: notify
+    image: plugins/slack
+    pull: if_not_exists
+    depends_on: [quality-gates, package-artifacts]
+    settings:
+      webhook: {from_secret: slack_webhook}
+      channel: builds
+      template: "Build {{build.number}} — {{build.status}} {{build.link}}"
+    when:
+      status: [success, failure]
+      branch: [main, develop]
+      event: [push, tag]
 
   - name: generate-dashboard
     image: eclipse-temurin:17-jre
