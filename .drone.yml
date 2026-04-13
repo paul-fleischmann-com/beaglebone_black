@@ -1248,70 +1248,27 @@ steps:
         mkdir -p reports/strictdoc
         strictdoc export . --formats html --output-dir reports/strictdoc || true
         find reports/strictdoc -name "*.html" | head -10 || true
-        zip -r strictdoc-output.zip reports/strictdoc/
+        (cd reports/strictdoc && zip -r ../../strictdoc-output.zip .)
     commands:
       - sh scripts/run-step.sh
 
-  - name: prepare-reports
+  - name: publish-strictdoc
     image: alpine
     pull: if_not_exists
-    depends_on: [strictdoc-export]
-    environment:
-      STEP: prepare-reports
-      CMD: |
-        SHA8=$(echo "$DRONE_COMMIT_SHA" | head -c8)
-        FILE=strictdoc-$SHA8.zip
-        mv strictdoc-output.zip $FILE
-        echo $FILE > artifact_name.txt
-    commands:
-      - sh scripts/run-step.sh
-
-  - name: upload
-    image: alpine
-    pull: if_not_exists
-    depends_on: [prepare-reports]
-    environment:
-      STEP: upload
-      DEPLOY_HOST:
-        from_secret: deploy_host
-      DEPLOY_USER:
-        from_secret: deploy_user
-      SSH_KEY:
-        from_secret: ssh_key
-      CMD: |
-        apk add --no-cache openssh-client -q
-        sh scripts/ci-ssh-setup.sh
-        FILE=$(cat artifact_name.txt 2>/dev/null || echo "")
-        if [ -z "$FILE" ]; then echo "Kein Artefakt-Name — übersprungen"; exit 0; fi
-        scp -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
-          -i ~/.ssh/id_rsa "$FILE" $DEPLOY_USER@$DEPLOY_HOST:/var/www/downloads/ || \
-          echo "⚠️  Upload fehlgeschlagen (Server nicht erreichbar) — Build wird fortgesetzt"
-    commands:
-      - sh scripts/run-step.sh
-
-  - name: print-url
-    image: alpine
-    pull: if_not_exists
-    depends_on: [upload]
-    environment:
-      STEP: print-url
-      DEPLOY_HOST:
-        from_secret: deploy_host
-      CMD: |
-        SHA8=$(echo "$DRONE_COMMIT_SHA" | head -c8)
-        echo "Download URL:"
-        echo "http://$DEPLOY_HOST/downloads/strictdoc-$SHA8.zip"
-    commands:
-      - sh scripts/run-step.sh
-
-  - name: save-results
-    image: alpine
-    pull: if_not_exists
+    depends_on: [adoc-build, strictdoc-export]
     volumes:
+      - name: www-downloads
+        path: /var/www/downloads
       - name: pipeline-results
         path: /pipeline-results
-    depends_on: [adoc-build, strictdoc-export, prepare-reports, upload, print-url]
+    environment:
+      DEPLOY_HOST:
+        from_secret: deploy_host
     commands:
+      - apk add --no-cache unzip -q
+      - mkdir -p /var/www/downloads/7c-docs/strictdoc
+      - unzip -o strictdoc-output.zip -d /var/www/downloads/7c-docs/strictdoc/
+      - echo "StrictDoc verfuegbar unter http://$DEPLOY_HOST/downloads/7c-docs/strictdoc/"
       - sh scripts/save-pipeline-results.sh 7c-docs
     when:
       status: [success, failure]
