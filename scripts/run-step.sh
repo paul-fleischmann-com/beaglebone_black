@@ -24,7 +24,8 @@ if [ -z "$CMD" ]; then
 fi
 
 mkdir -p .step-status
-date +%s > .step-status/${STEP}.start
+chmod 777 .step-status 2>/dev/null || true
+date +%s > .step-status/${STEP}.start 2>/dev/null || true
 
 sh -c "$CMD"
 EXIT=$?

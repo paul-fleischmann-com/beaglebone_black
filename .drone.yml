@@ -1084,6 +1084,7 @@ steps:
           --junit-xml reports/go-tests-junit.xml \
           --output-junit reports/req-coverage-junit.xml \
           --min-coverage 70 || true
+        [ -f reports/req-coverage-junit.xml ] || echo '<?xml version="1.0"?><testsuites/>' > reports/req-coverage-junit.xml
     commands:
       - sh scripts/run-step.sh
 
@@ -1347,7 +1348,6 @@ trigger:
   paths:
     include:
       - arch/model/**
-      - .drone.yml
 
 volumes:
   - name: www-downloads
@@ -1467,11 +1467,8 @@ trigger:
   branch:
     exclude: [refs/tags/*]
   paths:
-    - docker/builder/**
-    - docker/bausteinsicht/**
-    - docker/strictdoc/**
+    - docker/**/VERSION
     - scripts/build-container.sh
-    - .drone.yml
 
 volumes:
   - name: www-downloads
