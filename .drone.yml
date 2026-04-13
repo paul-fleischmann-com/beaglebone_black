@@ -899,17 +899,6 @@ steps:
     commands:
       - sh scripts/run-step.sh
 
-  - name: notify-slack
-    image: plugins/slack
-    pull: if_not_exists
-    depends_on: [test-all-backends]
-    settings:
-      webhook: {from_secret: slack_webhook}
-      channel: builds
-      template: "Nightly Build {{build.number}} — {{build.status}} {{build.link}}"
-    when:
-      status: [success, failure]
-
   - name: save-results
     image: alpine
     pull: if_not_exists
@@ -1953,19 +1942,6 @@ steps:
       - echo "Artifacts gepackt"
     when:
       status: [success, failure]
-
-  - name: notify
-    image: plugins/slack
-    pull: if_not_exists
-    depends_on: [quality-gates, package-artifacts]
-    settings:
-      webhook: {from_secret: slack_webhook}
-      channel: builds
-      template: "Build {{build.number}} — {{build.status}} {{build.link}}"
-    when:
-      status: [success, failure]
-      branch: [main, develop]
-      event: [push, tag]
 
   - name: generate-dashboard
     image: eclipse-temurin:17-jre
