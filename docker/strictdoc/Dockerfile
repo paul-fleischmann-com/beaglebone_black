@@ -16,5 +16,5 @@ RUN pip install --no-cache-dir \
     $([ "$STRICTDOC_VERSION" = "latest" ] && echo "strictdoc" || echo "strictdoc==$STRICTDOC_VERSION")
 
 WORKDIR /data
-CMD ["sh", "-c", "echo 'Container Version: $APP_VERSION'"]
+CMD ["sh", "-c", "echo 'Container Version of strictdoc : $APP_VERSION'"]
 ENTRYPOINT ["strictdoc"]
