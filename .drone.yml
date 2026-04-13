@@ -2080,6 +2080,14 @@ trigger:
   event: [push, pull_request, custom]
   branch:
     exclude: [refs/tags/*]
+  paths:
+    include:
+      - project/**
+      - scripts/**
+      - docs/**
+      - tests/**
+    exclude:
+      - scripts/build-container.sh
 
 steps:
   - name: generate-dashboard
