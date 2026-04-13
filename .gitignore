@@ -64,6 +64,7 @@ secrets/
 
 # ── Drone ────────────────────────────────
 .drone.yml.local
+docker-compose.yml
 
 # ── Node (Web GUI) ────────────────────────
 node_modules/
