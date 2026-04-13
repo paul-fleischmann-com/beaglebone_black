@@ -20,7 +20,6 @@ trigger:
       - project/go-api/pkg/hal/**
       - scripts/build-arm.sh
       - Makefile
-      - .drone.yml
 
 
 volumes:
@@ -210,8 +209,6 @@ trigger:
       - project/rust-lib/**
       - scripts/build-arm.sh
       - Makefile
-      - .drone.yml
-
 
 volumes:
   - name: go-mod-cache
@@ -372,8 +369,6 @@ trigger:
   paths:
     include:
       - tools/**
-      - Makefile
-      - .drone.yml
 
 volumes:
   - name: go-mod-cache
@@ -638,8 +633,6 @@ trigger:
   paths:
     include:
       - tools/web-gui/**
-      - Makefile
-      - .drone.yml
 
 volumes:
   - name: www-downloads
@@ -950,7 +943,6 @@ trigger:
       - tests/**
       - docs/requirements/**
       - Makefile
-      - .drone.yml
 
 volumes:
   - name: go-mod-cache
@@ -1821,7 +1813,6 @@ trigger:
       - project/**
       - tools/**
       - Makefile
-      - .drone.yml
 
 volumes:
   - name: www-downloads
