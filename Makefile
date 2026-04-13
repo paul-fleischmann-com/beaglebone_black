@@ -132,6 +132,7 @@ publish-allure:
 	rm -rf /var/www/downloads/$(PIPELINE)
 	mkdir -p /var/www/downloads/$(PIPELINE)
 	unzip -o allure-report.zip -d /var/www/downloads/$(PIPELINE)/
+	cp allure-report.zip /var/www/downloads/$(PIPELINE)/allure-report.zip
 
 release-candidate:
 	VERSION=$(VERSION) ./scripts/ci-release-candidate.sh
