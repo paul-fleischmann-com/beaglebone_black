@@ -1,6 +1,6 @@
 # Traceability-Matrix — BeagleBone Black
 
-**Generiert:** 2026-04-12  
+**Generiert:** 2026-04-13  
 **Tool:** `scripts/gen_traceability_matrix.py`  
 **ASPICE:** SWE.1 BP3/BP4/BP5 Work Product
 
