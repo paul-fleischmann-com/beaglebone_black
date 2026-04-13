@@ -60,63 +60,21 @@ echo ""
 echo "## Velocity — Letzte 4 Wochen"
 echo ""
 
-CLOSED_ISSUES=$(gh issue list --state closed --limit 100 \
-  --json number,title,closedAt,labels \
-  --jq 'sort_by(.closedAt) | reverse | .[] | select(.closedAt >= (now - 2419200 | todate))' 2>/dev/null || echo "")
+GH_JSON=$(gh issue list --state closed --limit 100 \
+  --json number,title,closedAt,labels 2>/dev/null || echo "[]")
 
-if [ -n "$CLOSED_ISSUES" ]; then
-  # Gruppierung nach Woche via Python
-  python3 - <<'PYEOF'
-import json, sys
+GH_JSON="$GH_JSON" python3 <<'PYEOF'
+import json, os, sys
 from datetime import datetime, timedelta
 
 try:
-    issues = json.loads(sys.stdin.read() or "[]")
-except Exception:
-    issues = []
-
-# Nach Woche gruppieren
-weeks = {}
-for issue in issues:
-    if not issue.get('closedAt'):
-        continue
-    dt = datetime.fromisoformat(issue['closedAt'].replace('Z', '+00:00'))
-    week_start = (dt - timedelta(days=dt.weekday())).strftime('%Y-%m-%d')
-    weeks.setdefault(week_start, []).append(issue)
-
-if not weeks:
-    print("_Keine Issues in den letzten 4 Wochen geschlossen_")
-    sys.exit(0)
-
-print("| Woche | Issues geschlossen | Bugs | Features |")
-print("|---|---|---|---|")
-total = 0
-for week in sorted(weeks.keys(), reverse=True):
-    items = weeks[week]
-    bugs = sum(1 for i in items if any(l['name'] == 'bug' for l in i.get('labels', [])))
-    features = sum(1 for i in items if any(l['name'] == 'enhancement' for l in i.get('labels', [])))
-    print(f"| {week} | {len(items)} | {bugs} | {features} |")
-    total += len(items)
-print(f"")
-print(f"**Gesamt geschlossen:** {total}")
-print(f"**Ø pro Woche:** {total/max(len(weeks),1):.1f}")
-PYEOF
-
-else
-  GH_OUTPUT=$(gh issue list --state closed --limit 100 \
-    --json number,title,closedAt,labels 2>/dev/null)
-  echo "$GH_OUTPUT" | python3 - <<'PYEOF'
-import json, sys
-from datetime import datetime, timedelta
-
-try:
-    issues = json.load(sys.stdin)
+    issues = json.loads(os.environ.get('GH_JSON', '[]'))
 except Exception:
     issues = []
 
 cutoff = datetime.now().astimezone() - timedelta(weeks=4)
 recent = [i for i in issues if i.get('closedAt') and
-          datetime.fromisoformat(i['closedAt'].replace('Z','+00:00')) > cutoff]
+          datetime.fromisoformat(i['closedAt'].replace('Z', '+00:00')) > cutoff]
 
 weeks = {}
 for issue in recent:
@@ -141,7 +99,6 @@ print(f"")
 print(f"**Gesamt geschlossen:** {total}")
 print(f"**Ø pro Woche:** {total/max(len(weeks),1):.1f}")
 PYEOF
-fi
 
 echo ""
 echo "---"
