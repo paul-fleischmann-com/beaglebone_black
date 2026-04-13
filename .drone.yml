@@ -1423,6 +1423,7 @@ trigger:
     exclude: [refs/tags/*]
   paths:
     - docker/**/VERSION
+    - docker/**/Dockerfile
     - scripts/build-container.sh
     - .drone.yml
 

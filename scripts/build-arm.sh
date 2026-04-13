@@ -60,9 +60,16 @@ if [ -f "$PROJECT/rust-lib/target/armv7-unknown-linux-gnueabihf/release/libhardw
   cp "$PROJECT/rust-lib/target/armv7-unknown-linux-gnueabihf/release/rust_app" "$OUTPUT/"
 fi
 
+cp "$OUTPUT/libhardware.so"    "$PROJECT/go-api/libs/" 2>/dev/null || true
+cp "$OUTPUT/libhardware_rs.so" "$PROJECT/go-api/libs/" 2>/dev/null || true
+
 run_step "Build Go API" \
-  env GOOS=linux GOARCH=arm GOARM=7 \
-    go build -o "$OUTPUT/go_app" "$PROJECT/go/main.go"
+  env GOOS=linux GOARCH=arm GOARM=7 CGO_ENABLED=1 CC=arm-linux-gnueabihf-gcc \
+    go build -ldflags="-s -w" -o "$OUTPUT/embedded" "$PROJECT/go-api/cmd/"
+
+run_step "Build CLI (ARM)" \
+  env GOOS=linux GOARCH=arm GOARM=7 CGO_ENABLED=0 \
+    go build -o "$OUTPUT/bbcli-linux-arm" "$SRC/tools/cli/"
 
 # --- write JUnit XML -----------------------------------------------
 [ -z "$JUNIT" ] && { echo "=== JUnit XML disabled ==="; [ $FAILURES -eq 0 ] || exit 1; exit 0; }
