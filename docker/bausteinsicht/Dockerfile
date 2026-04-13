@@ -33,10 +33,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libxkbcommon0 libxcomposite1 libxrandr2 libxdamage1 \
     libasound2 libpangocairo-1.0-0 libatk1.0-0 libcups2 \
     && wget -q "https://github.com/jgraph/drawio-desktop/releases/download/v${DRAWIO_VERSION}/drawio-amd64-${DRAWIO_VERSION}.deb" \
-    && dpkg -i ./drawio-amd64-${DRAWIO_VERSION}.deb 2>&1 || true \
+    && dpkg --ignore-scripts -i ./drawio-amd64-${DRAWIO_VERSION}.deb || true \
     && apt-get install -f -y \
-    && dpkg --configure -a 2>&1 || true \
-    && DRAWIO_BIN=$(find /opt /usr/lib /usr/share -maxdepth 6 \( -name 'drawio' -o -name 'drawio-desktop' \) \( -type f -o -type l \) 2>/dev/null | head -1) \
+    && DRAWIO_BIN=$(find /opt /usr/lib -maxdepth 6 \( -name 'drawio' -o -name 'drawio-desktop' \) \( -type f -o -type l \) 2>/dev/null | head -1) \
     && test -n "$DRAWIO_BIN" && ln -sf "$DRAWIO_BIN" /usr/bin/drawio \
     && rm -f drawio-amd64-${DRAWIO_VERSION}.deb \
     && rm -rf /var/lib/apt/lists/*
