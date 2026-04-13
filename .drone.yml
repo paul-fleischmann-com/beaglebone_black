@@ -931,11 +931,11 @@ steps:
 
 ---
 # ════════════════════════════════════════
-# PIPELINE 7 — Reports & Quality Gates
+# PIPELINE 7a — Testing & Coverage
 # ════════════════════════════════════════
 kind: pipeline
 type: docker
-name: 7-reports
+name: 7a-testing
 
 image_pull_secrets:
   - dockerconfigjson
@@ -948,12 +948,9 @@ trigger:
     include:
       - project/**
       - tests/**
-      - scripts/**
-      - docs/**
+      - docs/requirements/**
       - Makefile
       - .drone.yml
-    exclude:
-      - scripts/build-container.sh
 
 volumes:
   - name: go-mod-cache
@@ -965,12 +962,6 @@ volumes:
   - name: pip-cache
     host:
       path: /var/cache/drone/pip
-  - name: gem-cache
-    host:
-      path: /var/cache/drone/gem
-  - name: www-downloads
-    host:
-      path: /var/www/downloads
   - name: pipeline-results
     host:
       path: /var/cache/drone/pipeline-results
@@ -1003,13 +994,13 @@ steps:
     commands:
       - sh scripts/run-step.sh
 
-  - name: junit-reports-pipe-7
+  - name: junit-reports-pipe-7a
     image: ghcr.io/rohit-gohri/drone-junit:v0
     pull: if_not_exists
     depends_on: [go-tests-with-coverage]
     settings:
       paths: reports/go-tests-junit.xml
-      report_name: "junit-reports - Pipe 7 - go-tests-with-coverage"
+      report_name: "junit-reports - Pipe 7a - go-tests-with-coverage"
     when:
       status: [success, failure]
 
@@ -1028,6 +1019,140 @@ steps:
     commands:
       - sh scripts/run-step.sh
 
+  - name: c-coverage
+    image: debian:bookworm
+    pull: if_not_exists
+    environment:
+      STEP: c-coverage
+      CMD: |
+        mkdir -p reports
+        apt-get update -q && apt-get install -y -q gcc make lcov
+        make -C c-lib CFLAGS="-fprofile-arcs -ftest-coverage -g" CC=gcc test || true
+        bash scripts/c_coverage.sh c-lib/ reports/c-coverage.info '/usr/*' '*/test/*' || true
+    commands:
+      - sh scripts/run-step.sh
+
+  - name: sonarqube-report
+    image: python:3.12-alpine
+    pull: if_not_exists
+    depends_on: [go-tests-with-coverage, c-coverage]
+    volumes:
+      - name: pip-cache
+        path: /root/.cache/pip
+    environment:
+      STEP: sonarqube-report
+      CMD: |
+        pip install requests defusedxml --break-system-packages -q
+        SONAR_TOKEN=$(cat /run/secrets/sonar_token 2>/dev/null || echo "")
+        if [ -z "$SONAR_TOKEN" ]; then echo "SONAR_TOKEN nicht gesetzt — übersprungen"; exit 0; fi
+        python3 .github/actions/sonarqube-report/sonarqube_report.py --token "$SONAR_TOKEN" --project paulefl_beaglebone_black --output reports/sonar-report.html || true
+    commands:
+      - sh scripts/run-step.sh
+
+  - name: sonarcloud-scan
+    image: sonarsource/sonar-scanner-cli:latest
+    pull: if_not_exists
+    depends_on: [go-tests-with-coverage, c-coverage]
+    environment:
+      STEP: sonarcloud-scan
+      CMD: |
+        sonar-scanner \
+            -Dsonar.projectKey=paulefl_beaglebone_black \
+            -Dsonar.organization=paulefl \
+            -Dsonar.host.url=https://sonarcloud.io \
+            -Dsonar.go.coverage.reportPaths=reports/go_coverage.out \
+            -Dsonar.c.lcov.reportPaths=reports/c-coverage.info \
+            || true
+    commands:
+      - sh scripts/run-step.sh
+    when:
+      branch: [main, develop]
+      event: [push]
+
+  - name: strictdoc-coverage-gate
+    image: python:3.12-slim
+    pull: if_not_exists
+    depends_on: [go-tests-with-coverage]
+    volumes:
+      - name: pip-cache
+        path: /root/.cache/pip
+    environment:
+      STEP: strictdoc-coverage-gate
+      CMD: |
+        python3 scripts/check_req_coverage.py \
+          --sdoc-dir docs/requirements \
+          --junit-xml reports/go-tests-junit.xml \
+          --output-junit reports/req-coverage-junit.xml \
+          --min-coverage 70 || true
+    commands:
+      - sh scripts/run-step.sh
+
+  - name: traceability-check
+    image: python:3.12-slim
+    pull: if_not_exists
+    depends_on: [strictdoc-coverage-gate]
+    environment:
+      STEP: traceability-check
+      CMD: |
+        python3 scripts/gen_traceability_matrix.py \
+          --output reports/traceability_matrix.md || true
+        python3 scripts/gen_traceability_matrix.py --check || true
+    commands:
+      - sh scripts/run-step.sh
+
+  - name: junit-reports-req-coverage
+    image: ghcr.io/rohit-gohri/drone-junit:v0
+    pull: if_not_exists
+    depends_on: [strictdoc-coverage-gate]
+    settings:
+      paths: reports/req-coverage-junit.xml
+      report_name: "junit-reports - Req coverage"
+    when:
+      status: [success, failure]
+
+  - name: save-results
+    image: alpine
+    pull: if_not_exists
+    volumes:
+      - name: pipeline-results
+        path: /pipeline-results
+    depends_on: [go-tests-with-coverage, python-tests, c-coverage, sonarqube-report, sonarcloud-scan, strictdoc-coverage-gate, traceability-check]
+    commands:
+      - sh scripts/save-pipeline-results.sh 7a-testing
+    when:
+      status: [success, failure]
+
+---
+# ════════════════════════════════════════
+# PIPELINE 7b — Static Analysis
+# ════════════════════════════════════════
+kind: pipeline
+type: docker
+name: 7b-analysis
+
+image_pull_secrets:
+  - dockerconfigjson
+
+trigger:
+  event: [push, pull_request, custom]
+  branch:
+    exclude: [refs/tags/*]
+  paths:
+    include:
+      - project/**
+      - tests/**
+      - scripts/**
+      - .drone.yml
+
+volumes:
+  - name: pip-cache
+    host:
+      path: /var/cache/drone/pip
+  - name: pipeline-results
+    host:
+      path: /var/cache/drone/pipeline-results
+
+steps:
   - name: python-security
     image: python:3.12-alpine
     pull: if_not_exists
@@ -1055,19 +1180,57 @@ steps:
     commands:
       - sh scripts/run-step.sh
 
-  - name: c-coverage
-    image: debian:bookworm
+  - name: save-results
+    image: alpine
     pull: if_not_exists
-    environment:
-      STEP: c-coverage
-      CMD: |
-        mkdir -p reports
-        apt-get update -q && apt-get install -y -q gcc make lcov
-        make -C c-lib CFLAGS="-fprofile-arcs -ftest-coverage -g" CC=gcc test || true
-        bash scripts/c_coverage.sh c-lib/ reports/c-coverage.info '/usr/*' '*/test/*' || true
+    volumes:
+      - name: pipeline-results
+        path: /pipeline-results
+    depends_on: [python-security, shellcheck]
     commands:
-      - sh scripts/run-step.sh
+      - sh scripts/save-pipeline-results.sh 7b-analysis
+    when:
+      status: [success, failure]
 
+---
+# ════════════════════════════════════════
+# PIPELINE 7c — Documentation
+# ════════════════════════════════════════
+kind: pipeline
+type: docker
+name: 7c-docs
+
+image_pull_secrets:
+  - dockerconfigjson
+
+trigger:
+  event: [push, pull_request, custom]
+  branch:
+    exclude: [refs/tags/*]
+  paths:
+    include:
+      - docs/**
+      - scripts/**
+      - project/**
+      - .drone.yml
+    exclude:
+      - scripts/build-container.sh
+
+volumes:
+  - name: pip-cache
+    host:
+      path: /var/cache/drone/pip
+  - name: gem-cache
+    host:
+      path: /var/cache/drone/gem
+  - name: www-downloads
+    host:
+      path: /var/www/downloads
+  - name: pipeline-results
+    host:
+      path: /var/cache/drone/pipeline-results
+
+steps:
   - name: adoc-build
     image: asciidoctor/docker-asciidoctor:latest
     pull: if_not_exists
@@ -1086,7 +1249,6 @@ steps:
   - name: strictdoc-export
     image: python:3.12-slim
     pull: if_not_exists
-    depends_on: [go-tests-with-coverage]
     volumes:
       - name: pip-cache
         path: /root/.cache/pip
@@ -1155,93 +1317,15 @@ steps:
     commands:
       - sh scripts/run-step.sh
 
-  - name: strictdoc-coverage-gate
-    image: python:3.12-slim
-    pull: if_not_exists
-    depends_on: [strictdoc-export]
-    volumes:
-      - name: pip-cache
-        path: /root/.cache/pip
-    environment:
-      STEP: strictdoc-coverage-gate
-      CMD: |
-        python3 scripts/check_req_coverage.py \
-          --sdoc-dir docs/requirements \
-          --junit-xml reports/go-tests-junit.xml \
-          --output-junit reports/req-coverage-junit.xml \
-          --min-coverage 70 || true
-    commands:
-      - sh scripts/run-step.sh
-
-  - name: traceability-check
-    image: python:3.12-slim
-    pull: if_not_exists
-    depends_on: [strictdoc-coverage-gate]
-    environment:
-      STEP: traceability-check
-      CMD: |
-        python3 scripts/gen_traceability_matrix.py \
-          --output reports/traceability_matrix.md || true
-        python3 scripts/gen_traceability_matrix.py --check || true
-    commands:
-      - sh scripts/run-step.sh
-
-  - name: junit-reports-req-coverage
-    image: ghcr.io/rohit-gohri/drone-junit:v0
-    pull: if_not_exists
-    depends_on: [strictdoc-coverage-gate]
-    settings:
-      paths: reports/req-coverage-junit.xml
-      report_name: "junit-reports - Req coverage"
-    when:
-      status: [success, failure]
-
-  - name: sonarqube-report
-    image: python:3.12-alpine
-    pull: if_not_exists
-    depends_on: [go-tests-with-coverage, c-coverage, python-security]
-    volumes:
-      - name: pip-cache
-        path: /root/.cache/pip
-    environment:
-      STEP: sonarqube-report
-      CMD: |
-        pip install requests defusedxml --break-system-packages -q
-        SONAR_TOKEN=$(cat /run/secrets/sonar_token 2>/dev/null || echo "")
-        if [ -z "$SONAR_TOKEN" ]; then echo "SONAR_TOKEN nicht gesetzt — übersprungen"; exit 0; fi
-        python3 .github/actions/sonarqube-report/sonarqube_report.py --token "$SONAR_TOKEN" --project paulefl_beaglebone_black --output reports/sonar-report.html || true
-    commands:
-      - sh scripts/run-step.sh
-
-  - name: sonarcloud-scan
-    image: sonarsource/sonar-scanner-cli:latest
-    pull: if_not_exists
-    depends_on: [go-tests-with-coverage, c-coverage, python-security]
-    environment:
-      STEP: sonarcloud-scan
-      CMD: |
-        sonar-scanner \
-            -Dsonar.projectKey=paulefl_beaglebone_black \
-            -Dsonar.organization=paulefl \
-            -Dsonar.host.url=https://sonarcloud.io \
-            -Dsonar.go.coverage.reportPaths=reports/go_coverage.out \
-            -Dsonar.c.lcov.reportPaths=reports/c-coverage.info \
-            || true
-    commands:
-      - sh scripts/run-step.sh
-    when:
-      branch: [main, develop]
-      event: [push]
-
   - name: save-results
     image: alpine
     pull: if_not_exists
     volumes:
       - name: pipeline-results
         path: /pipeline-results
-    depends_on: [go-tests-with-coverage, python-tests, python-security, shellcheck, c-coverage, adoc-build, strictdoc-export, prepare-reports, print-url, strictdoc-coverage-gate, traceability-check, sonarqube-report, sonarcloud-scan]
+    depends_on: [adoc-build, strictdoc-export, prepare-reports, upload, print-url]
     commands:
-      - sh scripts/save-pipeline-results.sh 7-reports
+      - sh scripts/save-pipeline-results.sh 7c-docs
     when:
       status: [success, failure]
 
@@ -1808,7 +1892,9 @@ depends_on:
   - 4-webapp
   - 5-release
   - 6-nightly
-  - 7-reports
+  - 7a-testing
+  - 7b-analysis
+  - 7c-docs
   - 8-bausteinsicht
   - 9-build-container
   - 10-integration-tests
