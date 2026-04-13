@@ -1,0 +1,227 @@
+@startuml Claude Entwicklungsprozess-Workflow
+
+!theme plain
+skinparam backgroundColor #FAFAFA
+skinparam defaultFontName Helvetica
+skinparam defaultFontSize 12
+
+skinparam activity {
+  BackgroundColor #E8F4FD
+  BorderColor #2E86AB
+  FontColor #1A1A2E
+  ArrowColor #2E86AB
+  DiamondBackgroundColor #FFF3CD
+  DiamondBorderColor #D4A017
+}
+
+skinparam note {
+  BackgroundColor #F0FFF0
+  BorderColor #5AAA5A
+}
+
+skinparam rectangle {
+  BackgroundColor #EEF2FF
+  BorderColor #7C83E8
+}
+
+title Claude Entwicklungsprozess-Workflow\nBeagleBone Black — Waterfall + ASPICE + Agile
+
+|#E8F4FD| User |
+|#FFF3CD| Claude Skills |
+|#F0FFF0| Hooks & Automation |
+|#EEF2FF| CI / GitHub |
+
+' ═══════════════════════════════
+' PHASE 1: Story & Requirements
+' ═══════════════════════════════
+|User|
+start
+:Idee / Feature-Wunsch;
+
+|Claude Skills|
+:/start-story;
+note right
+  6 Schritte:
+  1. Story erfassen
+  2. INVEST-Validierung
+  3. Akzeptanzkriterien
+  4. Requirements ableiten
+  5. SDoc schreiben
+  6. GitHub Issue anlegen
+end note
+
+:INVEST-Prüfung\n**I**ndependent · **N**egotiable\n**V**aluable · **E**stimable\n**S**mall · **T**estable;
+
+if (INVEST OK?) then (ja)
+else (Feedback)
+  :Story überarbeiten;
+  :INVEST-Prüfung;
+endif
+
+:Requirements in SDoc\n(docs/requirements/*.sdoc);
+:GitHub Issue erstellt\n(@create-issues);
+
+' ═══════════════════════════════
+' PHASE 2: Sprint Planning
+' ═══════════════════════════════
+|User|
+:/sprint-ceremony planning;
+
+|Claude Skills|
+:@sprint-manager\nIssues priorisieren\nSprint-Ziel definieren;
+
+' ═══════════════════════════════
+' PHASE 3: Ticket-Implementierung
+' ═══════════════════════════════
+|User|
+:/start_ticket <nr>;
+
+|Claude Skills|
+:Issue auswählen\nBranch anlegen\n<nr>-<titel>;
+
+|CI / GitHub|
+:GitHub Issue → "In Progress";
+
+|Claude Skills|
+:Implementierungsplan\n(docs/features/plans/);
+
+' ── Implementierungs-Loop ──
+repeat
+  |Claude Skills|
+  :Phase implementieren;
+
+  |Hooks & Automation|
+  fork
+    :PostToolUse\n**format-on-save.sh**\n• gofmt (*.go)\n• shellcheck (*.sh)\n• drone-lint (.drone.yml);
+  fork again
+    :PreToolUse\n**block-no-verify.sh**\n• git commit --no-verify\ngeblockt;
+  fork again
+    :PreToolUse\n**protect-env-files.sh**\n• .env* Edits geblockt;
+  end fork
+
+  |Claude Skills|
+  :Commit;
+
+  |User|
+  :Plan noch sinnvoll?;
+
+repeat while (weitere Phasen?) is (ja)
+-> nein;
+
+' ═══════════════════════════════
+' PHASE 4: Verifikation
+' ═══════════════════════════════
+|Claude Skills|
+:Akzeptanzkriterien\nverifizieren;
+
+|User|
+:Alles OK?;
+
+if (OK?) then (ja)
+else (Nein)
+  :Nachbessern;
+  :Commit;
+endif
+
+' ═══════════════════════════════
+' PHASE 5: PR & CI
+' ═══════════════════════════════
+|CI / GitHub|
+:PR erstellen\n**gh pr create**;
+:Drone CI Build\n7 Pipelines;
+
+if (CI grün?) then (ja)
+else (fehlgeschlagen)
+  |Claude Skills|
+  :@drone-analyzer\nFehler analysieren;
+  :Fix commiten & pushen;
+  |CI / GitHub|
+  :Neuer Build;
+  if (CI grün?) then (ja)
+  endif
+endif
+
+' ── Auto Review ──
+|Claude Skills|
+:PR-Review\n**@pr-reviewer**\nDiff analysieren;
+
+if (BLOCKER gefunden?) then (nein)
+else (ja)
+  :Fix implementieren;
+  :Commit & Push → neuer CI;
+endif
+
+|CI / GitHub|
+if (GH_BOT_TOKEN gesetzt?) then (ja)
+  :gh pr review --approve;
+else (nein)
+  :gh pr comment\n🤖 Auto-Review;
+endif
+
+|Claude Skills|
+:CHANGELOG.md aktualisieren;
+
+|CI / GitHub|
+:PR mergen\n**--squash --delete-branch**;
+:Issue schließen;
+:git checkout main && git pull;
+
+' ═══════════════════════════════
+' PHASE 6: Sprint Ceremonies
+' ═══════════════════════════════
+|User|
+:/sprint-ceremony review;
+
+|Claude Skills|
+:@sprint-manager\nVelocity auswerten\nDone-Issues prüfen;
+
+:/sprint-ceremony retro;
+:Verbesserungen\nfür nächsten Sprint;
+
+' ═══════════════════════════════
+' PHASE 7: ASPICE & Phase Gate
+' ═══════════════════════════════
+|User|
+:/aspice-assessment;
+
+|Claude Skills|
+:@aspice-process-checker\nSWE.1–SWE.6\nMAN.3, SUP.1/8/9/10;
+
+:/work-product-check;
+:Work Products\nprüfen;
+
+:/reporting aspice|velocity|traceability;
+note right
+  Generiert:
+  • docs/reports/aspice_report.md
+  • docs/reports/velocity_report.md
+  • docs/requirements/traceability_matrix.md
+end note
+
+|User|
+:/phase-gate-reviewer;
+
+|Claude Skills|
+:@phase-gate-reviewer\nEntry/Exit Criteria\nPASS / CONDITIONAL / FAIL;
+
+if (Phase Gate PASS?) then (ja)
+  :Nächste Waterfall-Phase\naktivieren;
+  :workflow-state.json\naktualisieren;
+else (CONDITIONAL/FAIL)
+  :Gap-Liste\nschließen;
+endif
+
+stop
+
+' ═══════════════════════════════
+' LEGENDE
+' ═══════════════════════════════
+legend right
+  |= Symbol |= Bedeutung |
+  | /skill | Claude Code Skill (User-aufrufbar) |
+  | @agent | Claude Sub-Agent |
+  | Hook | Automatisch bei Tool-Use |
+  | <&check> CI | Drone CI (7 Pipelines) |
+endlegend
+
+@enduml
