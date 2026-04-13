@@ -64,12 +64,12 @@ cp "$OUTPUT/libhardware.so"    "$PROJECT/go-api/libs/" 2>/dev/null || true
 cp "$OUTPUT/libhardware_rs.so" "$PROJECT/go-api/libs/" 2>/dev/null || true
 
 run_step "Build Go API" \
-  env GOOS=linux GOARCH=arm GOARM=7 CGO_ENABLED=1 CC=arm-linux-gnueabihf-gcc \
-    go build -ldflags="-s -w" -o "$OUTPUT/embedded" "$PROJECT/go-api/cmd/"
+  sh -c "cd '$PROJECT/go-api' && GOOS=linux GOARCH=arm GOARM=7 CGO_ENABLED=1 CC=arm-linux-gnueabihf-gcc \
+    go build -ldflags='-s -w' -o '$OUTPUT/embedded' ./cmd/"
 
 run_step "Build CLI (ARM)" \
-  env GOOS=linux GOARCH=arm GOARM=7 CGO_ENABLED=0 \
-    go build -o "$OUTPUT/bbcli-linux-arm" "$SRC/tools/cli/"
+  sh -c "cd '$SRC/tools/cli' && GOOS=linux GOARCH=arm GOARM=7 CGO_ENABLED=0 \
+    go build -o '$OUTPUT/bbcli-linux-arm' ."
 
 # --- write JUnit XML -----------------------------------------------
 [ -z "$JUNIT" ] && { echo "=== JUnit XML disabled ==="; [ $FAILURES -eq 0 ] || exit 1; exit 0; }
