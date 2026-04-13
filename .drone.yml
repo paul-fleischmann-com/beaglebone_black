@@ -78,127 +78,13 @@ steps:
     when:
       status: [success, failure]
 
-  - name: test-c-lib-pytest
-    image: ghcr.io/paulefl/generic-builder:latest
-    pull: if_not_exists
-    depends_on: [build-libraries]
-    volumes:
-      - name: go-mod-cache
-        path: /go/pkg/mod
-      - name: go-build-cache
-        path: /root/.cache/go-build
-    environment:
-      STEP: test-c-lib-pytest
-      CMD: |
-        pip install --quiet pytest allure-pytest
-        make -C c-lib test-bin
-        pytest tests/c_lib/ --alluredir=allure-results -v || true
-        make -C c-lib test
-    commands:
-      - sh scripts/run-step.sh
-
-  - name: test-c-lib-go
-    image: ghcr.io/paulefl/generic-builder:latest
-    pull: if_not_exists
-    depends_on: [build-libraries]
-    volumes:
-      - name: go-mod-cache
-        path: /go/pkg/mod
-      - name: go-build-cache
-        path: /root/.cache/go-build
-    environment:
-      STEP: test-c-lib-go
-      CMD: |
-        make -C c-lib test-bin
-        (cd tools/c_test_runner && go mod tidy && go test -v ./... -count=1)
-    commands:
-      - sh scripts/run-step.sh
-
-  - name: test-c-lib-cgo
-    image: golang:1.24
-    pull: if_not_exists
-    depends_on: [build-libraries]
-    volumes:
-      - name: go-mod-cache
-        path: /go/pkg/mod
-      - name: go-build-cache
-        path: /root/.cache/go-build
-    environment:
-      CGO_ENABLED: "1"
-      STEP: test-c-lib-cgo
-      CMD: |
-        mkdir -p allure-results
-        cd tools/c_cgo_test
-        go mod tidy
-        ALLURE_OUTPUT_PATH=../../allure-results go test -v ./... -count=1
-    commands:
-      - sh scripts/run-step.sh
-
-  - name: test-rust-lib
-    image: ghcr.io/paulefl/generic-builder:latest
-    pull: if_not_exists
-    depends_on: [build-libraries]
-    volumes:
-      - name: cargo-registry
-        path: /usr/local/cargo/registry
-      - name: cargo-git
-        path: /usr/local/cargo/git
-    environment:
-      STEP: test-rust-lib
-      CMD: cargo test --manifest-path project/rust-lib/Cargo.toml
-    commands:
-      - sh scripts/run-step.sh
-
-  - name: test-go
-    image: ghcr.io/paulefl/generic-builder:latest
-    pull: if_not_exists
-    depends_on: [build-libraries]
-    volumes:
-      - name: go-mod-cache
-        path: /go/pkg/mod
-      - name: go-build-cache
-        path: /root/.cache/go-build
-    environment:
-      COVERPKG: ./pkg/hal/,./pkg/hal/mock/,./pkg/hal/config/
-      TEST_PACKAGES: ./pkg/hal/ ./pkg/hal/mock/ ./pkg/hal/config/
-      STEP: test-go
-      CMD: |
-        mkdir -p reports
-        cd project/go-api
-        mkdir -p ../../reports
-        gotestsum \
-          --junitfile ../../reports/go-tests-junit.xml \
-          --jsonfile  ../../reports/go-tests.json \
-          -- \
-          -race -count=3 \
-          -coverprofile=coverage.out \
-          -covermode=atomic \
-          -coverpkg=$COVERPKG \
-          $TEST_PACKAGES
-        total=$(go tool cover -func=coverage.out | grep "^total:" | awk '{print $3}' | tr -d '%')
-        echo "Coverage: ${total}%"
-        awk "BEGIN{exit !($total >= 75)}" || (echo "Coverage gate: ${total}% < 75%" && exit 1)
-        echo "Coverage gate: ${total}% >= 75%"
-    commands:
-      - sh scripts/run-step.sh
-
-  - name: junit-reports-pipe1
-    image: ghcr.io/rohit-gohri/drone-junit:v0
-    pull: if_not_exists
-    depends_on: [build-libraries, test-c-lib-pytest, test-c-lib-go, test-go]
-    settings:
-      paths: reports/*.xml
-      report_name: "Pipe 1 - Build & Tests"
-    when:
-      status: [success, failure]
-
   - name: save-results
     image: alpine
     pull: if_not_exists
     volumes:
       - name: pipeline-results
         path: /pipeline-results
-    depends_on: [build-libraries, test-c-lib-pytest, test-c-lib-go, test-c-lib-cgo, test-rust-lib, test-go]
+    depends_on: [build-libraries, save-artifacts]
     commands:
       - sh scripts/save-pipeline-results.sh 1-libraries
     when:
@@ -937,6 +823,8 @@ name: 7a-testing
 image_pull_secrets:
   - dockerconfigjson
 
+depends_on: [1-libraries]
+
 trigger:
   event: [push, pull_request, custom]
   branch:
@@ -959,11 +847,102 @@ volumes:
   - name: pip-cache
     host:
       path: /var/cache/drone/pip
+  - name: cargo-registry
+    host:
+      path: /var/cache/drone/cargo/registry
+  - name: cargo-git
+    host:
+      path: /var/cache/drone/cargo/git
+  - name: build-cache
+    host:
+      path: /var/cache/drone/build-artifacts
   - name: pipeline-results
     host:
       path: /var/cache/drone/pipeline-results
 
 steps:
+  - name: restore-artifacts
+    image: alpine
+    pull: if_not_exists
+    volumes:
+      - name: build-cache
+        path: /build-cache
+    commands:
+      - mkdir -p bin project/go-api/libs
+      - cp -r /build-cache/$DRONE_BUILD_NUMBER/bin/. bin/ 2>/dev/null || true
+      - cp /build-cache/$DRONE_BUILD_NUMBER/go-api-libs/*.so project/go-api/libs/ 2>/dev/null || true
+
+  - name: test-c-lib-pytest
+    image: ghcr.io/paulefl/generic-builder:latest
+    pull: if_not_exists
+    depends_on: [restore-artifacts]
+    volumes:
+      - name: go-mod-cache
+        path: /go/pkg/mod
+      - name: go-build-cache
+        path: /root/.cache/go-build
+    environment:
+      STEP: test-c-lib-pytest
+      CMD: |
+        pip install --quiet pytest allure-pytest
+        make -C c-lib test-bin
+        pytest tests/c_lib/ --alluredir=allure-results -v || true
+        make -C c-lib test
+    commands:
+      - sh scripts/run-step.sh
+
+  - name: test-c-lib-go
+    image: ghcr.io/paulefl/generic-builder:latest
+    pull: if_not_exists
+    depends_on: [restore-artifacts]
+    volumes:
+      - name: go-mod-cache
+        path: /go/pkg/mod
+      - name: go-build-cache
+        path: /root/.cache/go-build
+    environment:
+      STEP: test-c-lib-go
+      CMD: |
+        make -C c-lib test-bin
+        (cd tools/c_test_runner && go mod tidy && go test -v ./... -count=1)
+    commands:
+      - sh scripts/run-step.sh
+
+  - name: test-c-lib-cgo
+    image: golang:1.24
+    pull: if_not_exists
+    depends_on: [restore-artifacts]
+    volumes:
+      - name: go-mod-cache
+        path: /go/pkg/mod
+      - name: go-build-cache
+        path: /root/.cache/go-build
+    environment:
+      CGO_ENABLED: "1"
+      STEP: test-c-lib-cgo
+      CMD: |
+        mkdir -p allure-results
+        cd tools/c_cgo_test
+        go mod tidy
+        ALLURE_OUTPUT_PATH=../../allure-results go test -v ./... -count=1
+    commands:
+      - sh scripts/run-step.sh
+
+  - name: test-rust-lib
+    image: ghcr.io/paulefl/generic-builder:latest
+    pull: if_not_exists
+    depends_on: [restore-artifacts]
+    volumes:
+      - name: cargo-registry
+        path: /usr/local/cargo/registry
+      - name: cargo-git
+        path: /usr/local/cargo/git
+    environment:
+      STEP: test-rust-lib
+      CMD: cargo test --manifest-path project/rust-lib/Cargo.toml
+    commands:
+      - sh scripts/run-step.sh
+
   - name: go-tests-with-coverage
     image: golang:1.24
     pull: if_not_exists
@@ -1114,7 +1093,7 @@ steps:
     volumes:
       - name: pipeline-results
         path: /pipeline-results
-    depends_on: [go-tests-with-coverage, python-tests, c-coverage, sonarqube-report, sonarcloud-scan, strictdoc-coverage-gate, traceability-check]
+    depends_on: [test-c-lib-pytest, test-c-lib-go, test-c-lib-cgo, test-rust-lib, go-tests-with-coverage, python-tests, c-coverage, sonarqube-report, sonarcloud-scan, strictdoc-coverage-gate, traceability-check]
     commands:
       - sh scripts/save-pipeline-results.sh 7a-testing
     when:
