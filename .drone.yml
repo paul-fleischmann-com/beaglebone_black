@@ -1355,7 +1355,7 @@ steps:
           echo "Keine Änderungen in arch/model/export"
         else
           git commit -m "ci(bausteinsicht): update exported diagrams [skip ci]"
-          git push https://paulefl:${GIT_TOKEN}@${DRONE_GIT_HTTP_URL#https://} HEAD:${DRONE_BRANCH}
+          git push https://paulefl:${GIT_TOKEN}@github.com/paulefl/beaglebone_black.git HEAD:${DRONE_BRANCH}
         fi
     commands:
       - sh scripts/run-step.sh
@@ -1617,8 +1617,8 @@ steps:
         git add Makefile CHANGELOG.md
         git commit -m "chore(release): bump version to ${NEW} [skip ci]"
         git tag "v${NEW}"
-        git push https://paulefl:${GIT_TOKEN}@${DRONE_GIT_HTTP_URL#https://} HEAD:main
-        git push https://paulefl:${GIT_TOKEN}@${DRONE_GIT_HTTP_URL#https://} "v${NEW}"
+        git push https://paulefl:${GIT_TOKEN}@github.com/paulefl/beaglebone_black.git HEAD:main
+        git push https://paulefl:${GIT_TOKEN}@github.com/paulefl/beaglebone_black.git "v${NEW}"
     commands:
       - sh scripts/run-step.sh
 
