@@ -29,15 +29,14 @@ ENV APP_VERSION=$VERSION
 # Copy compiled binary from builder
 COPY --from=builder /usr/local/bin/bausteinsicht /usr/local/bin/bausteinsicht
 
-# DrawIO + headless display dependencies
+# DrawIO + headless display dependencies + drawio itself in one layer
+# (apt-get lists must not be cleared between steps — drawio dep resolution needs them)
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y --no-install-recommends \
     wget xvfb xauth libgbm1 dbus dbus-x11 libx11-xcb1 libxcb-dri3-0 \
     libxkbcommon0 libxcomposite1 libxrandr2 libxdamage1 \
-    libasound2 libpangocairo-1.0-0 libatk1.0-0 libcups2
-
-ARG DRAWIO_VERSION=29.5.2
-RUN wget -q "https://github.com/jgraph/drawio-desktop/releases/download/v${DRAWIO_VERSION}/drawio-amd64-${DRAWIO_VERSION}.deb" -O /tmp/drawio.deb \
+    libasound2 libpangocairo-1.0-0 libatk1.0-0 libcups2 \
+    && wget -q "https://github.com/jgraph/drawio-desktop/releases/download/v${DRAWIO_VERSION}/drawio-amd64-${DRAWIO_VERSION}.deb" -O /tmp/drawio.deb \
     && apt-get install -y --no-install-recommends /tmp/drawio.deb \
     && rm -f /tmp/drawio.deb && rm -rf /var/lib/apt/lists/*
 
