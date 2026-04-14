@@ -46,6 +46,33 @@ test-cover:
 check-drone-yml:
 	cd scripts/drone-lint && go run check_drone_yml.go ../../.drone.yml
 
+shellcheck-report:
+	@mkdir -p reports
+	@TOTAL=0; FAILURES=0; \
+	JUNIT=reports/shellcheck-junit.xml; \
+	> reports/shellcheck.txt; \
+	{ \
+	  echo '<?xml version="1.0" encoding="UTF-8"?>'; \
+	  echo '<testsuites>'; \
+	  for f in scripts/*.sh; do \
+	    findings=$$(shellcheck -f gcc "$$f" 2>&1 || true); \
+	    count=$$(echo "$$findings" | grep -c '.' 2>/dev/null || echo 0); \
+	    TOTAL=$$((TOTAL + 1)); \
+	    name=$$(basename "$$f"); \
+	    if [ "$$count" -eq 0 ]; then \
+	      echo "  <testsuite name=\"shellcheck\" tests=\"1\" failures=\"0\"><testcase name=\"$$name\" classname=\"shellcheck\"/></testsuite>"; \
+	    else \
+	      FAILURES=$$((FAILURES + 1)); \
+	      safe=$$(echo "$$findings" | sed 's/&/\&amp;/g;s/</\&lt;/g;s/>/\&gt;/g'); \
+	      echo "  <testsuite name=\"shellcheck\" tests=\"1\" failures=\"1\"><testcase name=\"$$name\" classname=\"shellcheck\"><failure message=\"$$count finding(s)\">$$safe</failure></testcase></testsuite>"; \
+	    fi; \
+	    echo "$$findings" >> reports/shellcheck.txt; \
+	  done; \
+	  echo '</testsuites>'; \
+	} > "$$JUNIT"; \
+	echo "--- ShellCheck Summary: $$FAILURES/$$TOTAL scripts with findings ---"; \
+	[ -s reports/shellcheck.txt ] && cat reports/shellcheck.txt || echo "No findings."
+
 lint:
 	cd project/go-api && go vet ./pkg/hal/ ./pkg/hal/mock/ ./pkg/hal/config/
 	cd tools/cli && go mod tidy && go vet ./...
@@ -206,4 +233,4 @@ info:
 	@echo "  info             Show this help"
 	@echo ""
 
-.PHONY: all c-lib rust-lib go-api cli cli-arm test test-ci test-cover lint test-python test-report test-report-open traceability traceability-check aspice-report velocity-report reports deploy clean req-tracing version adoc-build adoc-summary build-arm checksums release-candidate prepend-changelog install-java install-asciidoctor setup-env info publish-allure report-all
+.PHONY: all c-lib rust-lib go-api cli cli-arm test test-ci test-cover lint shellcheck-report test-python test-report test-report-open traceability traceability-check aspice-report velocity-report reports deploy clean req-tracing version adoc-build adoc-summary build-arm checksums release-candidate prepend-changelog install-java install-asciidoctor setup-env info publish-allure report-all
