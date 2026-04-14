@@ -1,11 +1,14 @@
 ---
 name: VERSION file vor Erhöhung prüfen
-description: Immer zuerst VERSION-Datei lesen bevor die Version erhöht wird
+description: Vor dem Bump zuerst latest-Version aus der Registry abfragen, dann VERSION file erhöhen
 type: feedback
 ---
 
-Vor jedem Bump einer VERSION-Datei (z.B. docker/bausteinsicht/VERSION) zuerst den aktuellen Inhalt mit Read lesen und dann um 1 erhöhen — nie blind einen fixen Wert schreiben.
+Vor jedem Bump von `docker/bausteinsicht/VERSION`:
+1. **Registry abfragen**: `gh api /users/paulefl/packages/container/bausteinsicht/versions --jq '.[].metadata.container.tags'` — die `latest`-Version ermitteln
+2. **VERSION file lesen**: aktuellen lokalen Wert mit Read prüfen
+3. **Neue Version** = max(registry-latest, local-version) + patch — schreiben
 
-**Why:** User hat explizit darauf hingewiesen, dass der aktuelle Stand geprüft werden soll bevor die Version erhöht wird.
+**Why:** Lokale VERSION-Datei kann veraltet sein (fehlgeschlagene Builds pushen keine neue Version). Die Registry-latest ist die einzig zuverlässige Quelle was tatsächlich deployed wurde.
 
-**How to apply:** Bei jeder Änderung die eine VERSION-Datei betrifft: Read → aktuellen Wert ermitteln → um 1 erhöhen → schreiben.
+**How to apply:** Immer beide Quellen prüfen, nie blind inkrementieren.
