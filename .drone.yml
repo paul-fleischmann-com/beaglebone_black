@@ -1348,7 +1348,7 @@ steps:
     commands:
       - sh scripts/ci-git-setup.sh
       - git add arch/model/export/
-      - git diff --staged --quiet && echo "Keine Änderungen in arch/model/export" || git commit -m "ci(bausteinsicht): update exported diagrams [skip ci]"
+      - 'git diff --staged --quiet && echo "Keine Änderungen in arch/model/export" || git commit -m "ci(bausteinsicht): update exported diagrams [skip ci]"'
     when:
       event: [push]
       branch: [main, develop]
