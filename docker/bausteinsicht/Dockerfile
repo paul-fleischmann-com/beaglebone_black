@@ -37,11 +37,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libpangocairo-1.0-0 libatk1.0-0 libatk-bridge2.0-0  libgtk-3-0 libnss3 libasound2 libdrm2
 
 RUN wget -q "https://github.com/jgraph/drawio-desktop/releases/download/v${DRAWIO_VERSION}/drawio-amd64-${DRAWIO_VERSION}.deb" -O /tmp/drawio.deb \
- && apt-get update && apt-get install -y --no-install-recommends /tmp/drawio.deb \
+ && apt-get update \
+ && apt-get install -y --no-install-recommends /tmp/drawio.deb 2>&1 || true \
+ && apt-get install -f -y --no-install-recommends \
  && rm -f /tmp/drawio.deb && rm -rf /var/lib/apt/lists/* \
- && DRAWIO_BIN=$(find /opt /usr/lib -name "drawio" -type f 2>/dev/null | head -1) \
- && echo "drawio binary found at: $DRAWIO_BIN" \
- && ln -sf "$DRAWIO_BIN" /usr/local/bin/drawio
+ && DRAWIO_BIN=$(find /opt /usr/lib /usr/bin -name "drawio" -executable -type f 2>/dev/null | head -1) \
+ && echo "drawio binary found at: ${DRAWIO_BIN:-NOT FOUND}" \
+ && [ -n "$DRAWIO_BIN" ] && ln -sf "$DRAWIO_BIN" /usr/local/bin/drawio || (echo "ERROR: drawio binary not found after install" && exit 1)
 
 # Wrapper script so `drawio` runs headless via xvfb with dbus
 # -a: auto-pick a free display number (avoids conflicts with existing Xvfb)
