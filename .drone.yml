@@ -311,8 +311,10 @@ steps:
         from_secret: beagle_host
       STEP: test-hardware-all-backends
       CMD: |
-        apk add --no-cache openssh-client -q
+        apk add --no-cache openssh-client curl -q
         pip install pytest pytest-timeout requests --break-system-packages -q
+        echo "=== API Diagnose ===" && curl -s http://$BEAGLE_HOST:5000/health || true
+        echo "=== BME280 Diagnose ===" && curl -s http://$BEAGLE_HOST:5000/api/v1/bme280 || true
         for backend in c rust auto; do echo "=== Backend $backend ==="; HW_BACKEND=$backend pytest tests/hardware/ -v --timeout=60 || exit 1; done
     commands:
       - sh scripts/run-step.sh
