@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/sh
 # Prepend an unreleased.md section to CHANGELOG.md.
 # Used by the CI changelog job after git-cliff generates unreleased.md.
 set -e
