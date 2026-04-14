@@ -1346,7 +1346,7 @@ steps:
     pull: if_not_exists
     depends_on: [export-png]
     environment:
-      GIT_TOKEN: {from_secret: Bau_token}
+      GIT_TOKEN: {from_secret: git_token}
       STEP: commit-exports
       CMD: |
         sh scripts/ci-git-setup.sh
@@ -1404,7 +1404,7 @@ steps:
     image: alpine
     pull: if_not_exists
     environment:
-      GIT_TOKEN: {from_secret: Bau_token}
+      GIT_TOKEN: {from_secret: git_token}
       STEP: download-release-assets
       CMD: |
         apk add --no-cache curl jq
@@ -1544,7 +1544,7 @@ steps:
       - test-cli-on-bbb
       - test-cli-remote
     environment:
-      GIT_TOKEN: {from_secret: Bau_token}
+      GIT_TOKEN: {from_secret: git_token}
       STEP: promote-to-stable
       CMD: |
         apk add --no-cache curl jq git
@@ -1600,7 +1600,7 @@ steps:
     image: alpine/git
     pull: if_not_exists
     environment:
-      GIT_TOKEN: {from_secret: Bau_token}
+      GIT_TOKEN: {from_secret: git_token}
       STEP: bump-version
       CMD: |
         BUMP=${DRONE_DEPLOY_TO##release-}
@@ -1668,7 +1668,7 @@ steps:
     image: alpine/git
     pull: if_not_exists
     environment:
-      GIT_TOKEN: {from_secret: Bau_token}
+      GIT_TOKEN: {from_secret: git_token}
       STEP: update-changelog
       CMD: sh scripts/update-changelog.sh
     commands:
