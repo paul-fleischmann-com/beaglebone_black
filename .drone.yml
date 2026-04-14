@@ -294,9 +294,10 @@ steps:
         from_secret: ssh_key_bbb
       script:
         - cp /home/debian/app/bin/bbcli-linux-arm /home/debian/app/bbcli
-        - XDG_RUNTIME_DIR=/run/user/1000 systemctl --user restart embedded-sw
-        - sleep 3
-        - XDG_RUNTIME_DIR=/run/user/1000 systemctl --user is-active embedded-sw
+        - "printf '[Unit]\\nDescription=BeagleBone Embedded SW API\\nAfter=network.target\\n\\n[Service]\\nExecStart=/home/debian/app/bin/embedded\\nEnvironment=LD_LIBRARY_PATH=/home/debian/app/project/go-api/libs\\nRestart=on-failure\\nRestartSec=5\\n\\n[Install]\\nWantedBy=default.target\\n' > ~/.config/systemd/user/embedded-sw.service"
+        - export XDG_RUNTIME_DIR=/run/user/$(id -u) && systemctl --user daemon-reload && systemctl --user restart embedded-sw
+        - sleep 5
+        - export XDG_RUNTIME_DIR=/run/user/$(id -u) && systemctl --user is-active embedded-sw
     when:
       branch: [main, develop]
       event: [push]

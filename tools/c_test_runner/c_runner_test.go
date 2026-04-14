@@ -92,8 +92,17 @@ func ensureRun() (map[string]unityResult, string, error) {
 		if buildErr = b.Run(); buildErr != nil {
 			return
 		}
-		out, _ := exec.Command(testBin()).CombinedOutput()
+		cmd := exec.Command(testBin())
+		cmd.Env = append(os.Environ(),
+			"GCOV_PREFIX=/tmp/gcov-go-runner",
+			"GCOV_PREFIX_STRIP=99",
+		)
+		out, runErr := cmd.CombinedOutput()
 		rawOutput = string(out)
+		if len(rawOutput) == 0 {
+			buildErr = fmt.Errorf("Unity binary produced no output (exit: %v)", runErr)
+			return
+		}
 		cache = parseUnity(rawOutput)
 	})
 	return cache, rawOutput, buildErr
