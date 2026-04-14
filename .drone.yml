@@ -1233,7 +1233,7 @@ steps:
     pull: if_not_exists
     environment:
       STEP: shellcheck
-      CMD: make shellcheck-report
+      CMD: sh scripts/shellcheck-report.sh
     commands:
       - sh scripts/run-step.sh
 

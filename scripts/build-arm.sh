@@ -63,6 +63,11 @@ fi
 cp "$OUTPUT/libhardware.so"    "$PROJECT/go-api/libs/" 2>/dev/null || true
 cp "$OUTPUT/libhardware_rs.so" "$PROJECT/go-api/libs/" 2>/dev/null || true
 
+# Copy C and Rust headers into CGO include path
+mkdir -p "$PROJECT/go-api/libs/include"
+cp "$PROJECT/c/include/"*.h "$PROJECT/go-api/libs/include/" 2>/dev/null || true
+find "$PROJECT/rust-lib" -name "*.h" -exec cp {} "$PROJECT/go-api/libs/include/" \; 2>/dev/null || true
+
 run_step "Build Go API" \
   sh -c "cd '$PROJECT/go-api' && \
     CGO_CFLAGS='-I$PROJECT/go-api/libs/include' \
