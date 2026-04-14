@@ -1356,6 +1356,7 @@ steps:
           echo "Keine Änderungen in arch/model/export"
         else
           git commit -m "ci(bausteinsicht): update exported diagrams [skip ci]"
+          echo "Push URL: https://${GIT_USER}:***@${DRONE_GIT_HTTP_URL#https://} → branch: ${DRONE_BRANCH}"
           git push https://${GIT_USER}:${GIT_TOKEN}@${DRONE_GIT_HTTP_URL#https://} HEAD:${DRONE_BRANCH}
         fi
     commands:
