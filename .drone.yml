@@ -1347,7 +1347,7 @@ steps:
     depends_on: [export-png]
     environment:
       GIT_TOKEN: {from_secret: git_token}
-      GIT_USER:  {from_secret: git_user}
+      GIT_USER: paulefl
       STEP: commit-exports
       CMD: |
         sh scripts/ci-git-setup.sh
@@ -1603,7 +1603,7 @@ steps:
     pull: if_not_exists
     environment:
       GIT_TOKEN: {from_secret: git_token}
-      GIT_USER:  {from_secret: git_user}
+      GIT_USER: paulefl
       STEP: bump-version
       CMD: |
         BUMP=${DRONE_DEPLOY_TO##release-}
@@ -1672,7 +1672,7 @@ steps:
     pull: if_not_exists
     environment:
       GIT_TOKEN: {from_secret: git_token}
-      GIT_USER:  {from_secret: git_user}
+      GIT_USER: paulefl
       STEP: update-changelog
       CMD: |
         apk add --no-cache curl tar jq
