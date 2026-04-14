@@ -60,11 +60,11 @@ if [ -f "$PROJECT/rust-lib/target/armv7-unknown-linux-gnueabihf/release/libhardw
   cp "$PROJECT/rust-lib/target/armv7-unknown-linux-gnueabihf/release/rust_app" "$OUTPUT/"
 fi
 
+mkdir -p "$PROJECT/go-api/libs/include"
 cp "$OUTPUT/libhardware.so"    "$PROJECT/go-api/libs/" 2>/dev/null || true
 cp "$OUTPUT/libhardware_rs.so" "$PROJECT/go-api/libs/" 2>/dev/null || true
 
 # Copy C and Rust headers into CGO include path
-mkdir -p "$PROJECT/go-api/libs/include"
 cp "$PROJECT/c/include/"*.h "$PROJECT/go-api/libs/include/" 2>/dev/null || true
 find "$PROJECT/rust-lib" -name "*.h" -exec cp {} "$PROJECT/go-api/libs/include/" \; 2>/dev/null || true
 
