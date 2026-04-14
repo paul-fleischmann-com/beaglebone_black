@@ -275,7 +275,7 @@ steps:
         - project/go-api/libs/libhardware.so
         - project/go-api/libs/libhardware_rs.so
         - bin/bbcli-linux-arm
-      target: /app/
+      target: /home/debian/app/
     when:
       branch: [main, develop]
       event: [push]
@@ -292,7 +292,7 @@ steps:
       key:
         from_secret: ssh_key_bbb
       script:
-        - cp /app/bbcli-linux-arm /app/bbcli
+        - cp /home/debian/app/bbcli-linux-arm /home/debian/app/bbcli
         - systemctl restart embedded-sw
         - sleep 3
         - systemctl is-active embedded-sw
