@@ -26,12 +26,7 @@ echo "$IMAGE:$VERSION not found in ghcr.io — building ..."
 
 
 echo "Building $IMAGE:$VERSION ..."
-SECRET_ARGS=""
-if [ -n "${REGISTRY_TOKEN:-}" ]; then
-  SECRET_ARGS="--secret id=git_token,env=REGISTRY_TOKEN"
-fi
 podman build --build-arg VERSION="$VERSION" \
-  $SECRET_ARGS \
   -t "$FULL_IMAGE:$VERSION" \
   -t "$FULL_IMAGE:latest" \
   -f "$DOCKERFILE" \
