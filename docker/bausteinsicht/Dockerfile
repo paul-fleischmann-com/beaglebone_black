@@ -12,7 +12,9 @@ FROM golang:1.24 AS builder
 RUN apt-get update && apt-get install -y --no-install-recommends git && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /src
-RUN git clone --depth 1 https://github.com/docToolchain/Bausteinsicht.git .
+RUN --mount=type=secret,id=git_token \
+    git clone --depth 1 \
+      https://oauth2:$(cat /run/secrets/git_token)@github.com/docToolchain/Bausteinsicht.git .
 RUN go build -o /usr/local/bin/bausteinsicht ./cmd/...
 
 # ── Stage 2: Runtime ──────────────────────────────
