@@ -375,8 +375,8 @@ steps:
     environment:
       STEP: lint-cli
       CMD: |
-        (cd tools/cli && go mod tidy && go vet ./...)
-        test -z "$(gofmt -l tools/cli/)" || (echo "gofmt: tools/cli/" && exit 1)
+        cd tools/cli && go vet ./...
+        test -z "$(gofmt -l .)" || (echo "gofmt: tools/cli/" && exit 1)
     commands:
       - sh scripts/run-step.sh
 
@@ -390,11 +390,11 @@ steps:
         path: /root/.cache/go-build
     environment:
       STEP: lint-tui
-      CMD: "(cd tools/tui && go mod tidy && go vet ./...)"
+      CMD: "cd tools/tui && go vet ./..."
     commands:
       - sh scripts/run-step.sh
 
-  - name: build-cli-linux-amd64
+  - name: build-cli
     image: golang:1.24
     pull: if_not_exists
     depends_on: [lint-cli]
@@ -404,88 +404,20 @@ steps:
       - name: go-build-cache
         path: /root/.cache/go-build
     environment:
-      GOOS: linux
-      GOARCH: amd64
       CGO_ENABLED: "0"
-      STEP: build-cli-linux-amd64
-      CMD: "(cd tools/cli && go build -ldflags=\"-s -w\" -o ../../bin/bbcli-linux-amd64 .)"
+      STEP: build-cli
+      CMD: |
+        mkdir -p bin
+        cd tools/cli
+        GOOS=linux   GOARCH=amd64          go build -ldflags="-s -w" -o ../../bin/bbcli-linux-amd64 .
+        GOOS=linux   GOARCH=arm   GOARM=7  go build -ldflags="-s -w" -o ../../bin/bbcli-linux-arm .
+        GOOS=darwin  GOARCH=amd64          go build -ldflags="-s -w" -o ../../bin/bbcli-darwin-amd64 .
+        GOOS=darwin  GOARCH=arm64          go build -ldflags="-s -w" -o ../../bin/bbcli-darwin-arm64 .
+        GOOS=windows GOARCH=amd64          go build -ldflags="-s -w" -o ../../bin/bbcli-windows-amd64.exe .
     commands:
       - sh scripts/run-step.sh
 
-  - name: build-cli-linux-arm
-    image: golang:1.24
-    pull: if_not_exists
-    depends_on: [lint-cli]
-    volumes:
-      - name: go-mod-cache
-        path: /go/pkg/mod
-      - name: go-build-cache
-        path: /root/.cache/go-build
-    environment:
-      GOOS: linux
-      GOARCH: arm
-      GOARM: "7"
-      CGO_ENABLED: "0"
-      STEP: build-cli-linux-arm
-      CMD: "(cd tools/cli && go build -ldflags=\"-s -w\" -o ../../bin/bbcli-linux-arm .)"
-    commands:
-      - sh scripts/run-step.sh
-
-  - name: build-cli-darwin-amd64
-    image: golang:1.24
-    pull: if_not_exists
-    depends_on: [lint-cli]
-    volumes:
-      - name: go-mod-cache
-        path: /go/pkg/mod
-      - name: go-build-cache
-        path: /root/.cache/go-build
-    environment:
-      GOOS: darwin
-      GOARCH: amd64
-      CGO_ENABLED: "0"
-      STEP: build-cli-darwin-amd64
-      CMD: "(cd tools/cli && go build -ldflags=\"-s -w\" -o ../../bin/bbcli-darwin-amd64 .)"
-    commands:
-      - sh scripts/run-step.sh
-
-  - name: build-cli-darwin-arm64
-    image: golang:1.24
-    pull: if_not_exists
-    depends_on: [lint-cli]
-    volumes:
-      - name: go-mod-cache
-        path: /go/pkg/mod
-      - name: go-build-cache
-        path: /root/.cache/go-build
-    environment:
-      GOOS: darwin
-      GOARCH: arm64
-      CGO_ENABLED: "0"
-      STEP: build-cli-darwin-arm64
-      CMD: "(cd tools/cli && go build -ldflags=\"-s -w\" -o ../../bin/bbcli-darwin-arm64 .)"
-    commands:
-      - sh scripts/run-step.sh
-
-  - name: build-cli-windows-amd64
-    image: golang:1.24
-    pull: if_not_exists
-    depends_on: [lint-cli]
-    volumes:
-      - name: go-mod-cache
-        path: /go/pkg/mod
-      - name: go-build-cache
-        path: /root/.cache/go-build
-    environment:
-      GOOS: windows
-      GOARCH: amd64
-      CGO_ENABLED: "0"
-      STEP: build-cli-windows-amd64
-      CMD: "(cd tools/cli && go build -ldflags=\"-s -w\" -o ../../bin/bbcli-windows-amd64.exe .)"
-    commands:
-      - sh scripts/run-step.sh
-
-  - name: build-tui-linux-amd64
+  - name: build-tui
     image: golang:1.24
     pull: if_not_exists
     depends_on: [lint-tui]
@@ -495,48 +427,14 @@ steps:
       - name: go-build-cache
         path: /root/.cache/go-build
     environment:
-      GOOS: linux
-      GOARCH: amd64
       CGO_ENABLED: "0"
-      STEP: build-tui-linux-amd64
-      CMD: "(cd tools/tui && go build -ldflags=\"-s -w\" -o ../../bin/bbtui-linux-amd64 .)"
-    commands:
-      - sh scripts/run-step.sh
-
-  - name: build-tui-linux-armv7
-    image: golang:1.24
-    pull: if_not_exists
-    depends_on: [lint-tui]
-    volumes:
-      - name: go-mod-cache
-        path: /go/pkg/mod
-      - name: go-build-cache
-        path: /root/.cache/go-build
-    environment:
-      GOOS: linux
-      GOARCH: arm
-      GOARM: "7"
-      CGO_ENABLED: "0"
-      STEP: build-tui-linux-armv7
-      CMD: "(cd tools/tui && go build -ldflags=\"-s -w\" -o ../../bin/bbtui-linux-armv7 .)"
-    commands:
-      - sh scripts/run-step.sh
-
-  - name: build-tui-darwin-amd64
-    image: golang:1.24
-    pull: if_not_exists
-    depends_on: [lint-tui]
-    volumes:
-      - name: go-mod-cache
-        path: /go/pkg/mod
-      - name: go-build-cache
-        path: /root/.cache/go-build
-    environment:
-      GOOS: darwin
-      GOARCH: amd64
-      CGO_ENABLED: "0"
-      STEP: build-tui-darwin-amd64
-      CMD: "(cd tools/tui && go build -ldflags=\"-s -w\" -o ../../bin/bbtui-darwin-amd64 .)"
+      STEP: build-tui
+      CMD: |
+        mkdir -p bin
+        cd tools/tui
+        GOOS=linux  GOARCH=amd64          go build -ldflags="-s -w" -o ../../bin/bbtui-linux-amd64 .
+        GOOS=linux  GOARCH=arm   GOARM=7  go build -ldflags="-s -w" -o ../../bin/bbtui-linux-armv7 .
+        GOOS=darwin GOARCH=amd64          go build -ldflags="-s -w" -o ../../bin/bbtui-darwin-amd64 .
     commands:
       - sh scripts/run-step.sh
 
@@ -567,15 +465,7 @@ steps:
   - name: checksums
     image: alpine
     pull: if_not_exists
-    depends_on:
-      - build-cli-linux-amd64
-      - build-cli-linux-arm
-      - build-cli-darwin-amd64
-      - build-cli-darwin-arm64
-      - build-cli-windows-amd64
-      - build-tui-linux-amd64
-      - build-tui-linux-armv7
-      - build-tui-darwin-amd64
+    depends_on: [build-cli, build-tui]
     environment:
       STEP: checksums
       CMD: "(cd bin && sha256sum bbcli-* bbtui-* > checksums.sha256 && cat checksums.sha256)"
@@ -588,7 +478,7 @@ steps:
     volumes:
       - name: pipeline-results
         path: /pipeline-results
-    depends_on: [lint-cli, lint-tui, build-cli-linux-amd64, build-cli-linux-arm, build-cli-darwin-amd64, build-cli-darwin-arm64, build-cli-windows-amd64, build-tui-linux-amd64, build-tui-linux-armv7, build-tui-darwin-amd64, validate-web-gui, shellcheck, checksums]
+    depends_on: [lint-cli, lint-tui, build-cli, build-tui, validate-web-gui, shellcheck, checksums]
     commands:
       - sh scripts/save-pipeline-results.sh 3-tools
     when:
