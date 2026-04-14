@@ -23,5 +23,4 @@ if git diff --cached --quiet; then
   echo "Keine Changelog-Änderungen"
 else
   git commit -m "docs(changelog): update unreleased section [skip ci]"
-  git push https://paulefl:${GIT_TOKEN}@github.com/paulefl/beaglebone_black.git HEAD:main
 fi

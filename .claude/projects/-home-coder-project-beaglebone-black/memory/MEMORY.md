@@ -1,6 +1,7 @@
 # Memory Index
 
 ## Feedback
+- [Bausteinsicht-Modell vor Commit synchronisieren](feedback_model_sync_before_commit.md) — Vor jedem Commit mit Source-Änderungen beaglebone_black.jsonc prüfen und aktualisieren
 - [CI Python scripts as separate files](feedback_ci_python_scripts.md) — Python code gehört in `.py` files unter `scripts/`, nicht als Inline-Heredoc in GitHub Actions YAML
 - [Kein Co-Author in Commits](feedback_no_coauthor_commits.md) — Keine `Co-Authored-By: Claude` Zeile in Commit-Messages
 - [Issue-Auswahl per Nummer](feedback_issue_selection.md) — User gibt immer direkte Issue-Nummer an, nicht Listenposition

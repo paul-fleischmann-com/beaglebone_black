@@ -1345,20 +1345,27 @@ steps:
     image: alpine/git
     pull: if_not_exists
     depends_on: [export-png]
-    environment:
-      GIT_TOKEN: {from_secret: git_token}
-      STEP: commit-exports
-      CMD: |
-        sh scripts/ci-git-setup.sh
-        git add arch/model/export/
-        if git diff --staged --quiet; then
-          echo "Keine Änderungen in arch/model/export"
-        else
-          git commit -m "ci(bausteinsicht): update exported diagrams [skip ci]"
-          git push https://paulefl:${GIT_TOKEN}@github.com/paulefl/beaglebone_black.git HEAD:${DRONE_BRANCH}
-        fi
     commands:
-      - sh scripts/run-step.sh
+      - sh scripts/ci-git-setup.sh
+      - git add arch/model/export/
+      - git diff --staged --quiet && echo "Keine Änderungen in arch/model/export" || git commit -m "ci(bausteinsicht): update exported diagrams [skip ci]"
+    when:
+      event: [push]
+      branch: [main, develop]
+
+  - name: push-exports
+    image: plugins/git-action
+    pull: if_not_exists
+    depends_on: [commit-exports]
+    settings:
+      actions:
+        - push
+      remote: https://github.com/paulefl/beaglebone_black.git
+      branch: ${DRONE_BRANCH}
+      netrc_machine: github.com
+      netrc_username: paulefl
+      netrc_password:
+        from_secret: git_token
     when:
       event: [push]
       branch: [main, develop]
@@ -1369,7 +1376,7 @@ steps:
     volumes:
       - name: pipeline-results
         path: /pipeline-results
-    depends_on: [show-version, validate-model, export-plantuml, export-mermaid, export-table, export-png, commit-exports]
+    depends_on: [show-version, validate-model, export-plantuml, export-mermaid, export-table, export-png, push-exports]
     commands:
       - sh scripts/save-pipeline-results.sh 8-bausteinsicht
     when:
@@ -1668,11 +1675,27 @@ steps:
     image: alpine/git
     pull: if_not_exists
     environment:
-      GIT_TOKEN: {from_secret: git_token}
       STEP: update-changelog
       CMD: sh scripts/update-changelog.sh
     commands:
       - sh scripts/run-step.sh
+
+  - name: push-changelog
+    image: plugins/git-action
+    pull: if_not_exists
+    depends_on: [update-changelog]
+    settings:
+      actions:
+        - push
+      remote: https://github.com/paulefl/beaglebone_black.git
+      branch: main
+      netrc_machine: github.com
+      netrc_username: paulefl
+      netrc_password:
+        from_secret: git_token
+    when:
+      event: [push]
+      branch: [main]
 
   - name: save-results
     image: alpine
@@ -1680,7 +1703,7 @@ steps:
     volumes:
       - name: pipeline-results
         path: /pipeline-results
-    depends_on: [update-changelog]
+    depends_on: [push-changelog]
     commands:
       - sh scripts/save-pipeline-results.sh 12-changelog
     when:
