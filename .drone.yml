@@ -294,9 +294,9 @@ steps:
         from_secret: ssh_key_bbb
       script:
         - cp /home/debian/app/bin/bbcli-linux-arm /home/debian/app/bbcli
-        - sudo systemctl restart embedded-sw
+        - systemctl --user restart embedded-sw
         - sleep 3
-        - sudo systemctl is-active embedded-sw
+        - systemctl --user is-active embedded-sw
     when:
       branch: [main, develop]
       event: [push]
