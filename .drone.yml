@@ -1235,15 +1235,30 @@ steps:
       STEP: shellcheck
       CMD: |
         mkdir -p reports
-        shellcheck -f gcc scripts/*.sh > reports/shellcheck.txt 2>&1 || true
-        COUNT=$(grep -c '.' reports/shellcheck.txt 2>/dev/null || echo 0)
-        echo "--- ShellCheck Report Summary ---"
-        if [ "$COUNT" -eq 0 ]; then
-          echo "No findings. All scripts passed."
-        else
-          echo "$COUNT finding(s) found. Details in reports/shellcheck.txt:"
-          cat reports/shellcheck.txt
-        fi
+        TOTAL=0
+        FAILURES=0
+        JUNIT=reports/shellcheck-junit.xml
+        {
+          echo '<?xml version="1.0" encoding="UTF-8"?>'
+          echo '<testsuites>'
+          for f in scripts/*.sh; do
+            findings=$(shellcheck -f gcc "$f" 2>&1 || true)
+            count=$(echo "$findings" | grep -c '.' 2>/dev/null || echo 0)
+            TOTAL=$((TOTAL + 1))
+            name=$(basename "$f")
+            if [ "$count" -eq 0 ]; then
+              echo "  <testsuite name=\"shellcheck\" tests=\"1\" failures=\"0\"><testcase name=\"$name\" classname=\"shellcheck\"/></testsuite>"
+            else
+              FAILURES=$((FAILURES + 1))
+              safe=$(echo "$findings" | sed 's/&/\&amp;/g;s/</\&lt;/g;s/>/\&gt;/g')
+              echo "  <testsuite name=\"shellcheck\" tests=\"1\" failures=\"1\"><testcase name=\"$name\" classname=\"shellcheck\"><failure message=\"$count finding(s)\">$safe</failure></testcase></testsuite>"
+            fi
+            echo "$findings" >> reports/shellcheck.txt
+          done
+          echo '</testsuites>'
+        } > "$JUNIT"
+        echo "--- ShellCheck Summary: $FAILURES/$TOTAL scripts with findings ---"
+        [ -s reports/shellcheck.txt ] && cat reports/shellcheck.txt || echo "No findings."
     commands:
       - sh scripts/run-step.sh
 
@@ -1258,7 +1273,8 @@ steps:
       - DEST=/var/www/downloads/shellcheck
       - mkdir -p "$DEST"
       - cp reports/shellcheck.txt "$DEST/shellcheck-${DRONE_BUILD_NUMBER}.txt"
-      - echo "Report verfügbar unter /downloads/shellcheck/shellcheck-${DRONE_BUILD_NUMBER}.txt"
+      - cp reports/shellcheck-junit.xml "$DEST/shellcheck-${DRONE_BUILD_NUMBER}-junit.xml"
+      - echo "Reports verfügbar unter /downloads/shellcheck/shellcheck-${DRONE_BUILD_NUMBER}.*"
 
   - name: save-results
     image: alpine
