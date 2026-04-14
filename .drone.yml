@@ -1276,9 +1276,16 @@ volumes:
       path: /var/cache/drone/pipeline-results
 
 steps:
+  - name: show-version
+    image: ghcr.io/paulefl/bausteinsicht:latest
+    pull: always
+    commands:
+      - echo "bausteinsicht container version: $APP_VERSION"
+
   - name: validate-model
     image: ghcr.io/paulefl/bausteinsicht:latest
     pull: always
+    depends_on: [show-version]
     environment:
       STEP: validate-model
       CMD: bausteinsicht validate --model arch/model/beaglebone_black.jsonc
@@ -1363,7 +1370,7 @@ steps:
     volumes:
       - name: pipeline-results
         path: /pipeline-results
-    depends_on: [validate-model, export-plantuml, export-mermaid, export-table, export-png, commit-exports]
+    depends_on: [show-version, validate-model, export-plantuml, export-mermaid, export-table, export-png, commit-exports]
     commands:
       - sh scripts/save-pipeline-results.sh 8-bausteinsicht
     when:
