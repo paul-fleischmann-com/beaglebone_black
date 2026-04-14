@@ -61,20 +61,20 @@
     "bbcli": {
       "kind": "client_tool",
       "title": "bbcli",
-      "description": "Kommandozeilen-Tool für direkte API-Interaktion; Cross-compiled für Linux amd64/arm. Quelle: tools/cli/",
-      "technology": "Go / Cobra + Viper"
+      "description": "Kommandozeilen-Tool für direkte API-Interaktion; Subcommands: bme280, gpio, backend, system, completion. Cross-compiled für Linux amd64/arm. Quelle: tools/cli/",
+      "technology": "Go 1.23 / Cobra + Viper"
     },
     "bbgui": {
       "kind": "client_tool",
       "title": "bbgui",
-      "description": "Desktop-GUI Anwendung mit grafischer Darstellung der Sensordaten. Quelle: tools/desktop-gui/",
+      "description": "Desktop-GUI Anwendung mit grafischer Darstellung der Sensordaten; Tabs für BME280, GPIO, UART, SPI, Backend, System. Quelle: tools/desktop-gui/main.go",
       "technology": "Go / Fyne v2"
     },
     "bbtui": {
       "kind": "client_tool",
       "title": "bbtui",
-      "description": "Interaktives Terminal-UI für Echtzeit-Anzeige von Sensordaten. Quelle: tools/tui/",
-      "technology": "Go / BubbleTea + Lipgloss"
+      "description": "Interaktives Terminal-UI für Echtzeit-Anzeige von Sensordaten; Tabs 1-6, automatischer BME280-Refresh alle 2s. Quelle: tools/tui/main.go",
+      "technology": "Go 1.24 / BubbleTea + Lipgloss"
     },
     "beaglebone": {
       "kind": "system",
@@ -122,7 +122,7 @@
             "api-handlers": {
               "kind": "component",
               "title": "API Handler",
-              "description": "HTTP-Handler-Methoden auf Server-Struct: HealthHandler, BME280Handler, BME280StreamHandler, GPIOAllHandler, GPIOReadHandler, GPIOWriteHandler, UARTConfigHandler, UARTSendHandler, UARTReceiveHandler, SPITransferHandler. Quelle: project/go-api/pkg/api/handlers.go",
+              "description": "HTTP-Handler-Methoden auf Server-Struct: HealthHandler, BME280Handler, BME280StreamHandler, GPIOAllHandler, GPIOReadHandler, GPIOWriteHandler, UARTConfigHandler, UARTSendHandler, UARTReceiveHandler, SPITransferHandler. Zusätzlich backendHandler (POST /api/v1/backend) für Laufzeit-Backend-Wechsel in project/go-api/cmd/main.go. Quelle: project/go-api/pkg/api/handlers.go",
               "technology": "Go / gorilla/mux"
             },
             "api-server": {
@@ -134,13 +134,13 @@
             "hal": {
               "kind": "component",
               "title": "Hardware Abstraction Layer (HAL)",
-              "description": "HardwareDriver Interface mit 13 Methoden (BME280Read, GPIOExport, GPIOSetDirection, GPIORead, GPIOWrite, UARTOpen, UARTWrite, UARTRead, UARTClose, SPITransfer, Init, Close, Name, Backend). Datentypen: BME280Data, GPIOData, UARTData, SPIData. Quelle: project/go-api/pkg/hal/interface.go",
+              "description": "HardwareDriver Interface mit 14 Methoden: Name, Backend, BME280Read, GPIOExport, GPIOSetDirection, GPIORead, GPIOWrite, UARTOpen, UARTWrite, UARTRead, UARTClose, SPITransfer, Init, Close. Datentypen: BME280Data, GPIOData, UARTData, SPIData. Quelle: project/go-api/pkg/hal/interface.go",
               "technology": "Go Interface",
               "children": {
                 "hal-auto": {
                   "kind": "component",
                   "title": "Auto Driver",
-                  "description": "Decorator über C- und Rust-Driver. Versucht C zuerst; schlägt das fehl, transparenter Fallback auf Rust. Alle 10 HardwareDriver-Methoden delegiert. Quelle: project/go-api/pkg/hal/loader/factory.go (autoDriver struct)",
+                  "description": "Decorator über C- und Rust-Driver (autoDriver struct). Bei Init werden beide Backends sofort initialisiert; C ist primär, Rust ist Backup. Bei Fehler jeder der 14 HardwareDriver-Methoden transparenter Fallback auf Rust. Quelle: project/go-api/pkg/hal/loader/factory.go",
                   "technology": "Go / Decorator Pattern"
                 },
                 "hal-c": {
@@ -152,7 +152,7 @@
                 "hal-config": {
                   "kind": "component",
                   "title": "HAL Konfiguration",
-                  "description": "Config-Struct und Umgebungsvariablen-Loader. HW_BACKEND (default: auto), HW_I2C (default: /dev/i2c-1), HW_UART (default: /dev/ttyO1), BME280Addr (0x76), SPIDevice (/dev/spidev0.0). Quelle: project/go-api/pkg/hal/config/config.go",
+                  "description": "Config-Struct und Umgebungsvariablen-Loader. Felder: Backend (HW_BACKEND, default: auto), I2CBus (HW_I2C, default: /dev/i2c-1), BME280Addr (0x76), UARTPort (HW_UART, default: /dev/ttyO1), UARTBaud (115200), SPIDevice (/dev/spidev0.0), SPISpeed (1000000), Timeout (10s). Quelle: project/go-api/pkg/hal/config/config.go",
                   "technology": "Go / os.Getenv"
                 },
                 "hal-factory": {
@@ -164,7 +164,7 @@
                 "hal-mock": {
                   "kind": "component",
                   "title": "Mock Driver",
-                  "description": "Vollständige HardwareDriver-Implementierung für Unit-Tests ohne echte Hardware. Gibt statische Testwerte zurück. Quelle: project/go-api/pkg/hal/mock/driver.go",
+                  "description": "Vollständige HardwareDriver-Implementierung für Unit-Tests ohne echte Hardware. Gibt statische Testwerte zurück. Bietet WasCalled() und Reset() für Testassertions. Quelle: project/go-api/pkg/hal/mock/driver.go",
                   "technology": "Go"
                 },
                 "hal-rust": {
