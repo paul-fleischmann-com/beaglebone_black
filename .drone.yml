@@ -1232,7 +1232,15 @@ steps:
       STEP: shellcheck
       CMD: |
         mkdir -p reports
-        shellcheck scripts/*.sh 2>&1 | tee reports/shellcheck.txt || true
+        shellcheck -f gcc scripts/*.sh > reports/shellcheck.txt 2>&1 || true
+        COUNT=$(grep -c '.' reports/shellcheck.txt 2>/dev/null || echo 0)
+        echo "--- ShellCheck Report Summary ---"
+        if [ "$COUNT" -eq 0 ]; then
+          echo "No findings. All scripts passed."
+        else
+          echo "$COUNT finding(s) found. Details in reports/shellcheck.txt:"
+          cat reports/shellcheck.txt
+        fi
     commands:
       - sh scripts/run-step.sh
 
