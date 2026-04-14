@@ -1207,6 +1207,9 @@ volumes:
   - name: pipeline-results
     host:
       path: /var/cache/drone/pipeline-results
+  - name: www-downloads
+    host:
+      path: /var/www/downloads
 
 steps:
   - name: python-security
@@ -1244,13 +1247,26 @@ steps:
     commands:
       - sh scripts/run-step.sh
 
+  - name: publish-shellcheck
+    image: alpine
+    pull: if_not_exists
+    depends_on: [shellcheck]
+    volumes:
+      - name: www-downloads
+        path: /var/www/downloads
+    commands:
+      - DEST=/var/www/downloads/shellcheck
+      - mkdir -p "$DEST"
+      - cp reports/shellcheck.txt "$DEST/shellcheck-${DRONE_BUILD_NUMBER}.txt"
+      - echo "Report verfügbar unter /downloads/shellcheck/shellcheck-${DRONE_BUILD_NUMBER}.txt"
+
   - name: save-results
     image: alpine
     pull: if_not_exists
     volumes:
       - name: pipeline-results
         path: /pipeline-results
-    depends_on: [python-security, shellcheck]
+    depends_on: [python-security, shellcheck, publish-shellcheck]
     commands:
       - sh scripts/save-pipeline-results.sh 7b-analysis
     when:
