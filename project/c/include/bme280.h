@@ -390,6 +390,17 @@ int8_t bme280_compensate_data(uint8_t sensor_comp,
  */
 int8_t bme280_cal_meas_delay(uint32_t *max_delay, const struct bme280_settings *settings);
 
+/* ── Go-CGO convenience wrappers ── */
+typedef struct {
+    double temperature;
+    double humidity;
+    double pressure;
+    double altitude;
+} bme280_data_t;
+
+int8_t bme280_read(struct bme280_dev *dev, bme280_data_t *out);
+void   bme280_close(struct bme280_dev *dev);
+
 #ifdef __cplusplus
 }
 #endif /* End of CPP guard */

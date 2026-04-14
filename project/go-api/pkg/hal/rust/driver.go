@@ -73,7 +73,7 @@ func (d *RustDriver) UARTOpen(port string, baud uint32) error {
 	cp := C.CString(port)
 	defer C.free(unsafe.Pointer(cp))
 	d.uart = C.rs_uart_open(cp, C.uint32_t(baud))
-	if d.uart.port == nil {
+	if d.uart.r == nil {
 		return fmt.Errorf("rs_uart_open failed")
 	}
 	return nil

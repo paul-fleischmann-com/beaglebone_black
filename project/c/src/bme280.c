@@ -1567,3 +1567,31 @@ static int8_t null_ptr_check(const struct bme280_dev *dev)
 
     return rslt;
 }
+/* ── Go-CGO convenience wrappers ── */
+#include <math.h>
+
+int8_t bme280_read(struct bme280_dev *dev, bme280_data_t *out) {
+    int8_t ret;
+    uint32_t delay_ms;
+    struct bme280_data comp_data;
+
+    ret = bme280_set_sensor_mode(BME280_FORCED_MODE, dev);
+    if (ret != BME280_OK) return ret;
+
+    bme280_cal_meas_delay(&delay_ms, &dev->settings);
+    dev->delay_us(delay_ms * 1000, dev->intf_ptr);
+
+    ret = bme280_get_sensor_data(BME280_ALL, &comp_data, dev);
+    if (ret != BME280_OK) return ret;
+
+    out->temperature = comp_data.temperature;
+    out->humidity    = comp_data.humidity;
+    out->pressure    = comp_data.pressure / 100.0;
+    /* altitude from pressure (ISA model) */
+    out->altitude    = 44330.0 * (1.0 - pow(out->pressure / 1013.25, 0.1903));
+    return BME280_OK;
+}
+
+void bme280_close(struct bme280_dev *dev) {
+    (void)dev; /* nothing to free for stack-allocated dev */
+}
