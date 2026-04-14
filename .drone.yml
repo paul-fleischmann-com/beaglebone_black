@@ -311,6 +311,7 @@ steps:
         from_secret: beagle_host
       STEP: test-hardware-all-backends
       CMD: |
+        apk add --no-cache openssh-client -q
         pip install pytest pytest-timeout requests --break-system-packages -q
         for backend in c rust auto; do echo "=== Backend $backend ==="; HW_BACKEND=$backend pytest tests/hardware/ -v --timeout=60 || exit 1; done
     commands:

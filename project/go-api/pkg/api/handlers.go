@@ -17,6 +17,12 @@ import (
 
 const errInvalidBody = "invalid request body: "
 
+func jsonError(w http.ResponseWriter, msg string, code int) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(code)
+	json.NewEncoder(w).Encode(map[string]string{"error": msg})
+}
+
 // Server holds the shared state for all HTTP handlers.
 type Server struct {
 	HW   hal.HardwareDriver
@@ -44,7 +50,7 @@ func (s *Server) BME280Handler(w http.ResponseWriter, r *http.Request) {
 	s.HWMu.Unlock()
 	data, err := hw.BME280Read()
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		jsonError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	json.NewEncoder(w).Encode(data)
@@ -56,7 +62,7 @@ func (s *Server) BME280StreamHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	flusher, ok := w.(http.Flusher)
 	if !ok {
-		http.Error(w, "streaming unsupported", http.StatusInternalServerError)
+		jsonError(w, "streaming unsupported", http.StatusInternalServerError)
 		return
 	}
 	ticker := time.NewTicker(2 * time.Second)
@@ -104,7 +110,7 @@ func (s *Server) GPIOReadHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Sscanf(mux.Vars(r)["pin"], "%d", &pin)
 	data, err := hw.GPIORead(pin)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		jsonError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	json.NewEncoder(w).Encode(data)
@@ -118,14 +124,14 @@ func (s *Server) GPIOWriteHandler(w http.ResponseWriter, r *http.Request) {
 		Value int `json:"value"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, errInvalidBody+err.Error(), http.StatusBadRequest)
+		jsonError(w, errInvalidBody+err.Error(), http.StatusBadRequest)
 		return
 	}
 	s.HWMu.Lock()
 	err := s.HW.GPIOWrite(pin, req.Value)
 	s.HWMu.Unlock()
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		jsonError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	json.NewEncoder(w).Encode(map[string]interface{}{"pin": pin, "value": req.Value, "status": "ok"})
@@ -138,22 +144,22 @@ func (s *Server) UARTConfigHandler(w http.ResponseWriter, r *http.Request) {
 		Baud uint32 `json:"baud"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, errInvalidBody+err.Error(), http.StatusBadRequest)
+		jsonError(w, errInvalidBody+err.Error(), http.StatusBadRequest)
 		return
 	}
 	if req.Port == "" {
-		http.Error(w, "missing required field: port", http.StatusBadRequest)
+		jsonError(w, "missing required field: port", http.StatusBadRequest)
 		return
 	}
 	if req.Baud == 0 {
-		http.Error(w, "missing required field: baud must be > 0", http.StatusBadRequest)
+		jsonError(w, "missing required field: baud must be > 0", http.StatusBadRequest)
 		return
 	}
 	s.HWMu.Lock()
 	err := s.HW.UARTOpen(req.Port, req.Baud)
 	s.HWMu.Unlock()
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		jsonError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
@@ -165,14 +171,14 @@ func (s *Server) UARTSendHandler(w http.ResponseWriter, r *http.Request) {
 		Data []byte `json:"data"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, errInvalidBody+err.Error(), http.StatusBadRequest)
+		jsonError(w, errInvalidBody+err.Error(), http.StatusBadRequest)
 		return
 	}
 	s.HWMu.Lock()
 	n, err := s.HW.UARTWrite(req.Data)
 	s.HWMu.Unlock()
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		jsonError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	json.NewEncoder(w).Encode(map[string]int{"bytes_sent": n})
@@ -184,7 +190,7 @@ func (s *Server) UARTReceiveHandler(w http.ResponseWriter, r *http.Request) {
 	data, err := s.HW.UARTRead(1000)
 	s.HWMu.Unlock()
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		jsonError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	json.NewEncoder(w).Encode(data)
@@ -198,14 +204,14 @@ func (s *Server) SPITransferHandler(w http.ResponseWriter, r *http.Request) {
 		TX     []byte `json:"tx"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, errInvalidBody+err.Error(), http.StatusBadRequest)
+		jsonError(w, errInvalidBody+err.Error(), http.StatusBadRequest)
 		return
 	}
 	s.HWMu.Lock()
 	data, err := s.HW.SPITransfer(req.Device, req.Speed, req.TX)
 	s.HWMu.Unlock()
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		jsonError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	json.NewEncoder(w).Encode(data)
