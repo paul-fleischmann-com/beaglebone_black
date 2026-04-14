@@ -1347,7 +1347,6 @@ steps:
     depends_on: [export-png]
     environment:
       GIT_TOKEN: {from_secret: git_token}
-      GIT_USER: paulefl
       STEP: commit-exports
       CMD: |
         sh scripts/ci-git-setup.sh
@@ -1356,8 +1355,7 @@ steps:
           echo "Keine Änderungen in arch/model/export"
         else
           git commit -m "ci(bausteinsicht): update exported diagrams [skip ci]"
-          echo "Push URL: https://${GIT_USER}:***@${DRONE_GIT_HTTP_URL#https://} → branch: ${DRONE_BRANCH}"
-          git push https://${GIT_USER}:${GIT_TOKEN}@${DRONE_GIT_HTTP_URL#https://} HEAD:${DRONE_BRANCH}
+          git push https://paulefl:${GIT_TOKEN}@${DRONE_GIT_HTTP_URL#https://} HEAD:${DRONE_BRANCH}
         fi
     commands:
       - sh scripts/run-step.sh
@@ -1603,7 +1601,6 @@ steps:
     pull: if_not_exists
     environment:
       GIT_TOKEN: {from_secret: git_token}
-      GIT_USER: paulefl
       STEP: bump-version
       CMD: |
         BUMP=${DRONE_DEPLOY_TO##release-}
@@ -1620,8 +1617,8 @@ steps:
         git add Makefile CHANGELOG.md
         git commit -m "chore(release): bump version to ${NEW} [skip ci]"
         git tag "v${NEW}"
-        git push https://${GIT_USER}:${GIT_TOKEN}@${DRONE_GIT_HTTP_URL#https://} HEAD:main
-        git push https://${GIT_USER}:${GIT_TOKEN}@${DRONE_GIT_HTTP_URL#https://} "v${NEW}"
+        git push https://paulefl:${GIT_TOKEN}@${DRONE_GIT_HTTP_URL#https://} HEAD:main
+        git push https://paulefl:${GIT_TOKEN}@${DRONE_GIT_HTTP_URL#https://} "v${NEW}"
     commands:
       - sh scripts/run-step.sh
 
@@ -1672,7 +1669,6 @@ steps:
     pull: if_not_exists
     environment:
       GIT_TOKEN: {from_secret: git_token}
-      GIT_USER: paulefl
       STEP: update-changelog
       CMD: |
         apk add --no-cache curl tar jq
@@ -1689,7 +1685,7 @@ steps:
           echo "Keine Changelog-Änderungen"
         else
           git commit -m "docs(changelog): update unreleased section [skip ci]"
-          git push https://${GIT_USER}:${GIT_TOKEN}@${DRONE_GIT_HTTP_URL#https://} HEAD:main
+          git push https://paulefl:${GIT_TOKEN}@${DRONE_GIT_HTTP_URL#https://} HEAD:main
         fi
     commands:
       - sh scripts/run-step.sh
