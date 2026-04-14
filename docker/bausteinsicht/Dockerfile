@@ -33,11 +33,12 @@ COPY --from=builder /usr/local/bin/bausteinsicht /usr/local/bin/bausteinsicht
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y --no-install-recommends \
     wget xvfb xauth libgbm1 dbus dbus-x11 libx11-xcb1 libxcb-dri3-0 \
-    libxkbcommon0 libxcomposite1 libxrandr2 libxdamage1 \
-    libpangocairo-1.0-0 libatk1.0-0 \
-    && wget -q "https://github.com/jgraph/drawio-desktop/releases/download/v${DRAWIO_VERSION}/drawio-amd64-${DRAWIO_VERSION}.deb" -O /tmp/drawio.deb \
-    && dpkg -i /tmp/drawio.deb || apt-get install -f -y \
-    && rm -f /tmp/drawio.deb && rm -rf /var/lib/apt/lists/*
+    libxkbcommon0 libxcomposite1 libxrandr2 libxdamage1 libxss1 libxtst6 \
+    libpangocairo-1.0-0 libatk1.0-0 libatk-bridge2.0-0  libgtk-3-0 libnss3 libasound2 libdrm2
+
+RUN wget -q "https://github.com/jgraph/drawio-desktop/releases/download/v${DRAWIO_VERSION}/drawio-amd64-${DRAWIO_VERSION}.deb" -O /tmp/drawio.deb \
+ && apt-get update && apt-get install -y --no-install-recommends /tmp/drawio.deb \
+ && rm -f /tmp/drawio.deb && rm -rf /var/lib/apt/lists/*
 
 # Wrapper script so `drawio` runs headless via xvfb with dbus
 # -a: auto-pick a free display number (avoids conflicts with existing Xvfb)
