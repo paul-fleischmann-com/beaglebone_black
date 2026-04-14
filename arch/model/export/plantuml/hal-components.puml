@@ -1,20 +1,28 @@
 @startuml
 !include <C4/C4_Component>
 
-System(beaglebone_c_lib, "C Hardware Library", "C / arm-linux-gnueabihf-gcc", "Cross-kompilierte Shared Library (libhardware.so) mit Low-Level Hardware-Treibern")
-System(beaglebone_rust_lib, "Rust Hardware Library", "Rust / armv7-unknown-linux-musleabihf", "Cross-kompilierte Shared Library (libhardware_rs.so); Memory-Safe Alternative zur C-Lib")
+System(beaglebone_c_lib, "C Hardware Library", "C / arm-linux-gnueabihf-gcc", "Cross-kompilierte Shared Library (libhardware.so). Quellen: c-lib/ (Makefile-Target: make c-lib). Kopiert nach project/go-api/libs/")
+System(beaglebone_rust_lib, "Rust Hardware Library", "Rust / armv7-unknown-linux-musleabihf (musl)", "Cross-kompilierte Shared Library (libhardware_rs.so). Memory-Safe Alternative zur C-Lib. Target: armv7-unknown-linux-musleabihf. Quelle: project/rust-lib/")
 Container_Boundary(beaglebone_go_api, "REST API Server") {
-  Component(beaglebone_go_api_api_handlers, "API Handler", "Go / Gorilla Mux", "HTTP-Handler für alle Endpunkte: /health, /api/v1/bme280, /api/v1/gpio, /api/v1/uart, /api/v1/spi, /api/v1/backend")
-  Component(beaglebone_go_api_hal, "Hardware Abstraction Layer (HAL)", "Go Interface", "Definiert das HardwareDriver Interface; wählt Backend per HW_BACKEND Umgebungsvariable")
-  Component(beaglebone_go_api_hal_hal_c, "C Driver", "Go / CGO", "Implementiert HardwareDriver via CGO-Bindings zur C-Bibliothek; höchste Performance")
-  Component(beaglebone_go_api_hal_hal_factory, "Backend Factory", "Go", "Wählt C-, Rust- oder Auto-Backend anhand von HW_BACKEND (default: auto)")
-  Component(beaglebone_go_api_hal_hal_mock, "Mock Driver", "Go", "Stub-Implementierung für Unit-Tests ohne echte Hardware")
-  Component(beaglebone_go_api_hal_hal_rust, "Rust Driver", "Go / FFI", "Implementiert HardwareDriver via FFI-Bindings zur Rust-Bibliothek; Memory-Safety")
+  Component(beaglebone_go_api_api_handlers, "API Handler", "Go / gorilla/mux", "HTTP-Handler-Methoden auf Server-Struct: HealthHandler, BME280Handler, BME280StreamHandler, GPIOAllHandler, GPIOReadHandler, GPIOWriteHandler, UARTConfigHandler, UARTSendHandler, UARTReceiveHandler, SPITransferHandler. Zusätzlich backendHandler (POST /api/v1/backend) für Laufzeit-Backend-Wechsel in project/go-api/cmd/main.go. Quelle: project/go-api/pkg/api/handlers.go")
+  Component(beaglebone_go_api_api_server, "HTTP Server", "Go / net/http", "Server-Struct (HW HardwareDriver, HWMu *sync.Mutex), CORSMiddleware (Access-Control-Allow-Origin: *), NewHTTPServer mit konfigurierten Timeouts (Read: 10s, Write: 30s, Idle: 60s). Quelle: project/go-api/pkg/api/server.go")
+  Component(beaglebone_go_api_hal, "Hardware Abstraction Layer (HAL)", "Go Interface", "HardwareDriver Interface mit 14 Methoden: Name, Backend, BME280Read, GPIOExport, GPIOSetDirection, GPIORead, GPIOWrite, UARTOpen, UARTWrite, UARTRead, UARTClose, SPITransfer, Init, Close. Datentypen: BME280Data, GPIOData, UARTData, SPIData. Quelle: project/go-api/pkg/hal/interface.go")
+  Component(beaglebone_go_api_hal_hal_auto, "Auto Driver", "Go / Decorator Pattern", "Decorator über C- und Rust-Driver (autoDriver struct). Bei Init werden beide Backends sofort initialisiert; C ist primär, Rust ist Backup. Bei Fehler jeder der 14 HardwareDriver-Methoden transparenter Fallback auf Rust. Quelle: project/go-api/pkg/hal/loader/factory.go")
+  Component(beaglebone_go_api_hal_hal_c, "C Driver", "Go / CGO", "Implementiert HardwareDriver via CGO-Bindings zur libhardware.so. Höchste Performance. Quelle: project/go-api/pkg/hal/c/driver.go")
+  Component(beaglebone_go_api_hal_hal_config, "HAL Konfiguration", "Go / os.Getenv", "Config-Struct und Umgebungsvariablen-Loader. Felder: Backend (HW_BACKEND, default: auto), I2CBus (HW_I2C, default: /dev/i2c-1), BME280Addr (0x76), UARTPort (HW_UART, default: /dev/ttyO1), UARTBaud (115200), SPIDevice (/dev/spidev0.0), SPISpeed (1000000), Timeout (10s). Quelle: project/go-api/pkg/hal/config/config.go")
+  Component(beaglebone_go_api_hal_hal_factory, "Backend Factory", "Go / Factory Pattern", "NewDriver(cfg): erzeugt C-, Rust- oder Auto-Driver anhand von HW_BACKEND. Separates Package pkg/hal/loader/ zur Vermeidung von Import-Zyklen (pkg/hal/c importiert pkg/hal). Quelle: project/go-api/pkg/hal/loader/factory.go")
+  Component(beaglebone_go_api_hal_hal_mock, "Mock Driver", "Go", "Vollständige HardwareDriver-Implementierung für Unit-Tests ohne echte Hardware. Gibt statische Testwerte zurück. Bietet WasCalled() und Reset() für Testassertions. Quelle: project/go-api/pkg/hal/mock/driver.go")
+  Component(beaglebone_go_api_hal_hal_rust, "Rust Driver", "Go / FFI (extern C)", "Implementiert HardwareDriver via FFI-Bindings zur libhardware_rs.so. Memory-Safe. Quelle: project/go-api/pkg/hal/rust/driver.go")
 }
 
+Rel(beaglebone_go_api_api_handlers, beaglebone_go_api_api_server, "Server-Struct, CORSMiddleware")
 Rel(beaglebone_go_api_api_handlers, beaglebone_go_api_hal, "delegiert Hardware-Zugriff")
-Rel(beaglebone_go_api_hal_hal_factory, beaglebone_go_api_hal_hal_c, "wählt (HW_BACKEND=c)")
-Rel(beaglebone_go_api_hal_hal_factory, beaglebone_go_api_hal_hal_rust, "wählt (HW_BACKEND=rust)")
+Rel(beaglebone_go_api_hal_hal_factory, beaglebone_go_api_hal_hal_config, "liest Konfiguration")
+Rel(beaglebone_go_api_hal_hal_factory, beaglebone_go_api_hal_hal_c, "erzeugt (HW_BACKEND=c)")
+Rel(beaglebone_go_api_hal_hal_factory, beaglebone_go_api_hal_hal_rust, "erzeugt (HW_BACKEND=rust)")
+Rel(beaglebone_go_api_hal_hal_factory, beaglebone_go_api_hal_hal_auto, "erzeugt (HW_BACKEND=auto)")
+Rel(beaglebone_go_api_hal_hal_auto, beaglebone_go_api_hal_hal_c, "primär (Fallback-Kette)")
+Rel(beaglebone_go_api_hal_hal_auto, beaglebone_go_api_hal_hal_rust, "Fallback bei C-Fehler")
 Rel(beaglebone_go_api_hal_hal_c, beaglebone_c_lib, "CGO")
 Rel(beaglebone_go_api_hal_hal_rust, beaglebone_rust_lib, "FFI")
 @enduml
