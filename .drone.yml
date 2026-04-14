@@ -294,9 +294,9 @@ steps:
         from_secret: ssh_key_bbb
       script:
         - cp /home/debian/app/bin/bbcli-linux-arm /home/debian/app/bbcli
-        - systemctl --user restart embedded-sw
+        - XDG_RUNTIME_DIR=/run/user/1000 systemctl --user restart embedded-sw
         - sleep 3
-        - systemctl --user is-active embedded-sw
+        - XDG_RUNTIME_DIR=/run/user/1000 systemctl --user is-active embedded-sw
     when:
       branch: [main, develop]
       event: [push]
@@ -310,7 +310,7 @@ steps:
         from_secret: beagle_host
       STEP: test-hardware-all-backends
       CMD: |
-        pip install pytest requests --break-system-packages -q
+        pip install pytest pytest-timeout requests --break-system-packages -q
         for backend in c rust auto; do echo "=== Backend $backend ==="; HW_BACKEND=$backend pytest tests/hardware/ -v --timeout=60 || exit 1; done
     commands:
       - sh scripts/run-step.sh
@@ -765,7 +765,7 @@ steps:
       BEAGLE_HOST: {from_secret: beagle_host}
       STEP: test-all-backends
       CMD: |
-        pip install pytest requests --break-system-packages -q
+        pip install pytest pytest-timeout requests --break-system-packages -q
         for backend in c rust auto; do echo "=== Backend $backend ==="; HW_BACKEND=$backend pytest tests/hardware/ -v --timeout=60 || exit 1; done
     commands:
       - sh scripts/run-step.sh
@@ -1474,7 +1474,7 @@ steps:
         from_secret: beagle_host
       STEP: test-hardware
       CMD: |
-        pip install pytest requests pytest-json-report --break-system-packages -q
+        pip install pytest pytest-timeout requests pytest-json-report --break-system-packages -q
         pytest tests/hardware/test_hardware.py -v --timeout=60 --json-report --json-report-file=reports/hardware-tests.json || true
     commands:
       - sh scripts/run-step.sh
@@ -1488,7 +1488,7 @@ steps:
         from_secret: beagle_host
       STEP: test-api
       CMD: |
-        pip install pytest requests pytest-json-report --break-system-packages -q
+        pip install pytest pytest-timeout requests pytest-json-report --break-system-packages -q
         pytest tests/api/test_api.py -v --timeout=30 --json-report --json-report-file=reports/api-tests.json || true
     commands:
       - sh scripts/run-step.sh
