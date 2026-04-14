@@ -284,6 +284,7 @@ steps:
     image: appleboy/drone-ssh
     pull: if_not_exists
     depends_on: [deploy-beaglebone]
+    failure: ignore
     settings:
       host:
         from_secret: beagle_host
@@ -292,10 +293,10 @@ steps:
       key:
         from_secret: ssh_key_bbb
       script:
-        - cp /home/debian/app/bbcli-linux-arm /home/debian/app/bbcli
-        - systemctl restart embedded-sw
+        - cp /home/debian/app/bin/bbcli-linux-arm /home/debian/app/bbcli
+        - sudo systemctl restart embedded-sw
         - sleep 3
-        - systemctl is-active embedded-sw
+        - sudo systemctl is-active embedded-sw
     when:
       branch: [main, develop]
       event: [push]
