@@ -1357,6 +1357,9 @@ steps:
     image: plugins/git-action
     pull: if_not_exists
     depends_on: [commit-exports]
+    environment:
+      PLUGIN_NETRC_PASSWORD:
+        from_secret: git_token
     settings:
       actions:
         - push
@@ -1364,8 +1367,6 @@ steps:
       branch: ${DRONE_BRANCH}
       netrc_machine: github.com
       netrc_username: paulefl
-      netrc_password:
-        from_secret: git_token
     when:
       event: [push]
       branch: [main, develop]
@@ -1684,6 +1685,9 @@ steps:
     image: plugins/git-action
     pull: if_not_exists
     depends_on: [update-changelog]
+    environment:
+      PLUGIN_NETRC_PASSWORD:
+        from_secret: git_token
     settings:
       actions:
         - push
@@ -1691,8 +1695,6 @@ steps:
       branch: main
       netrc_machine: github.com
       netrc_username: paulefl
-      netrc_password:
-        from_secret: git_token
     when:
       event: [push]
       branch: [main]
