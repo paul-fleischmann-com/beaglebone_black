@@ -269,7 +269,7 @@ steps:
       username:
         from_secret: beagle_user
       key:
-        from_secret: ssh_key
+        from_secret: ssh_key_bbb
       source:
         - bin/embedded
         - project/go-api/libs/libhardware.so
@@ -290,7 +290,7 @@ steps:
       username:
         from_secret: beagle_user
       key:
-        from_secret: ssh_key
+        from_secret: ssh_key_bbb
       script:
         - cp /app/bbcli-linux-arm /app/bbcli
         - systemctl restart embedded-sw
@@ -1440,7 +1440,7 @@ steps:
       username:
         from_secret: beagle_user
       key:
-        from_secret: ssh_key
+        from_secret: ssh_key_bbb
       source:
         - bin/embedded
         - bin/libhardware.so
@@ -1458,7 +1458,7 @@ steps:
       username:
         from_secret: beagle_user
       key:
-        from_secret: ssh_key
+        from_secret: ssh_key_bbb
       script:
         - cp ~/bin/bbcli-linux-arm ~/bin/bbcli
         - chmod +x ~/bin/*
@@ -1519,7 +1519,7 @@ steps:
       username:
         from_secret: beagle_user
       key:
-        from_secret: ssh_key
+        from_secret: ssh_key_bbb
       script:
         - ~/bin/bbcli --version
         - ~/bin/bbcli system status
