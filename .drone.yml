@@ -1280,7 +1280,7 @@ steps:
     image: ghcr.io/paulefl/bausteinsicht:latest
     pull: always
     commands:
-      - echo "bausteinsicht container version: $APP_VERSION"
+      - 'echo "bausteinsicht container version: $APP_VERSION"'
 
   - name: validate-model
     image: ghcr.io/paulefl/bausteinsicht:latest
