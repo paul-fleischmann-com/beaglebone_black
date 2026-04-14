@@ -38,7 +38,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 RUN wget -q "https://github.com/jgraph/drawio-desktop/releases/download/v${DRAWIO_VERSION}/drawio-amd64-${DRAWIO_VERSION}.deb" -O /tmp/drawio.deb \
  && apt-get update && apt-get install -y --no-install-recommends /tmp/drawio.deb \
- && rm -f /tmp/drawio.deb && rm -rf /var/lib/apt/lists/*
+ && rm -f /tmp/drawio.deb && rm -rf /var/lib/apt/lists/* \
+ && DRAWIO_BIN=$(find /opt /usr/lib -name "drawio" -type f 2>/dev/null | head -1) \
+ && echo "drawio binary found at: $DRAWIO_BIN" \
+ && ln -sf "$DRAWIO_BIN" /usr/local/bin/drawio
 
 # Wrapper script so `drawio` runs headless via xvfb with dbus
 # -a: auto-pick a free display number (avoids conflicts with existing Xvfb)
