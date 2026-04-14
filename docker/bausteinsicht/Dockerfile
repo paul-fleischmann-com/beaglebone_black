@@ -1,17 +1,18 @@
 # =============================================
 # Bausteinsicht CI Container (multi-stage)
-# Stage 1: compile Go binary from repo source
+# Stage 1: compile Go binary from upstream repo
 # Stage 2: slim runtime + DrawIO headless
 # =============================================
 # Build context must contain:
-#   repo-src/     — cloned Bausteinsicht repo
-#   drawio-export — wrapper script from .devcontainer/
+#   drawio-export — wrapper script from docker/bausteinsicht/
 
 # ── Stage 1: Build ────────────────────────────────
 FROM golang:1.24 AS builder
 
+RUN apt-get update && apt-get install -y --no-install-recommends git && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /src
-COPY repo-src/ .
+RUN git clone --depth 1 https://github.com/docToolchain/Bausteinsicht.git .
 RUN go build -o /usr/local/bin/bausteinsicht ./cmd/...
 
 # ── Stage 2: Runtime ──────────────────────────────
