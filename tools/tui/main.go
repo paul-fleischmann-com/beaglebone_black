@@ -95,6 +95,7 @@ func initialModel() model {
 
 // ── API Helper ───────────────────────────────────────────────────
 // [SDOC_LINK: SWR-015]
+// [SDOC_LINK: SWR-019]
 func apiGet(path string, out interface{}) error {
 	resp, err := http.Get(apiBase + path)
 	if err != nil {

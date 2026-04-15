@@ -1,4 +1,5 @@
 # [SDOC_LINK: SWR-016]
+# [SDOC_LINK: SWR-020]
 """
 Desktop GUI Tests — prüft Binary-Existenz und die vom GUI verwendeten
 REST API-Endpunkte (apiGet/apiPost für BME280 und GPIO).
@@ -80,3 +81,18 @@ class TestGuiApiEndpoints:
         d = r.json()
         assert "pin" in d
         assert "value" in d
+
+    def test_backend_wechsel_via_post(self):
+        """GUI backendTab() wechselt Backend via apiPost() POST /api/v1/backend (SWR-020)."""
+        for backend in ("c", "rust", "auto"):
+            r = requests.post(f"{API}/api/v1/backend", json={"backend": backend}, timeout=5)
+            assert r.status_code == 200
+
+    def test_uart_config_endpunkt(self):
+        """GUI uartTab() konfiguriert UART via POST /api/v1/uart/config (SWR-020)."""
+        r = requests.post(
+            f"{API}/api/v1/uart/config",
+            json={"port": "/dev/ttyO1", "baud": 115200},
+            timeout=5,
+        )
+        assert r.status_code in (200, 500)  # 500 ok wenn kein UART vorhanden

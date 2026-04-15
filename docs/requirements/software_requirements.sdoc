@@ -315,6 +315,39 @@ RELATIONS:
 - TYPE: File
   VALUE: tests/api/test_api.py
 
+[TEST_CASE]
+UID: TC-014
+TITLE: TUI — GPIO-Endpunkt und Backend-Wechsel über API
+STATEMENT: Verifiziert, dass der vom TUI verwendete GPIO-Endpunkt /api/v1/gpio/{pin} (GET/POST) und der Backend-Endpunkt /api/v1/backend (POST) korrekt antworten.
+TEST_TYPE: Integration
+RELATIONS:
+- TYPE: Parent
+  VALUE: SWR-019
+- TYPE: File
+  VALUE: tests/tui/test_tui.py
+
+[TEST_CASE]
+UID: TC-015
+TITLE: GUI — Backend-Wechsel und GPIO-Steuerung über API
+STATEMENT: Verifiziert, dass der vom GUI verwendete /api/v1/backend-Endpunkt (POST) und /api/v1/gpio/{pin} (POST) korrekt antworten.
+TEST_TYPE: Integration
+RELATIONS:
+- TYPE: Parent
+  VALUE: SWR-020
+- TYPE: File
+  VALUE: tests/gui/test_gui.py
+
+[TEST_CASE]
+UID: TC-016
+TITLE: Web App — Backend-Wechsel und Verbindungsstatus im HTML
+STATEMENT: Verifiziert statisch, dass setBackend() und Backend-Buttons (c/rust/auto) in index.html vorhanden sind und der Verbindungsstatus-Indikator im HTML existiert.
+TEST_TYPE: Unit
+RELATIONS:
+- TYPE: Parent
+  VALUE: SWR-021
+- TYPE: File
+  VALUE: tests/web/test_web_gui.py
+
 [SW_REQUIREMENT]
 UID: SWR-018
 TITLE: Tools — Traceability zu Implementierung und Tests
@@ -349,6 +382,51 @@ RELATIONS:
   VALUE: SWR-014
 - TYPE: File
   VALUE: tests/cli/test_cli.py
+
+[SW_REQUIREMENT]
+UID: SWR-019
+TITLE: TUI — GPIO-Steuerung und Backend-Wechsel
+STATEMENT: Das TUI muss GPIO-Pins über die REST API lesen und schreiben können sowie den HAL-Backend-Wechsel (c/rust/auto) über die REST API ermöglichen.
+STATUS: Active
+REQUIREMENT_TYPE: functional
+PRIORITY: Medium
+RELATIONS:
+- TYPE: Parent
+  VALUE: SYS-006
+- TYPE: File
+  VALUE: tools/tui/main.go
+- TYPE: File
+  VALUE: tests/tui/test_tui.py
+
+[SW_REQUIREMENT]
+UID: SWR-020
+TITLE: GUI — Backend-Wechsel und UART-Konfiguration
+STATEMENT: Die Desktop-GUI muss den HAL-Backend-Wechsel (c/rust/auto) und die UART-Konfiguration (Port, Baudrate) über die REST API ermöglichen.
+STATUS: Active
+REQUIREMENT_TYPE: functional
+PRIORITY: Medium
+RELATIONS:
+- TYPE: Parent
+  VALUE: SYS-006
+- TYPE: File
+  VALUE: tools/desktop-gui/main.go
+- TYPE: File
+  VALUE: tests/gui/test_gui.py
+
+[SW_REQUIREMENT]
+UID: SWR-021
+TITLE: Web App — Backend-Wechsel und Verbindungsstatus
+STATEMENT: Die Web App muss den HAL-Backend-Wechsel (c/rust/auto) über die REST API ermöglichen und den Verbindungsstatus (Online/Offline) anzeigen.
+STATUS: Active
+REQUIREMENT_TYPE: functional
+PRIORITY: Medium
+RELATIONS:
+- TYPE: Parent
+  VALUE: SYS-006
+- TYPE: File
+  VALUE: tools/web-gui/index.html
+- TYPE: File
+  VALUE: tests/web/test_web_gui.py
 
 [TEST_CASE]
 UID: TC-011

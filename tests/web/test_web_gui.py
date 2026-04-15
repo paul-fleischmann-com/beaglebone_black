@@ -1,4 +1,5 @@
 # [SDOC_LINK: SWR-017]
+# [SDOC_LINK: SWR-021]
 """
 Web GUI Tests — statische Analyse der index.html.
 
@@ -91,3 +92,25 @@ class TestWebGuiJavaScript:
     def test_api_endpunkt_gpio_aufgerufen(self, html):
         """setGPIO muss /api/v1/gpio/ aufrufen."""
         assert "/api/v1/gpio/" in html
+
+
+class TestWebGuiBackendUndStatus:
+    """Backend-Wechsel und Verbindungsstatus (SWR-021)."""
+
+    def test_backend_buttons_vorhanden(self, html):
+        """Buttons für alle drei Backends (c, rust, auto) müssen vorhanden sein."""
+        assert "setBackend('c')" in html
+        assert "setBackend('rust')" in html
+        assert "setBackend('auto')" in html
+
+    def test_backend_endpunkt_aufgerufen(self, html):
+        """setBackend() muss /api/v1/backend aufrufen."""
+        assert "/api/v1/backend" in html
+
+    def test_verbindungsstatus_element_vorhanden(self, html):
+        """Verbindungsstatus-Element (id='status') muss im HTML vorhanden sein."""
+        assert 'id="status"' in html
+
+    def test_verbindungsstatus_online_offline(self, html):
+        """Status muss Online/Offline anzeigen können."""
+        assert "Online" in html or "Offline" in html

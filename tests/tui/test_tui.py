@@ -1,4 +1,5 @@
 # [SDOC_LINK: SWR-015]
+# [SDOC_LINK: SWR-019]
 """
 TUI Tests — prüft ob das TUI Binary korrekt gebaut wurde und die
 benötigten REST API-Endpunkte (fetchBME280, setBackend) erreichbar sind.
@@ -79,4 +80,16 @@ class TestTuiApiEndpoints:
     def test_backend_endpunkt_erreichbar(self):
         """TUI setBackendCmd() setzt Backend via POST /api/v1/backend."""
         r = requests.post(f"{API}/api/v1/backend", json={"backend": "auto"}, timeout=5)
+        assert r.status_code == 200
+
+    def test_gpio_read_endpunkt(self):
+        """TUI GPIO-Tab liest Pin via GET /api/v1/gpio/{pin} (SWR-019)."""
+        r = requests.get(f"{API}/api/v1/gpio/60", timeout=5)
+        assert r.status_code == 200
+        d = r.json()
+        assert "pin" in d and "value" in d
+
+    def test_gpio_write_endpunkt(self):
+        """TUI GPIO-Tab setzt Pin via POST /api/v1/gpio/{pin} (SWR-019)."""
+        r = requests.post(f"{API}/api/v1/gpio/60", json={"value": 0}, timeout=5)
         assert r.status_code == 200
