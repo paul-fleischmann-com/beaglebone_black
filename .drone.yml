@@ -316,11 +316,11 @@ steps:
 
 ---
 # ════════════════════════════════════════
-# PIPELINE 3 — Tools (CLI + TUI + GUI)
+# PIPELINE apps-build-test — Apps (CLI, TUI, WebApp)
 # ════════════════════════════════════════
 kind: pipeline
 type: docker
-name: 3-tools
+name: apps-build-test
 
 image_pull_secrets:
   - dockerconfigjson
@@ -379,6 +379,30 @@ steps:
     commands:
       - sh scripts/run-step.sh
 
+  - name: shellcheck
+    image: koalaman/shellcheck-alpine:stable
+    pull: if_not_exists
+    environment:
+      STEP: shellcheck
+      CMD: shellcheck --severity=error scripts/*.sh
+    commands:
+      - sh scripts/run-step.sh
+
+  - name: validate-web-gui
+    image: python:3.12-alpine
+    pull: if_not_exists
+    environment:
+      STEP: validate-web-gui
+      CMD: |
+        python -c "
+        from html.parser import HTMLParser
+        class V(HTMLParser): pass
+        V().feed(open('tools/web-gui/index.html').read())
+        print('HTML valide')
+        "
+    commands:
+      - sh scripts/run-step.sh
+
   - name: build-cli
     image: golang:1.24
     pull: if_not_exists
@@ -423,100 +447,10 @@ steps:
     commands:
       - sh scripts/run-step.sh
 
-  - name: validate-web-gui
-    image: python:3.12-alpine
-    pull: if_not_exists
-    environment:
-      STEP: validate-web-gui
-      CMD: |
-        python -c "
-        from html.parser import HTMLParser
-        class V(HTMLParser): pass
-        V().feed(open('tools/web-gui/index.html').read())
-        print('HTML valide')
-        "
-    commands:
-      - sh scripts/run-step.sh
-
-  - name: shellcheck
-    image: koalaman/shellcheck-alpine:stable
-    pull: if_not_exists
-    environment:
-      STEP: shellcheck
-      CMD: shellcheck --severity=error scripts/*.sh
-    commands:
-      - sh scripts/run-step.sh
-
-  - name: checksums
-    image: alpine
-    pull: if_not_exists
-    depends_on: [build-cli, build-tui]
-    environment:
-      STEP: checksums
-      CMD: "(cd bin && sha256sum bbcli-* bbtui-* > checksums.sha256 && cat checksums.sha256)"
-    commands:
-      - sh scripts/run-step.sh
-
-  - name: save-results
-    image: alpine
-    pull: if_not_exists
-    volumes:
-      - name: pipeline-results
-        path: /pipeline-results
-    depends_on: [lint-cli, lint-tui, build-cli, build-tui, validate-web-gui, shellcheck, checksums]
-    commands:
-      - sh scripts/save-pipeline-results.sh 3-tools
-    when:
-      status: [success, failure]
-
----
-# ════════════════════════════════════════
-# PIPELINE 4 — WebApp Frontend
-# ════════════════════════════════════════
-kind: pipeline
-type: docker
-name: 4-webapp
-
-image_pull_secrets:
-  - dockerconfigjson
-
-trigger:
-  event: [push, pull_request, custom]
-  branch:
-    exclude: [refs/tags/*]
-  paths:
-    include:
-      - tools/web-gui/**
-      - .drone.yml
-
-volumes:
-  - name: www-downloads
-    host:
-      path: /var/www/downloads
-  - name: pipeline-results
-    host:
-      path: /var/cache/drone/pipeline-results
-
-steps:
-  - name: validate-html
-    image: python:3.12-alpine
-    pull: if_not_exists
-    environment:
-      STEP: validate-html
-      CMD: |
-        python -c "
-        from html.parser import HTMLParser
-        class V(HTMLParser): pass
-        V().feed(open('tools/web-gui/index.html').read())
-        print('HTML valide')
-        "
-    commands:
-      - sh scripts/run-step.sh
-
   - name: package-web-gui
     image: alpine
     pull: if_not_exists
-    depends_on: [validate-html]
+    depends_on: [validate-web-gui]
     environment:
       STEP: package-web-gui
       CMD: |
@@ -528,15 +462,25 @@ steps:
     commands:
       - sh scripts/run-step.sh
 
+  - name: checksums
+    image: alpine
+    pull: if_not_exists
+    depends_on: [build-cli, build-tui, package-web-gui]
+    environment:
+      STEP: checksums
+      CMD: "(cd bin && sha256sum bbcli-* bbtui-* bbweb-gui.zip > checksums.sha256 && cat checksums.sha256)"
+    commands:
+      - sh scripts/run-step.sh
+
   - name: save-results
     image: alpine
     pull: if_not_exists
     volumes:
       - name: pipeline-results
         path: /pipeline-results
-    depends_on: [validate-html, package-web-gui]
+    depends_on: [lint-cli, lint-tui, shellcheck, validate-web-gui, build-cli, build-tui, package-web-gui, checksums]
     commands:
-      - sh scripts/save-pipeline-results.sh 4-webapp
+      - sh scripts/save-pipeline-results.sh apps-build-test
     when:
       status: [success, failure]
 
@@ -548,7 +492,7 @@ kind: pipeline
 type: docker
 name: 5-release
 
-depends_on: [3-tools]
+depends_on: [apps-build-test]
 
 image_pull_secrets:
   - dockerconfigjson
@@ -1718,8 +1662,7 @@ image_pull_secrets:
 depends_on:
   - 1-libraries
   - 2-embedded-sw
-  - 3-tools
-  - 4-webapp
+  - apps-build-test
   - 5-release
   - 6-nightly
   - sw-unit-tests
