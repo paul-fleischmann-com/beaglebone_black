@@ -1,3 +1,4 @@
+// [SDOC_LINK: SWR-015]
 package main
 
 import (

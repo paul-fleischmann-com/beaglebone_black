@@ -1,3 +1,6 @@
+# [SDOC_LINK: SWR-015]
+# [SDOC_LINK: SWR-016]
+# [SDOC_LINK: SWR-017]
 import requests, os, pytest
 
 HOST = os.getenv("BEAGLE_HOST","192.168.7.2")
