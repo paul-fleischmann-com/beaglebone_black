@@ -302,38 +302,13 @@ steps:
       branch: [main, develop]
       event: [push]
 
-  - name: test-hardware-all-backends
-    image: python:3.12-alpine
-    pull: if_not_exists
-    depends_on: [restart-service]
-    environment:
-      BEAGLE_HOST:
-        from_secret: beagle_host
-      BBCLI_REMOTE: /home/debian/app/bbcli
-      STEP: test-hardware-all-backends
-      CMD: |
-        apk add --no-cache openssh-client curl -q
-        pip install pytest pytest-timeout requests --break-system-packages -q
-        echo "=== API Diagnose ===" && curl -s http://$BEAGLE_HOST:5000/health || true
-        echo "=== BME280 Diagnose ===" && curl -s http://$BEAGLE_HOST:5000/api/v1/bme280 || true
-        for backend in c rust auto; do
-          echo "=== Backend $backend ==="
-          curl -sf -X POST http://$BEAGLE_HOST:5000/api/v1/backend -H 'Content-Type: application/json' -d "{\"backend\":\"$backend\"}" || true
-          HW_BACKEND=$backend pytest tests/hardware/ -v --timeout=60 -k 'not Loopback' || exit 1
-        done
-    commands:
-      - sh scripts/run-step.sh
-    when:
-      branch: [main, develop]
-      event: [push]
-
   - name: save-results
     image: alpine
     pull: if_not_exists
     volumes:
       - name: pipeline-results
         path: /pipeline-results
-    depends_on: [test-hal-unit, lint-go, restore-artifacts, test-hardware-all-backends]
+    depends_on: [test-hal-unit, lint-go, restore-artifacts, restart-service]
     commands:
       - sh scripts/save-pipeline-results.sh 2-embedded-sw
     when:
@@ -793,11 +768,11 @@ steps:
 
 ---
 # ════════════════════════════════════════
-# PIPELINE 7a — Testing & Coverage
+# PIPELINE sw-unit-tests — Unit Tests & Coverage
 # ════════════════════════════════════════
 kind: pipeline
 type: docker
-name: 7a-testing
+name: sw-unit-tests
 
 image_pull_secrets:
   - dockerconfigjson
@@ -955,7 +930,7 @@ steps:
     depends_on: [go-tests-with-coverage]
     settings:
       paths: reports/go-tests-junit.xml
-      report_name: "junit-reports - Pipe 7a - go-tests-with-coverage"
+      report_name: "junit-reports - sw-unit-tests - go-tests-with-coverage"
     when:
       status: [success, failure]
 
@@ -1074,7 +1049,7 @@ steps:
         path: /pipeline-results
     depends_on: [test-c-lib-pytest, test-c-lib-go, test-c-lib-cgo, test-rust-lib, go-tests-with-coverage, python-tests, c-coverage, sonarqube-report, sonarcloud-scan, strictdoc-coverage-gate, traceability-check]
     commands:
-      - sh scripts/save-pipeline-results.sh 7a-testing
+      - sh scripts/save-pipeline-results.sh sw-unit-tests
     when:
       status: [success, failure]
 
@@ -1474,17 +1449,24 @@ steps:
         - chmod +x ~/bin/*
         - echo "Deploy abgeschlossen"
 
-  - name: test-hardware
+  - name: test-hardware-all-backends
     image: python:3.12-alpine
     pull: if_not_exists
     depends_on: [restart-bbb-service]
     environment:
       BEAGLE_HOST:
         from_secret: beagle_host
-      STEP: test-hardware
+      BBCLI_REMOTE: /home/debian/bin/bbcli
+      STEP: test-hardware-all-backends
       CMD: |
+        apk add --no-cache openssh-client curl -q
         pip install pytest pytest-timeout requests pytest-json-report --break-system-packages -q
-        pytest tests/hardware/test_hardware.py -v --timeout=60 --json-report --json-report-file=reports/hardware-tests.json || true
+        echo "=== API Diagnose ===" && curl -s http://$BEAGLE_HOST:5000/health || true
+        for backend in c rust auto; do
+          echo "=== Backend $backend ==="
+          curl -sf -X POST http://$BEAGLE_HOST:5000/api/v1/backend -H 'Content-Type: application/json' -d "{\"backend\":\"$backend\"}" || true
+          HW_BACKEND=$backend pytest tests/hardware/test_hardware.py -v --timeout=60 --json-report --json-report-file=reports/hardware-${backend}-tests.json || exit 1
+        done
     commands:
       - sh scripts/run-step.sh
 
@@ -1557,7 +1539,7 @@ steps:
     image: alpine
     pull: if_not_exists
     depends_on:
-      - test-hardware
+      - test-hardware-all-backends
       - test-api
       - test-uart-on-bbb
       - test-cli-on-bbb
@@ -1585,7 +1567,7 @@ steps:
     volumes:
       - name: pipeline-results
         path: /pipeline-results
-    depends_on: [download-release-assets, test-hardware, test-api, test-uart-on-bbb, test-cli-remote, promote-to-stable]
+    depends_on: [download-release-assets, test-hardware-all-backends, test-api, test-uart-on-bbb, test-cli-remote, promote-to-stable]
     commands:
       - sh scripts/save-pipeline-results.sh 10-integration-tests
     when:
@@ -1740,7 +1722,7 @@ depends_on:
   - 4-webapp
   - 5-release
   - 6-nightly
-  - 7a-testing
+  - sw-unit-tests
   - 7b-analysis
   - 7c-docs
   - 8-bausteinsicht
