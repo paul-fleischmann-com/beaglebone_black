@@ -205,13 +205,11 @@ RELATIONS:
 [TEST_CASE]
 UID: TC-019
 TITLE: CLI — JSON-Ausgabe via --json Flag
-STATEMENT: Verifiziert, dass das CLI-Tool mit --json Flag eine maschinenlesbare JSON-Ausgabe liefert und kein Returncode != 0 zurückgibt.
+STATEMENT: Verifiziert, dass das CLI-Tool mit --json Flag eine maschinenlesbare JSON-Ausgabe liefert und kein Returncode != 0 zurückgibt. Hinweis: Test ausstehend bis --json implementiert ist (siehe Issue #241).
 TEST_TYPE: Integration
 RELATIONS:
 - TYPE: Parent
   VALUE: SWR-014
-- TYPE: File
-  VALUE: tests/cli/test_cli.py
 
 [TEST_CASE]
 UID: TC-020

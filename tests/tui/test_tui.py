@@ -33,14 +33,6 @@ def _api_reachable() -> bool:
         return False
 
 
-def pytest_collection_modifyitems(items):
-    if not os.path.isfile(TUI):
-        skip = pytest.mark.skip(
-            reason=f"TUI-Binary nicht gefunden ({TUI}) — zuerst 'make cli' ausführen"
-        )
-        for item in items:
-            item.add_marker(skip)
-
 
 class TestTuiBinary:
     """Build-Check: TUI Binary muss nach 'make cli' vorhanden sein."""

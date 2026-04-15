@@ -260,7 +260,7 @@ RELATIONS:
 - TYPE: Parent
   VALUE: SYS-006
 - TYPE: File
-  VALUE: docs/requirements/software_requirements.sdoc
+  VALUE: docs/requirements/test_case_spec.sdoc
 
 [SW_REQUIREMENT]
 UID: SWR-019

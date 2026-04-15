@@ -33,14 +33,6 @@ def _api_reachable() -> bool:
         return False
 
 
-def pytest_collection_modifyitems(items):
-    if not os.path.isfile(GUI):
-        skip = pytest.mark.skip(
-            reason=f"GUI-Binary nicht gefunden ({GUI}) — zuerst 'make cli' ausführen"
-        )
-        for item in items:
-            item.add_marker(skip)
-
 
 class TestGuiBinary:
     """Build-Check: GUI Binary muss nach 'make cli' vorhanden sein."""
