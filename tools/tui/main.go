@@ -1,4 +1,3 @@
-// [SDOC_LINK: SWR-015]
 package main
 
 import (
@@ -95,6 +94,7 @@ func initialModel() model {
 }
 
 // ── API Helper ───────────────────────────────────────────────────
+// [SDOC_LINK: SWR-015]
 func apiGet(path string, out interface{}) error {
 	resp, err := http.Get(apiBase + path)
 	if err != nil {

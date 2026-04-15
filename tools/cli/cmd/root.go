@@ -45,4 +45,6 @@ func initConfig() {
 	viper.AutomaticEnv()
 	viper.ReadInConfig()
 }
+
+// [SDOC_LINK: SWR-013]
 func apiURL() string { return fmt.Sprintf("http://%s:%d", host, port) }

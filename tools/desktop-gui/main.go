@@ -1,4 +1,3 @@
-// [SDOC_LINK: SWR-016]
 package main
 
 import (
@@ -24,6 +23,7 @@ const (
 var apiBase = "http://192.168.7.2:5000"
 
 // ── API Helper ───────────────────────────────────────────────────
+// [SDOC_LINK: SWR-016]
 func apiGet(path string, out interface{}) error {
 	resp, err := http.Get(apiBase + path)
 	if err != nil {
