@@ -240,6 +240,149 @@ RELATIONS:
 - TYPE: File
   VALUE: project/go-api/pkg/api/handlers_test.go
 
+[SW_REQUIREMENT]
+UID: SWR-013
+TITLE: CLI — API-Verbindung und Befehlsausführung
+STATEMENT: Das CLI-Tool muss eine Verbindung zur REST API herstellen und Befehle für BME280, GPIO, UART und SPI ausführen können.
+STATUS: Active
+REQUIREMENT_TYPE: functional
+PRIORITY: High
+RELATIONS:
+- TYPE: Parent
+  VALUE: SYS-006
+- TYPE: File
+  VALUE: tools/cli/main.go
+- TYPE: File
+  VALUE: tests/hardware/test_uart.py
+
+[SW_REQUIREMENT]
+UID: SWR-014
+TITLE: CLI — Maschinenlesbare Ausgabe
+STATEMENT: Das CLI-Tool muss Ausgaben im JSON-Format unterstützen (--json Flag), damit Ergebnisse maschinell weiterverarbeitet werden können.
+STATUS: Active
+REQUIREMENT_TYPE: functional
+PRIORITY: Medium
+RELATIONS:
+- TYPE: Parent
+  VALUE: SYS-006
+- TYPE: File
+  VALUE: tools/cli/main.go
+- TYPE: File
+  VALUE: tests/hardware/test_uart.py
+
+[SW_REQUIREMENT]
+UID: SWR-015
+TITLE: TUI — Echtzeit-Sensoranzeige
+STATEMENT: Das TUI muss BME280-Sensordaten (Temperatur, Luftfeuchtigkeit, Luftdruck, Höhe) in Echtzeit im Terminal anzeigen und automatisch aktualisieren.
+STATUS: Active
+REQUIREMENT_TYPE: functional
+PRIORITY: High
+RELATIONS:
+- TYPE: Parent
+  VALUE: SYS-006
+- TYPE: File
+  VALUE: tools/tui/main.go
+- TYPE: File
+  VALUE: tests/api/test_api.py
+
+[SW_REQUIREMENT]
+UID: SWR-016
+TITLE: GUI — Sensordaten und GPIO-Steuerung
+STATEMENT: Die Desktop-GUI muss BME280-Sensordaten anzeigen und GPIO-Pins über die REST API setzen können.
+STATUS: Active
+REQUIREMENT_TYPE: functional
+PRIORITY: Medium
+RELATIONS:
+- TYPE: Parent
+  VALUE: SYS-006
+- TYPE: File
+  VALUE: tools/desktop-gui/main.go
+- TYPE: File
+  VALUE: tests/api/test_api.py
+
+[SW_REQUIREMENT]
+UID: SWR-017
+TITLE: Web App — Browser-basierter Zugriff
+STATEMENT: Die Web App muss im Browser ohne Installation erreichbar sein, BME280-Daten anzeigen, GPIO steuern und den API-Host konfigurierbar machen.
+STATUS: Active
+REQUIREMENT_TYPE: functional
+PRIORITY: High
+RELATIONS:
+- TYPE: Parent
+  VALUE: SYS-006
+- TYPE: File
+  VALUE: tools/web-gui/index.html
+- TYPE: File
+  VALUE: tests/api/test_api.py
+
+[SW_REQUIREMENT]
+UID: SWR-018
+TITLE: Tools — Traceability zu Implementierung und Tests
+STATEMENT: Jedes Tool-Requirement muss einen Verweis (SDOC_LINK) auf die zugehörige Implementierungsdatei im Source Code sowie auf den zugehörigen Test enthalten.
+STATUS: Active
+REQUIREMENT_TYPE: constraint
+PRIORITY: High
+RELATIONS:
+- TYPE: Parent
+  VALUE: SYS-006
+- TYPE: File
+  VALUE: docs/requirements/software_requirements.sdoc
+
+[TEST_CASE]
+UID: TC-009
+TITLE: CLI — Verbindung zur REST API und BME280-Befehl
+STATEMENT: Verifiziert, dass das CLI-Tool eine Verbindung zur REST API herstellt und den Befehl bme280 read erfolgreich ausführt sowie Temperatur in der Ausgabe enthält.
+TEST_TYPE: Integration
+RELATIONS:
+- TYPE: Parent
+  VALUE: SWR-013
+- TYPE: File
+  VALUE: tests/cli/test_cli.py
+
+[TEST_CASE]
+UID: TC-010
+TITLE: CLI — JSON-Ausgabe via --json Flag
+STATEMENT: Verifiziert, dass das CLI-Tool mit --json Flag eine maschinenlesbare JSON-Ausgabe liefert und kein Returncode != 0 zurückgibt.
+TEST_TYPE: Integration
+RELATIONS:
+- TYPE: Parent
+  VALUE: SWR-014
+- TYPE: File
+  VALUE: tests/cli/test_cli.py
+
+[TEST_CASE]
+UID: TC-011
+TITLE: TUI — BME280-Daten über REST API abrufbar
+STATEMENT: Verifiziert, dass der TUI-Prozess startet, den /api/v1/bme280-Endpunkt erfolgreich aufruft und Sensordaten empfängt (Temperatur, Luftfeuchtigkeit, Luftdruck, Höhe).
+TEST_TYPE: Integration
+RELATIONS:
+- TYPE: Parent
+  VALUE: SWR-015
+- TYPE: File
+  VALUE: tests/api/test_api.py
+
+[TEST_CASE]
+UID: TC-012
+TITLE: GUI — BME280-Anzeige und GPIO-Steuerung über API
+STATEMENT: Verifiziert, dass die Desktop-GUI den /api/v1/bme280-Endpunkt und den /api/v1/gpio/{pin}-Endpunkt (POST) erfolgreich aufruft.
+TEST_TYPE: Integration
+RELATIONS:
+- TYPE: Parent
+  VALUE: SWR-016
+- TYPE: File
+  VALUE: tests/api/test_api.py
+
+[TEST_CASE]
+UID: TC-013
+TITLE: Web App — API-Host konfigurierbar und Endpunkte erreichbar
+STATEMENT: Verifiziert, dass die Web App über einen konfigurierbaren API-Host (?host=...) den /api/v1/bme280-Endpunkt aufruft und Sensordaten anzeigt sowie GPIO per POST steuert.
+TEST_TYPE: Integration
+RELATIONS:
+- TYPE: Parent
+  VALUE: SWR-017
+- TYPE: File
+  VALUE: tests/api/test_api.py
+
 [SOURCE_CODE]
 UID: SC-001
 TITLE: HAL Interface

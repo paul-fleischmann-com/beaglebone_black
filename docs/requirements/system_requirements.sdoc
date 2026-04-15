@@ -52,3 +52,16 @@ STATUS: Active
 RELATIONS:
 - TYPE: File
   VALUE: Makefile
+
+[SYS_REQUIREMENT]
+UID: SYS-006
+TITLE: Client-Tools für Hardware-Steuerung
+STATEMENT: Das System muss Client-Tools bereitstellen (CLI, TUI, GUI, Web App), die über die REST API auf die Hardware zugreifen und Sensordaten anzeigen sowie GPIO steuern können.
+STATUS: Active
+RELATIONS:
+- TYPE: File
+  VALUE: tools/cli/main.go
+- TYPE: File
+  VALUE: tools/tui/main.go
+- TYPE: File
+  VALUE: tools/web-gui/index.html
