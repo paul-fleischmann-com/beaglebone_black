@@ -352,36 +352,36 @@ RELATIONS:
 
 [TEST_CASE]
 UID: TC-011
-TITLE: TUI — BME280-Daten über REST API abrufbar
-STATEMENT: Verifiziert, dass der TUI-Prozess startet, den /api/v1/bme280-Endpunkt erfolgreich aufruft und Sensordaten empfängt (Temperatur, Luftfeuchtigkeit, Luftdruck, Höhe).
+TITLE: TUI — Binary-Existenz und BME280-API-Endpunkt
+STATEMENT: Verifiziert, dass das TUI Binary nach dem Build vorhanden und ausführbar ist, und dass der von fetchBME280() verwendete /api/v1/bme280-Endpunkt alle erwarteten Felder (temperature, humidity, pressure, altitude) liefert.
 TEST_TYPE: Integration
 RELATIONS:
 - TYPE: Parent
   VALUE: SWR-015
 - TYPE: File
-  VALUE: tests/api/test_api.py
+  VALUE: tests/tui/test_tui.py
 
 [TEST_CASE]
 UID: TC-012
-TITLE: GUI — BME280-Anzeige und GPIO-Steuerung über API
-STATEMENT: Verifiziert, dass die Desktop-GUI den /api/v1/bme280-Endpunkt und den /api/v1/gpio/{pin}-Endpunkt (POST) erfolgreich aufruft.
+TITLE: GUI — Binary-Existenz und apiGet/apiPost Endpunkte
+STATEMENT: Verifiziert, dass das GUI Binary nach dem Build vorhanden und ausführbar ist, und dass die von apiGet()/apiPost() verwendeten Endpunkte /api/v1/bme280 (GET) und /api/v1/gpio/{pin} (POST/GET) korrekt antworten.
 TEST_TYPE: Integration
 RELATIONS:
 - TYPE: Parent
   VALUE: SWR-016
 - TYPE: File
-  VALUE: tests/api/test_api.py
+  VALUE: tests/gui/test_gui.py
 
 [TEST_CASE]
 UID: TC-013
-TITLE: Web App — API-Host konfigurierbar und Endpunkte erreichbar
-STATEMENT: Verifiziert, dass die Web App über einen konfigurierbaren API-Host (?host=...) den /api/v1/bme280-Endpunkt aufruft und Sensordaten anzeigt sowie GPIO per POST steuert.
-TEST_TYPE: Integration
+TITLE: Web App — Statische Analyse: Funktionen und HTML-Elemente
+STATEMENT: Verifiziert statisch, dass index.html fetchBME280(), setGPIO(), setBackend() implementiert, alle BME280-Anzeigeelemente enthält, GPIO-Buttons vorhanden sind und der ?host= URL-Parameter ausgewertet wird.
+TEST_TYPE: Unit
 RELATIONS:
 - TYPE: Parent
   VALUE: SWR-017
 - TYPE: File
-  VALUE: tests/api/test_api.py
+  VALUE: tests/web/test_web_gui.py
 
 [SOURCE_CODE]
 UID: SC-001
