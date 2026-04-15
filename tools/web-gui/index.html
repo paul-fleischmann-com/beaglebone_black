@@ -27,7 +27,12 @@
 <body>
 <header>
   <h1>🤖 BeagleBone Black Dashboard</h1>
-  <span id="status" style="color:#64748b;font-size:.85rem">Verbinde...</span>
+  <div style="display:flex;align-items:center;gap:.75rem">
+    <input id="api-host" placeholder="192.168.7.2:5000"
+      style="width:180px;background:#0f172a;border:1px solid #475569;color:#e2e8f0;padding:.3rem .6rem;border-radius:6px;font-size:.85rem"
+      onchange="updateHost(this.value)">
+    <span id="status" style="color:#64748b;font-size:.85rem">Verbinde...</span>
+  </div>
 </header>
 <div class="grid">
   <div class="card">
@@ -56,7 +61,12 @@
 </div>
 <div class="toast" id="toast"></div>
 <script>
-const API=`http://${location.hostname}:5000`;
+// Host aus URL-Parameter ?host=192.168.7.2 oder Fallback auf location.hostname
+const params=new URLSearchParams(location.search);
+const defaultHost=(params.get('host')||location.hostname)+':5000';
+let API='http://'+defaultHost;
+document.getElementById('api-host').value=defaultHost;
+function updateHost(v){API='http://'+v;fetchBME280()}
 function toast(m,ok=true){const t=document.getElementById('toast');t.textContent=m;t.className='toast show '+(ok?'':'');setTimeout(()=>t.className='toast',2500)}
 async function fetchBME280(){
   try{const d=await(await fetch(API+'/api/v1/bme280')).json();
