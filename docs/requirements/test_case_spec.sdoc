@@ -1,0 +1,280 @@
+[DOCUMENT]
+TITLE: Test Case Specification
+
+[GRAMMAR]
+IMPORT_FROM_FILE: grammar.sgra
+
+[TEST_CASE]
+UID: TC-001
+TITLE: BME280 Lesen Erfolg
+STATEMENT: Verifiziert, dass BME280Read() gültige Messwerte zurückgibt.
+TEST_TYPE: Unit
+RELATIONS:
+- TYPE: Parent
+  VALUE: SWR-001
+- TYPE: File
+  VALUE: project/go-api/pkg/hal/hal_test.go
+
+[TEST_CASE]
+UID: TC-002
+TITLE: GPIO Schreiben und Lesen
+STATEMENT: Verifiziert GPIO-Schreib- und Leseoperation über den Mock Driver.
+TEST_TYPE: Unit
+RELATIONS:
+- TYPE: Parent
+  VALUE: SWR-003
+- TYPE: File
+  VALUE: project/go-api/pkg/hal/hal_test.go
+
+[TEST_CASE]
+UID: TC-003
+TITLE: Auto-Fallback bei C-Fehler
+STATEMENT: Verifiziert, dass das System bei C-Backend-Fehler auf Rust zurückfällt.
+TEST_TYPE: Unit
+RELATIONS:
+- TYPE: Parent
+  VALUE: SWR-005
+- TYPE: File
+  VALUE: project/go-api/pkg/hal/hal_test.go
+
+[TEST_CASE]
+UID: TC-004
+TITLE: API Backend-Wechsel
+STATEMENT: Verifiziert, dass HW_BACKEND per REST API umgeschaltet werden kann.
+TEST_TYPE: Integration
+RELATIONS:
+- TYPE: Parent
+  VALUE: SWR-002
+- TYPE: File
+  VALUE: tests/api/test_api.py
+
+[TEST_CASE]
+UID: TC-005
+TITLE: POST-Handler 400 bei ungültigem JSON
+STATEMENT: Verifiziert, dass alle POST-Handler bei ungültigem JSON-Body HTTP 400 zurückgeben und keine Hardware-Operationen mit Null-Werten ausführen.
+TEST_TYPE: Unit
+RELATIONS:
+- TYPE: Parent
+  VALUE: HW-API-007
+- TYPE: File
+  VALUE: project/go-api/pkg/api/handlers_test.go
+
+[TEST_CASE]
+UID: TC-006
+TITLE: HTTP-Server hat konfigurierte Timeouts
+STATEMENT: Verifiziert, dass NewHTTPServer einen http.Server mit ReadTimeout, WriteTimeout und IdleTimeout > 0 zurückgibt.
+TEST_TYPE: Unit
+RELATIONS:
+- TYPE: Parent
+  VALUE: SWR-006
+- TYPE: File
+  VALUE: project/go-api/pkg/api/server_test.go
+
+[TEST_CASE]
+UID: TC-007
+TITLE: BME280StreamHandler gibt 500 zurück wenn kein Flusher
+STATEMENT: Verifiziert, dass BME280StreamHandler HTTP 500 zurückgibt wenn der ResponseWriter kein http.Flusher implementiert, anstatt einen Panic zu verursachen.
+TEST_TYPE: Unit
+RELATIONS:
+- TYPE: Parent
+  VALUE: SWR-007
+- TYPE: File
+  VALUE: project/go-api/pkg/api/handlers_test.go
+
+[TEST_CASE]
+UID: TC-008
+TITLE: LoadConfig registriert keine Flags im globalen FlagSet
+STATEMENT: Verifiziert, dass LoadConfig() keine Flags (backend, uart, i2c) im globalen flag.CommandLine registriert und flag.Parse() nicht aufruft.
+TEST_TYPE: Unit
+RELATIONS:
+- TYPE: Parent
+  VALUE: SWR-008
+- TYPE: File
+  VALUE: project/go-api/pkg/hal/config/config_test.go
+
+[TEST_CASE]
+UID: TC-009
+TITLE: HealthHandler gibt 200 mit Pflichtfeldern zurück
+STATEMENT: Verifiziert, dass GET /health HTTP 200 liefert und das JSON-Objekt die Felder status, backend, driver und arch enthält.
+TEST_TYPE: Unit
+RELATIONS:
+- TYPE: Parent
+  VALUE: API-001
+- TYPE: File
+  VALUE: project/go-api/pkg/api/handlers_test.go
+
+[TEST_CASE]
+UID: TC-010
+TITLE: BME280Handler gibt 200 mit Sensordaten zurück
+STATEMENT: Verifiziert, dass GET /api/v1/bme280 HTTP 200 liefert und das JSON die Felder temperature, humidity, pressure enthält.
+TEST_TYPE: Unit
+RELATIONS:
+- TYPE: Parent
+  VALUE: API-002
+- TYPE: File
+  VALUE: project/go-api/pkg/api/handlers_test.go
+
+[TEST_CASE]
+UID: TC-011
+TITLE: BME280Handler gibt 500 bei Treiberfehler zurück
+STATEMENT: Verifiziert, dass GET /api/v1/bme280 HTTP 500 liefert, wenn BME280Read() einen Fehler zurückgibt.
+TEST_TYPE: Unit
+RELATIONS:
+- TYPE: Parent
+  VALUE: API-003
+- TYPE: File
+  VALUE: project/go-api/pkg/api/handlers_test.go
+
+[TEST_CASE]
+UID: TC-012
+TITLE: GPIOReadHandler gibt 200 mit GPIO-Daten zurück
+STATEMENT: Verifiziert, dass GET /api/v1/gpio/{pin} HTTP 200 liefert und das JSON die Felder pin, value und backend enthält.
+TEST_TYPE: Unit
+RELATIONS:
+- TYPE: Parent
+  VALUE: API-004
+- TYPE: File
+  VALUE: project/go-api/pkg/api/handlers_test.go
+
+[TEST_CASE]
+UID: TC-013
+TITLE: GPIOAllHandler gibt 200 mit pins-Array zurück
+STATEMENT: Verifiziert, dass GET /api/v1/gpio HTTP 200 liefert und das JSON das Feld pins als Array enthält.
+TEST_TYPE: Unit
+RELATIONS:
+- TYPE: Parent
+  VALUE: API-005
+- TYPE: File
+  VALUE: project/go-api/pkg/api/handlers_test.go
+
+[TEST_CASE]
+UID: TC-014
+TITLE: UARTSendHandler gibt 200 mit bytes_sent zurück
+STATEMENT: Verifiziert, dass POST /api/v1/uart/send HTTP 200 liefert und bytes_sent der Länge der übertragenen Daten entspricht.
+TEST_TYPE: Unit
+RELATIONS:
+- TYPE: Parent
+  VALUE: API-006
+- TYPE: File
+  VALUE: project/go-api/pkg/api/handlers_test.go
+
+[TEST_CASE]
+UID: TC-015
+TITLE: UARTReceiveHandler gibt 200 zurück
+STATEMENT: Verifiziert, dass GET /api/v1/uart/receive HTTP 200 liefert.
+TEST_TYPE: Unit
+RELATIONS:
+- TYPE: Parent
+  VALUE: API-007
+- TYPE: File
+  VALUE: project/go-api/pkg/api/handlers_test.go
+
+[TEST_CASE]
+UID: TC-016
+TITLE: SPITransferHandler gibt 200 mit RX-Daten zurück
+STATEMENT: Verifiziert, dass POST /api/v1/spi/transfer HTTP 200 liefert und rx_buf die gespiegelten TX-Daten enthält (Mock-Loopback).
+TEST_TYPE: Unit
+RELATIONS:
+- TYPE: Parent
+  VALUE: API-008
+- TYPE: File
+  VALUE: project/go-api/pkg/api/handlers_test.go
+
+[TEST_CASE]
+UID: TC-017
+TITLE: Alle Handler setzen Content-Type application/json
+STATEMENT: Verifiziert, dass HealthHandler, BME280Handler, GPIOReadHandler, GPIOAllHandler, GPIOWriteHandler, UARTSendHandler, UARTReceiveHandler und SPITransferHandler den Header Content-Type: application/json setzen.
+TEST_TYPE: Unit
+RELATIONS:
+- TYPE: Parent
+  VALUE: API-009
+- TYPE: File
+  VALUE: project/go-api/pkg/api/handlers_test.go
+
+[TEST_CASE]
+UID: TC-018
+TITLE: CLI — Verbindung zur REST API und BME280-Befehl
+STATEMENT: Verifiziert, dass das CLI-Tool eine Verbindung zur REST API herstellt und den Befehl bme280 read erfolgreich ausführt sowie Temperatur in der Ausgabe enthält.
+TEST_TYPE: Integration
+RELATIONS:
+- TYPE: Parent
+  VALUE: SWR-013
+- TYPE: File
+  VALUE: tests/cli/test_cli.py
+
+[TEST_CASE]
+UID: TC-019
+TITLE: CLI — JSON-Ausgabe via --json Flag
+STATEMENT: Verifiziert, dass das CLI-Tool mit --json Flag eine maschinenlesbare JSON-Ausgabe liefert und kein Returncode != 0 zurückgibt.
+TEST_TYPE: Integration
+RELATIONS:
+- TYPE: Parent
+  VALUE: SWR-014
+- TYPE: File
+  VALUE: tests/cli/test_cli.py
+
+[TEST_CASE]
+UID: TC-020
+TITLE: TUI — Binary-Existenz und BME280-API-Endpunkt
+STATEMENT: Verifiziert, dass das TUI Binary nach dem Build vorhanden und ausführbar ist, und dass der von fetchBME280() verwendete /api/v1/bme280-Endpunkt alle erwarteten Felder (temperature, humidity, pressure, altitude) liefert.
+TEST_TYPE: Integration
+RELATIONS:
+- TYPE: Parent
+  VALUE: SWR-015
+- TYPE: File
+  VALUE: tests/tui/test_tui.py
+
+[TEST_CASE]
+UID: TC-021
+TITLE: GUI — Binary-Existenz und apiGet/apiPost Endpunkte
+STATEMENT: Verifiziert, dass das GUI Binary nach dem Build vorhanden und ausführbar ist, und dass die von apiGet()/apiPost() verwendeten Endpunkte /api/v1/bme280 (GET) und /api/v1/gpio/{pin} (POST/GET) korrekt antworten.
+TEST_TYPE: Integration
+RELATIONS:
+- TYPE: Parent
+  VALUE: SWR-016
+- TYPE: File
+  VALUE: tests/gui/test_gui.py
+
+[TEST_CASE]
+UID: TC-022
+TITLE: Web App — Statische Analyse: Funktionen und HTML-Elemente
+STATEMENT: Verifiziert statisch, dass index.html fetchBME280(), setGPIO(), setBackend() implementiert, alle BME280-Anzeigeelemente enthält, GPIO-Buttons vorhanden sind und der ?host= URL-Parameter ausgewertet wird.
+TEST_TYPE: Unit
+RELATIONS:
+- TYPE: Parent
+  VALUE: SWR-017
+- TYPE: File
+  VALUE: tests/web/test_web_gui.py
+
+[TEST_CASE]
+UID: TC-023
+TITLE: TUI — GPIO-Endpunkt und Backend-Wechsel über API
+STATEMENT: Verifiziert, dass der vom TUI verwendete GPIO-Endpunkt /api/v1/gpio/{pin} (GET/POST) und der Backend-Endpunkt /api/v1/backend (POST) korrekt antworten.
+TEST_TYPE: Integration
+RELATIONS:
+- TYPE: Parent
+  VALUE: SWR-019
+- TYPE: File
+  VALUE: tests/tui/test_tui.py
+
+[TEST_CASE]
+UID: TC-024
+TITLE: GUI — Backend-Wechsel und UART-Konfiguration über API
+STATEMENT: Verifiziert, dass der vom GUI verwendete /api/v1/backend-Endpunkt (POST) und /api/v1/uart/config (POST) korrekt antworten.
+TEST_TYPE: Integration
+RELATIONS:
+- TYPE: Parent
+  VALUE: SWR-020
+- TYPE: File
+  VALUE: tests/gui/test_gui.py
+
+[TEST_CASE]
+UID: TC-025
+TITLE: Web App — Backend-Wechsel und Verbindungsstatus im HTML
+STATEMENT: Verifiziert statisch, dass setBackend() und Backend-Buttons (c/rust/auto) in index.html vorhanden sind und der Verbindungsstatus-Indikator im HTML existiert.
+TEST_TYPE: Unit
+RELATIONS:
+- TYPE: Parent
+  VALUE: SWR-021
+- TYPE: File
+  VALUE: tests/web/test_web_gui.py

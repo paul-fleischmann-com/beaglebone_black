@@ -84,6 +84,51 @@ RELATIONS:
   VALUE: project/go-api/pkg/hal/hal_test.go
 
 [SW_REQUIREMENT]
+UID: SWR-006
+TITLE: HTTP-Server Timeouts
+STATEMENT: Der HTTP-Server muss ReadTimeout, WriteTimeout und IdleTimeout konfigurieren, um auf eingebetteten Systemen Ressourcenerschöpfung durch hängende Verbindungen zu verhindern. ReadTimeout >= 5s, WriteTimeout >= 10s, IdleTimeout >= 30s.
+STATUS: Active
+REQUIREMENT_TYPE: non-functional
+PRIORITY: High
+RELATIONS:
+- TYPE: Parent
+  VALUE: SYS-004
+- TYPE: File
+  VALUE: project/go-api/pkg/api/server.go
+- TYPE: File
+  VALUE: project/go-api/pkg/api/server_test.go
+
+[SW_REQUIREMENT]
+UID: SWR-007
+TITLE: BME280 Stream Flusher-Prüfung
+STATEMENT: Der BME280StreamHandler muss vor dem Streaming prüfen ob der ResponseWriter das http.Flusher-Interface implementiert. Falls nicht, muss HTTP 500 zurückgegeben werden anstatt einen Panic auszulösen.
+STATUS: Active
+REQUIREMENT_TYPE: functional
+PRIORITY: High
+RELATIONS:
+- TYPE: Parent
+  VALUE: SWR-001
+- TYPE: File
+  VALUE: project/go-api/pkg/api/handlers.go
+- TYPE: File
+  VALUE: project/go-api/pkg/api/handlers_test.go
+
+[SW_REQUIREMENT]
+UID: SWR-008
+TITLE: Keine flag.Parse() in Library-Packages
+STATEMENT: Library-Packages dürfen flag.Parse() nicht aufrufen und keine Flags im globalen flag.CommandLine registrieren. Konfigurationswerte müssen ausschließlich über Umgebungsvariablen oder Dependency Injection übergeben werden.
+STATUS: Active
+REQUIREMENT_TYPE: constraint
+PRIORITY: High
+RELATIONS:
+- TYPE: Parent
+  VALUE: SWR-002
+- TYPE: File
+  VALUE: project/go-api/pkg/hal/config/config.go
+- TYPE: File
+  VALUE: project/go-api/pkg/hal/config/config_test.go
+
+[SW_REQUIREMENT]
 UID: SWR-009
 TITLE: ARM v7 Architektur-Kompatibilität
 STATEMENT: Die Software muss für die ARM v7 (ARMv7-A) Architektur kompiliert und auf einem ARM Cortex-A8 Prozessor mit 512 MB RAM ausführbar sein. Go-Binaries müssen mit GOARCH=arm GOARM=7, C-Code mit arm-linux-gnueabihf und Rust-Code mit armv7-unknown-linux-musleabihf gebaut werden.
@@ -138,82 +183,123 @@ RELATIONS:
   VALUE: Makefile
 
 [SW_REQUIREMENT]
-UID: SWR-008
-TITLE: Keine flag.Parse() in Library-Packages
-STATEMENT: Library-Packages dürfen flag.Parse() nicht aufrufen und keine Flags im globalen flag.CommandLine registrieren. Konfigurationswerte müssen ausschließlich über Umgebungsvariablen oder Dependency Injection übergeben werden.
-STATUS: Active
-REQUIREMENT_TYPE: constraint
-PRIORITY: High
-RELATIONS:
-- TYPE: Parent
-  VALUE: SWR-002
-- TYPE: File
-  VALUE: project/go-api/pkg/hal/config/config.go
-- TYPE: File
-  VALUE: project/go-api/pkg/hal/config/config_test.go
-
-[TEST_CASE]
-UID: TC-008
-TITLE: LoadConfig registriert keine Flags im globalen FlagSet
-STATEMENT: Verifiziert, dass LoadConfig() keine Flags (backend, uart, i2c) im globalen flag.CommandLine registriert und flag.Parse() nicht aufruft.
-TEST_TYPE: Unit
-RELATIONS:
-- TYPE: Parent
-  VALUE: SWR-008
-- TYPE: File
-  VALUE: project/go-api/pkg/hal/config/config_test.go
-
-[SW_REQUIREMENT]
-UID: SWR-007
-TITLE: BME280 Stream Flusher-Prüfung
-STATEMENT: Der BME280StreamHandler muss vor dem Streaming prüfen ob der ResponseWriter das http.Flusher-Interface implementiert. Falls nicht, muss HTTP 500 zurückgegeben werden anstatt einen Panic auszulösen.
+UID: SWR-013
+TITLE: CLI — API-Verbindung und Befehlsausführung
+STATEMENT: Das CLI-Tool muss eine Verbindung zur REST API herstellen und Befehle für BME280, GPIO, UART und SPI ausführen können.
 STATUS: Active
 REQUIREMENT_TYPE: functional
 PRIORITY: High
 RELATIONS:
 - TYPE: Parent
-  VALUE: SWR-001
+  VALUE: SYS-006
 - TYPE: File
-  VALUE: project/go-api/pkg/api/handlers.go
+  VALUE: tools/cli/cmd/root.go
 - TYPE: File
-  VALUE: project/go-api/pkg/api/handlers_test.go
-
-[TEST_CASE]
-UID: TC-007
-TITLE: BME280StreamHandler gibt 500 zurück wenn kein Flusher
-STATEMENT: Verifiziert, dass BME280StreamHandler HTTP 500 zurückgibt wenn der ResponseWriter kein http.Flusher implementiert, anstatt einen Panic zu verursachen.
-TEST_TYPE: Unit
-RELATIONS:
-- TYPE: Parent
-  VALUE: SWR-007
-- TYPE: File
-  VALUE: project/go-api/pkg/api/handlers_test.go
+  VALUE: tools/cli/cmd/bme280.go
 
 [SW_REQUIREMENT]
-UID: SWR-006
-TITLE: HTTP-Server Timeouts
-STATEMENT: Der HTTP-Server muss ReadTimeout, WriteTimeout und IdleTimeout konfigurieren, um auf eingebetteten Systemen Ressourcenerschöpfung durch hängende Verbindungen zu verhindern. ReadTimeout >= 5s, WriteTimeout >= 10s, IdleTimeout >= 30s.
+UID: SWR-014
+TITLE: CLI — Maschinenlesbare Ausgabe
+STATEMENT: Das CLI-Tool muss Ausgaben im JSON-Format unterstützen (--json Flag), damit Ergebnisse maschinell weiterverarbeitet werden können.
 STATUS: Active
-REQUIREMENT_TYPE: non-functional
+REQUIREMENT_TYPE: functional
+PRIORITY: Medium
+RELATIONS:
+- TYPE: Parent
+  VALUE: SYS-006
+- TYPE: File
+  VALUE: tools/cli/cmd/root.go
+
+[SW_REQUIREMENT]
+UID: SWR-015
+TITLE: TUI — Echtzeit-Sensoranzeige
+STATEMENT: Das TUI muss BME280-Sensordaten (Temperatur, Luftfeuchtigkeit, Luftdruck, Höhe) in Echtzeit im Terminal anzeigen und automatisch aktualisieren.
+STATUS: Active
+REQUIREMENT_TYPE: functional
 PRIORITY: High
 RELATIONS:
 - TYPE: Parent
-  VALUE: SYS-004
+  VALUE: SYS-006
 - TYPE: File
-  VALUE: project/go-api/pkg/api/server.go
-- TYPE: File
-  VALUE: project/go-api/pkg/api/server_test.go
+  VALUE: tools/tui/main.go
 
-[TEST_CASE]
-UID: TC-006
-TITLE: HTTP-Server hat konfigurierte Timeouts
-STATEMENT: Verifiziert, dass NewHTTPServer einen http.Server mit ReadTimeout, WriteTimeout und IdleTimeout > 0 zurückgibt.
-TEST_TYPE: Unit
+[SW_REQUIREMENT]
+UID: SWR-016
+TITLE: GUI — Sensordaten und GPIO-Steuerung
+STATEMENT: Die Desktop-GUI muss BME280-Sensordaten anzeigen und GPIO-Pins über die REST API setzen können.
+STATUS: Active
+REQUIREMENT_TYPE: functional
+PRIORITY: Medium
 RELATIONS:
 - TYPE: Parent
-  VALUE: SWR-006
+  VALUE: SYS-006
 - TYPE: File
-  VALUE: project/go-api/pkg/api/server_test.go
+  VALUE: tools/desktop-gui/main.go
+
+[SW_REQUIREMENT]
+UID: SWR-017
+TITLE: Web App — Browser-basierter Zugriff
+STATEMENT: Die Web App muss im Browser ohne Installation erreichbar sein, BME280-Daten anzeigen, GPIO steuern und den API-Host konfigurierbar machen.
+STATUS: Active
+REQUIREMENT_TYPE: functional
+PRIORITY: High
+RELATIONS:
+- TYPE: Parent
+  VALUE: SYS-006
+- TYPE: File
+  VALUE: tools/web-gui/index.html
+
+[SW_REQUIREMENT]
+UID: SWR-018
+TITLE: Tools — Traceability zu Implementierung und Tests
+STATEMENT: Jedes Tool-Requirement muss einen Verweis (SDOC_LINK) auf die zugehörige Implementierungsdatei im Source Code sowie auf den zugehörigen Test enthalten.
+STATUS: Active
+REQUIREMENT_TYPE: constraint
+PRIORITY: High
+RELATIONS:
+- TYPE: Parent
+  VALUE: SYS-006
+- TYPE: File
+  VALUE: docs/requirements/software_requirements.sdoc
+
+[SW_REQUIREMENT]
+UID: SWR-019
+TITLE: TUI — GPIO-Steuerung und Backend-Wechsel
+STATEMENT: Das TUI muss GPIO-Pins über die REST API lesen und schreiben können sowie den HAL-Backend-Wechsel (c/rust/auto) über die REST API ermöglichen.
+STATUS: Active
+REQUIREMENT_TYPE: functional
+PRIORITY: Medium
+RELATIONS:
+- TYPE: Parent
+  VALUE: SYS-006
+- TYPE: File
+  VALUE: tools/tui/main.go
+
+[SW_REQUIREMENT]
+UID: SWR-020
+TITLE: GUI — Backend-Wechsel und UART-Konfiguration
+STATEMENT: Die Desktop-GUI muss den HAL-Backend-Wechsel (c/rust/auto) und die UART-Konfiguration (Port, Baudrate) über die REST API ermöglichen.
+STATUS: Active
+REQUIREMENT_TYPE: functional
+PRIORITY: Medium
+RELATIONS:
+- TYPE: Parent
+  VALUE: SYS-006
+- TYPE: File
+  VALUE: tools/desktop-gui/main.go
+
+[SW_REQUIREMENT]
+UID: SWR-021
+TITLE: Web App — Backend-Wechsel und Verbindungsstatus
+STATEMENT: Die Web App muss den HAL-Backend-Wechsel (c/rust/auto) über die REST API ermöglichen und den Verbindungsstatus (Online/Offline) anzeigen.
+STATUS: Active
+REQUIREMENT_TYPE: functional
+PRIORITY: Medium
+RELATIONS:
+- TYPE: Parent
+  VALUE: SYS-006
+- TYPE: File
+  VALUE: tools/web-gui/index.html
 
 [SW_REQUIREMENT]
 UID: HW-API-007
@@ -229,237 +315,131 @@ RELATIONS:
 - TYPE: File
   VALUE: project/go-api/pkg/api/handlers_test.go
 
-[TEST_CASE]
-UID: TC-005
-TITLE: POST-Handler 400 bei ungültigem JSON
-STATEMENT: Verifiziert, dass alle POST-Handler bei ungültigem JSON-Body HTTP 400 zurückgeben und keine Hardware-Operationen mit Null-Werten ausführen.
-TEST_TYPE: Unit
+[SW_REQUIREMENT]
+UID: API-001
+TITLE: HealthHandler Response-Format
+STATEMENT: GET /health muss HTTP 200 zurückgeben und ein JSON-Objekt mit den Feldern status, backend, driver und arch enthalten.
+STATUS: Active
+PRIORITY: High
 RELATIONS:
 - TYPE: Parent
-  VALUE: HW-API-007
+  VALUE: SWR-001
+- TYPE: File
+  VALUE: project/go-api/pkg/api/handlers.go
 - TYPE: File
   VALUE: project/go-api/pkg/api/handlers_test.go
 
 [SW_REQUIREMENT]
-UID: SWR-013
-TITLE: CLI — API-Verbindung und Befehlsausführung
-STATEMENT: Das CLI-Tool muss eine Verbindung zur REST API herstellen und Befehle für BME280, GPIO, UART und SPI ausführen können.
+UID: API-002
+TITLE: BME280Handler Happy Path
+STATEMENT: GET /api/v1/bme280 muss HTTP 200 zurückgeben und ein JSON-Objekt mit den Messwerten temperature, humidity und pressure enthalten, wenn der Treiber erfolgreich liest.
 STATUS: Active
-REQUIREMENT_TYPE: functional
 PRIORITY: High
 RELATIONS:
 - TYPE: Parent
-  VALUE: SYS-006
+  VALUE: SWR-001
 - TYPE: File
-  VALUE: tools/cli/main.go
+  VALUE: project/go-api/pkg/api/handlers.go
 - TYPE: File
-  VALUE: tests/hardware/test_uart.py
+  VALUE: project/go-api/pkg/api/handlers_test.go
 
 [SW_REQUIREMENT]
-UID: SWR-014
-TITLE: CLI — Maschinenlesbare Ausgabe
-STATEMENT: Das CLI-Tool muss Ausgaben im JSON-Format unterstützen (--json Flag), damit Ergebnisse maschinell weiterverarbeitet werden können.
+UID: API-003
+TITLE: BME280Handler Fehlerfall
+STATEMENT: GET /api/v1/bme280 muss HTTP 500 zurückgeben, wenn der Hardware-Treiber einen Fehler meldet.
 STATUS: Active
-REQUIREMENT_TYPE: functional
-PRIORITY: Medium
-RELATIONS:
-- TYPE: Parent
-  VALUE: SYS-006
-- TYPE: File
-  VALUE: tools/cli/main.go
-- TYPE: File
-  VALUE: tests/hardware/test_uart.py
-
-[SW_REQUIREMENT]
-UID: SWR-015
-TITLE: TUI — Echtzeit-Sensoranzeige
-STATEMENT: Das TUI muss BME280-Sensordaten (Temperatur, Luftfeuchtigkeit, Luftdruck, Höhe) in Echtzeit im Terminal anzeigen und automatisch aktualisieren.
-STATUS: Active
-REQUIREMENT_TYPE: functional
 PRIORITY: High
 RELATIONS:
 - TYPE: Parent
-  VALUE: SYS-006
+  VALUE: SWR-001
 - TYPE: File
-  VALUE: tools/tui/main.go
+  VALUE: project/go-api/pkg/api/handlers.go
 - TYPE: File
-  VALUE: tests/api/test_api.py
+  VALUE: project/go-api/pkg/api/handlers_test.go
 
 [SW_REQUIREMENT]
-UID: SWR-016
-TITLE: GUI — Sensordaten und GPIO-Steuerung
-STATEMENT: Die Desktop-GUI muss BME280-Sensordaten anzeigen und GPIO-Pins über die REST API setzen können.
+UID: API-004
+TITLE: GPIOReadHandler Happy Path
+STATEMENT: GET /api/v1/gpio/{pin} muss HTTP 200 zurückgeben und ein JSON-Objekt mit den Feldern pin, value und backend enthalten.
 STATUS: Active
-REQUIREMENT_TYPE: functional
 PRIORITY: Medium
 RELATIONS:
 - TYPE: Parent
-  VALUE: SYS-006
+  VALUE: SWR-001
 - TYPE: File
-  VALUE: tools/desktop-gui/main.go
+  VALUE: project/go-api/pkg/api/handlers.go
 - TYPE: File
-  VALUE: tests/api/test_api.py
+  VALUE: project/go-api/pkg/api/handlers_test.go
 
 [SW_REQUIREMENT]
-UID: SWR-017
-TITLE: Web App — Browser-basierter Zugriff
-STATEMENT: Die Web App muss im Browser ohne Installation erreichbar sein, BME280-Daten anzeigen, GPIO steuern und den API-Host konfigurierbar machen.
+UID: API-005
+TITLE: GPIOAllHandler Response-Format
+STATEMENT: GET /api/v1/gpio muss HTTP 200 zurückgeben und ein JSON-Objekt mit dem Feld pins als Array liefern.
 STATUS: Active
-REQUIREMENT_TYPE: functional
+PRIORITY: Medium
+RELATIONS:
+- TYPE: Parent
+  VALUE: SWR-001
+- TYPE: File
+  VALUE: project/go-api/pkg/api/handlers.go
+- TYPE: File
+  VALUE: project/go-api/pkg/api/handlers_test.go
+
+[SW_REQUIREMENT]
+UID: API-006
+TITLE: UARTSendHandler Happy Path
+STATEMENT: POST /api/v1/uart/send mit gültigem JSON muss HTTP 200 zurückgeben und ein JSON-Objekt mit dem Feld bytes_sent enthalten, das der Länge der gesendeten Daten entspricht.
+STATUS: Active
+PRIORITY: Medium
+RELATIONS:
+- TYPE: Parent
+  VALUE: SWR-001
+- TYPE: File
+  VALUE: project/go-api/pkg/api/handlers.go
+- TYPE: File
+  VALUE: project/go-api/pkg/api/handlers_test.go
+
+[SW_REQUIREMENT]
+UID: API-007
+TITLE: UARTReceiveHandler Happy Path
+STATEMENT: GET /api/v1/uart/receive muss HTTP 200 zurückgeben und ein JSON-Objekt mit UART-Empfangsdaten liefern.
+STATUS: Active
+PRIORITY: Medium
+RELATIONS:
+- TYPE: Parent
+  VALUE: SWR-001
+- TYPE: File
+  VALUE: project/go-api/pkg/api/handlers.go
+- TYPE: File
+  VALUE: project/go-api/pkg/api/handlers_test.go
+
+[SW_REQUIREMENT]
+UID: API-008
+TITLE: SPITransferHandler Happy Path
+STATEMENT: POST /api/v1/spi/transfer mit gültigem JSON muss HTTP 200 zurückgeben und ein JSON-Objekt mit den empfangenen SPI-Daten (rx_buf) liefern.
+STATUS: Active
+PRIORITY: Medium
+RELATIONS:
+- TYPE: Parent
+  VALUE: SWR-001
+- TYPE: File
+  VALUE: project/go-api/pkg/api/handlers.go
+- TYPE: File
+  VALUE: project/go-api/pkg/api/handlers_test.go
+
+[SW_REQUIREMENT]
+UID: API-009
+TITLE: Content-Type JSON Header
+STATEMENT: Alle GET- und POST-Handler der REST API müssen den Response-Header Content-Type auf application/json setzen.
+STATUS: Active
 PRIORITY: High
 RELATIONS:
 - TYPE: Parent
-  VALUE: SYS-006
+  VALUE: SWR-001
 - TYPE: File
-  VALUE: tools/web-gui/index.html
+  VALUE: project/go-api/pkg/api/handlers.go
 - TYPE: File
-  VALUE: tests/api/test_api.py
-
-[TEST_CASE]
-UID: TC-014
-TITLE: TUI — GPIO-Endpunkt und Backend-Wechsel über API
-STATEMENT: Verifiziert, dass der vom TUI verwendete GPIO-Endpunkt /api/v1/gpio/{pin} (GET/POST) und der Backend-Endpunkt /api/v1/backend (POST) korrekt antworten.
-TEST_TYPE: Integration
-RELATIONS:
-- TYPE: Parent
-  VALUE: SWR-019
-- TYPE: File
-  VALUE: tests/tui/test_tui.py
-
-[TEST_CASE]
-UID: TC-015
-TITLE: GUI — Backend-Wechsel und GPIO-Steuerung über API
-STATEMENT: Verifiziert, dass der vom GUI verwendete /api/v1/backend-Endpunkt (POST) und /api/v1/gpio/{pin} (POST) korrekt antworten.
-TEST_TYPE: Integration
-RELATIONS:
-- TYPE: Parent
-  VALUE: SWR-020
-- TYPE: File
-  VALUE: tests/gui/test_gui.py
-
-[TEST_CASE]
-UID: TC-016
-TITLE: Web App — Backend-Wechsel und Verbindungsstatus im HTML
-STATEMENT: Verifiziert statisch, dass setBackend() und Backend-Buttons (c/rust/auto) in index.html vorhanden sind und der Verbindungsstatus-Indikator im HTML existiert.
-TEST_TYPE: Unit
-RELATIONS:
-- TYPE: Parent
-  VALUE: SWR-021
-- TYPE: File
-  VALUE: tests/web/test_web_gui.py
-
-[SW_REQUIREMENT]
-UID: SWR-018
-TITLE: Tools — Traceability zu Implementierung und Tests
-STATEMENT: Jedes Tool-Requirement muss einen Verweis (SDOC_LINK) auf die zugehörige Implementierungsdatei im Source Code sowie auf den zugehörigen Test enthalten.
-STATUS: Active
-REQUIREMENT_TYPE: constraint
-PRIORITY: High
-RELATIONS:
-- TYPE: Parent
-  VALUE: SYS-006
-- TYPE: File
-  VALUE: docs/requirements/software_requirements.sdoc
-
-[TEST_CASE]
-UID: TC-009
-TITLE: CLI — Verbindung zur REST API und BME280-Befehl
-STATEMENT: Verifiziert, dass das CLI-Tool eine Verbindung zur REST API herstellt und den Befehl bme280 read erfolgreich ausführt sowie Temperatur in der Ausgabe enthält.
-TEST_TYPE: Integration
-RELATIONS:
-- TYPE: Parent
-  VALUE: SWR-013
-- TYPE: File
-  VALUE: tests/cli/test_cli.py
-
-[TEST_CASE]
-UID: TC-010
-TITLE: CLI — JSON-Ausgabe via --json Flag
-STATEMENT: Verifiziert, dass das CLI-Tool mit --json Flag eine maschinenlesbare JSON-Ausgabe liefert und kein Returncode != 0 zurückgibt.
-TEST_TYPE: Integration
-RELATIONS:
-- TYPE: Parent
-  VALUE: SWR-014
-- TYPE: File
-  VALUE: tests/cli/test_cli.py
-
-[SW_REQUIREMENT]
-UID: SWR-019
-TITLE: TUI — GPIO-Steuerung und Backend-Wechsel
-STATEMENT: Das TUI muss GPIO-Pins über die REST API lesen und schreiben können sowie den HAL-Backend-Wechsel (c/rust/auto) über die REST API ermöglichen.
-STATUS: Active
-REQUIREMENT_TYPE: functional
-PRIORITY: Medium
-RELATIONS:
-- TYPE: Parent
-  VALUE: SYS-006
-- TYPE: File
-  VALUE: tools/tui/main.go
-- TYPE: File
-  VALUE: tests/tui/test_tui.py
-
-[SW_REQUIREMENT]
-UID: SWR-020
-TITLE: GUI — Backend-Wechsel und UART-Konfiguration
-STATEMENT: Die Desktop-GUI muss den HAL-Backend-Wechsel (c/rust/auto) und die UART-Konfiguration (Port, Baudrate) über die REST API ermöglichen.
-STATUS: Active
-REQUIREMENT_TYPE: functional
-PRIORITY: Medium
-RELATIONS:
-- TYPE: Parent
-  VALUE: SYS-006
-- TYPE: File
-  VALUE: tools/desktop-gui/main.go
-- TYPE: File
-  VALUE: tests/gui/test_gui.py
-
-[SW_REQUIREMENT]
-UID: SWR-021
-TITLE: Web App — Backend-Wechsel und Verbindungsstatus
-STATEMENT: Die Web App muss den HAL-Backend-Wechsel (c/rust/auto) über die REST API ermöglichen und den Verbindungsstatus (Online/Offline) anzeigen.
-STATUS: Active
-REQUIREMENT_TYPE: functional
-PRIORITY: Medium
-RELATIONS:
-- TYPE: Parent
-  VALUE: SYS-006
-- TYPE: File
-  VALUE: tools/web-gui/index.html
-- TYPE: File
-  VALUE: tests/web/test_web_gui.py
-
-[TEST_CASE]
-UID: TC-011
-TITLE: TUI — Binary-Existenz und BME280-API-Endpunkt
-STATEMENT: Verifiziert, dass das TUI Binary nach dem Build vorhanden und ausführbar ist, und dass der von fetchBME280() verwendete /api/v1/bme280-Endpunkt alle erwarteten Felder (temperature, humidity, pressure, altitude) liefert.
-TEST_TYPE: Integration
-RELATIONS:
-- TYPE: Parent
-  VALUE: SWR-015
-- TYPE: File
-  VALUE: tests/tui/test_tui.py
-
-[TEST_CASE]
-UID: TC-012
-TITLE: GUI — Binary-Existenz und apiGet/apiPost Endpunkte
-STATEMENT: Verifiziert, dass das GUI Binary nach dem Build vorhanden und ausführbar ist, und dass die von apiGet()/apiPost() verwendeten Endpunkte /api/v1/bme280 (GET) und /api/v1/gpio/{pin} (POST/GET) korrekt antworten.
-TEST_TYPE: Integration
-RELATIONS:
-- TYPE: Parent
-  VALUE: SWR-016
-- TYPE: File
-  VALUE: tests/gui/test_gui.py
-
-[TEST_CASE]
-UID: TC-013
-TITLE: Web App — Statische Analyse: Funktionen und HTML-Elemente
-STATEMENT: Verifiziert statisch, dass index.html fetchBME280(), setGPIO(), setBackend() implementiert, alle BME280-Anzeigeelemente enthält, GPIO-Buttons vorhanden sind und der ?host= URL-Parameter ausgewertet wird.
-TEST_TYPE: Unit
-RELATIONS:
-- TYPE: Parent
-  VALUE: SWR-017
-- TYPE: File
-  VALUE: tests/web/test_web_gui.py
+  VALUE: project/go-api/pkg/api/handlers_test.go
 
 [SOURCE_CODE]
 UID: SC-001
@@ -493,272 +473,3 @@ RELATIONS:
   VALUE: SWR-002
 - TYPE: File
   VALUE: project/go-api/pkg/hal/loader/factory.go
-
-[TEST_CASE]
-UID: TC-001
-TITLE: BME280 Lesen Erfolg
-STATEMENT: Verifiziert, dass BME280Read() gültige Messwerte zurückgibt.
-TEST_TYPE: Unit
-RELATIONS:
-- TYPE: Parent
-  VALUE: SWR-001
-- TYPE: File
-  VALUE: project/go-api/pkg/hal/hal_test.go
-
-[TEST_CASE]
-UID: TC-002
-TITLE: GPIO Schreiben und Lesen
-STATEMENT: Verifiziert GPIO-Schreib- und Leseoperation über den Mock Driver.
-TEST_TYPE: Unit
-RELATIONS:
-- TYPE: Parent
-  VALUE: SWR-003
-- TYPE: File
-  VALUE: project/go-api/pkg/hal/hal_test.go
-
-[TEST_CASE]
-UID: TC-003
-TITLE: Auto-Fallback bei C-Fehler
-STATEMENT: Verifiziert, dass das System bei C-Backend-Fehler auf Rust zurückfällt.
-TEST_TYPE: Unit
-RELATIONS:
-- TYPE: Parent
-  VALUE: SWR-005
-- TYPE: File
-  VALUE: project/go-api/pkg/hal/hal_test.go
-
-[TEST_CASE]
-UID: TC-004
-TITLE: API Backend-Wechsel
-STATEMENT: Verifiziert, dass HW_BACKEND per REST API umgeschaltet werden kann.
-TEST_TYPE: Integration
-RELATIONS:
-- TYPE: Parent
-  VALUE: SWR-002
-- TYPE: File
-  VALUE: tests/api/test_api.py
-
-[SW_REQUIREMENT]
-UID: API-001
-TITLE: HealthHandler Response-Format
-STATEMENT: GET /api/v1/health muss HTTP 200 zurückgeben und ein JSON-Objekt mit den Feldern status, backend, driver und arch enthalten.
-STATUS: Active
-PRIORITY: High
-RELATIONS:
-- TYPE: Parent
-  VALUE: SWR-001
-- TYPE: File
-  VALUE: project/go-api/pkg/api/handlers.go
-- TYPE: File
-  VALUE: project/go-api/pkg/api/handlers_test.go
-
-[TEST_CASE]
-UID: TC-009
-TITLE: HealthHandler gibt 200 mit Pflichtfeldern zurück
-STATEMENT: Verifiziert, dass GET /api/v1/health HTTP 200 liefert und das JSON-Objekt die Felder status, backend, driver und arch enthält.
-TEST_TYPE: Unit
-RELATIONS:
-- TYPE: Parent
-  VALUE: API-001
-- TYPE: File
-  VALUE: project/go-api/pkg/api/handlers_test.go
-
-[SW_REQUIREMENT]
-UID: API-002
-TITLE: BME280Handler Happy Path
-STATEMENT: GET /api/v1/bme280 muss HTTP 200 zurückgeben und ein JSON-Objekt mit den Messwerten temperature, humidity und pressure enthalten, wenn der Treiber erfolgreich liest.
-STATUS: Active
-PRIORITY: High
-RELATIONS:
-- TYPE: Parent
-  VALUE: SWR-001
-- TYPE: File
-  VALUE: project/go-api/pkg/api/handlers.go
-- TYPE: File
-  VALUE: project/go-api/pkg/api/handlers_test.go
-
-[TEST_CASE]
-UID: TC-010
-TITLE: BME280Handler gibt 200 mit Sensordaten zurück
-STATEMENT: Verifiziert, dass GET /api/v1/bme280 HTTP 200 liefert und das JSON die Felder temperature, humidity, pressure enthält.
-TEST_TYPE: Unit
-RELATIONS:
-- TYPE: Parent
-  VALUE: API-002
-- TYPE: File
-  VALUE: project/go-api/pkg/api/handlers_test.go
-
-[SW_REQUIREMENT]
-UID: API-003
-TITLE: BME280Handler Fehlerfall
-STATEMENT: GET /api/v1/bme280 muss HTTP 500 zurückgeben, wenn der Hardware-Treiber einen Fehler meldet.
-STATUS: Active
-PRIORITY: High
-RELATIONS:
-- TYPE: Parent
-  VALUE: SWR-001
-- TYPE: File
-  VALUE: project/go-api/pkg/api/handlers.go
-- TYPE: File
-  VALUE: project/go-api/pkg/api/handlers_test.go
-
-[TEST_CASE]
-UID: TC-011
-TITLE: BME280Handler gibt 500 bei Treiberfehler zurück
-STATEMENT: Verifiziert, dass GET /api/v1/bme280 HTTP 500 liefert, wenn BME280Read() einen Fehler zurückgibt.
-TEST_TYPE: Unit
-RELATIONS:
-- TYPE: Parent
-  VALUE: API-003
-- TYPE: File
-  VALUE: project/go-api/pkg/api/handlers_test.go
-
-[SW_REQUIREMENT]
-UID: API-004
-TITLE: GPIOReadHandler Happy Path
-STATEMENT: GET /api/v1/gpio/{pin} muss HTTP 200 zurückgeben und ein JSON-Objekt mit den Feldern pin, value und backend enthalten.
-STATUS: Active
-PRIORITY: Medium
-RELATIONS:
-- TYPE: Parent
-  VALUE: SWR-001
-- TYPE: File
-  VALUE: project/go-api/pkg/api/handlers.go
-- TYPE: File
-  VALUE: project/go-api/pkg/api/handlers_test.go
-
-[TEST_CASE]
-UID: TC-012
-TITLE: GPIOReadHandler gibt 200 mit GPIO-Daten zurück
-STATEMENT: Verifiziert, dass GET /api/v1/gpio/{pin} HTTP 200 liefert und das JSON die Felder pin, value und backend enthält.
-TEST_TYPE: Unit
-RELATIONS:
-- TYPE: Parent
-  VALUE: API-004
-- TYPE: File
-  VALUE: project/go-api/pkg/api/handlers_test.go
-
-[SW_REQUIREMENT]
-UID: API-005
-TITLE: GPIOAllHandler Response-Format
-STATEMENT: GET /api/v1/gpio muss HTTP 200 zurückgeben und ein JSON-Objekt mit dem Feld pins als Array liefern.
-STATUS: Active
-PRIORITY: Medium
-RELATIONS:
-- TYPE: Parent
-  VALUE: SWR-001
-- TYPE: File
-  VALUE: project/go-api/pkg/api/handlers.go
-- TYPE: File
-  VALUE: project/go-api/pkg/api/handlers_test.go
-
-[TEST_CASE]
-UID: TC-013
-TITLE: GPIOAllHandler gibt 200 mit pins-Array zurück
-STATEMENT: Verifiziert, dass GET /api/v1/gpio HTTP 200 liefert und das JSON das Feld pins als Array enthält.
-TEST_TYPE: Unit
-RELATIONS:
-- TYPE: Parent
-  VALUE: API-005
-- TYPE: File
-  VALUE: project/go-api/pkg/api/handlers_test.go
-
-[SW_REQUIREMENT]
-UID: API-006
-TITLE: UARTSendHandler Happy Path
-STATEMENT: POST /api/v1/uart/send mit gültigem JSON muss HTTP 200 zurückgeben und ein JSON-Objekt mit dem Feld bytes_sent enthalten, das der Länge der gesendeten Daten entspricht.
-STATUS: Active
-PRIORITY: Medium
-RELATIONS:
-- TYPE: Parent
-  VALUE: SWR-001
-- TYPE: File
-  VALUE: project/go-api/pkg/api/handlers.go
-- TYPE: File
-  VALUE: project/go-api/pkg/api/handlers_test.go
-
-[TEST_CASE]
-UID: TC-014
-TITLE: UARTSendHandler gibt 200 mit bytes_sent zurück
-STATEMENT: Verifiziert, dass POST /api/v1/uart/send HTTP 200 liefert und bytes_sent der Länge der übertragenen Daten entspricht.
-TEST_TYPE: Unit
-RELATIONS:
-- TYPE: Parent
-  VALUE: API-006
-- TYPE: File
-  VALUE: project/go-api/pkg/api/handlers_test.go
-
-[SW_REQUIREMENT]
-UID: API-007
-TITLE: UARTReceiveHandler Happy Path
-STATEMENT: GET /api/v1/uart/receive muss HTTP 200 zurückgeben und ein JSON-Objekt mit UART-Empfangsdaten liefern.
-STATUS: Active
-PRIORITY: Medium
-RELATIONS:
-- TYPE: Parent
-  VALUE: SWR-001
-- TYPE: File
-  VALUE: project/go-api/pkg/api/handlers.go
-- TYPE: File
-  VALUE: project/go-api/pkg/api/handlers_test.go
-
-[TEST_CASE]
-UID: TC-015
-TITLE: UARTReceiveHandler gibt 200 zurück
-STATEMENT: Verifiziert, dass GET /api/v1/uart/receive HTTP 200 liefert.
-TEST_TYPE: Unit
-RELATIONS:
-- TYPE: Parent
-  VALUE: API-007
-- TYPE: File
-  VALUE: project/go-api/pkg/api/handlers_test.go
-
-[SW_REQUIREMENT]
-UID: API-008
-TITLE: SPITransferHandler Happy Path
-STATEMENT: POST /api/v1/spi/transfer mit gültigem JSON muss HTTP 200 zurückgeben und ein JSON-Objekt mit den empfangenen SPI-Daten (rx_buf) liefern.
-STATUS: Active
-PRIORITY: Medium
-RELATIONS:
-- TYPE: Parent
-  VALUE: SWR-001
-- TYPE: File
-  VALUE: project/go-api/pkg/api/handlers.go
-- TYPE: File
-  VALUE: project/go-api/pkg/api/handlers_test.go
-
-[TEST_CASE]
-UID: TC-016
-TITLE: SPITransferHandler gibt 200 mit RX-Daten zurück
-STATEMENT: Verifiziert, dass POST /api/v1/spi/transfer HTTP 200 liefert und rx_buf die gespiegelten TX-Daten enthält (Mock-Loopback).
-TEST_TYPE: Unit
-RELATIONS:
-- TYPE: Parent
-  VALUE: API-008
-- TYPE: File
-  VALUE: project/go-api/pkg/api/handlers_test.go
-
-[SW_REQUIREMENT]
-UID: API-009
-TITLE: Content-Type JSON Header
-STATEMENT: Alle GET- und POST-Handler der REST API müssen den Response-Header Content-Type auf application/json setzen.
-STATUS: Active
-PRIORITY: High
-RELATIONS:
-- TYPE: Parent
-  VALUE: SWR-001
-- TYPE: File
-  VALUE: project/go-api/pkg/api/handlers.go
-- TYPE: File
-  VALUE: project/go-api/pkg/api/handlers_test.go
-
-[TEST_CASE]
-UID: TC-017
-TITLE: Alle Handler setzen Content-Type application/json
-STATEMENT: Verifiziert, dass HealthHandler, BME280Handler, GPIOReadHandler, GPIOAllHandler, GPIOWriteHandler, UARTSendHandler, UARTReceiveHandler und SPITransferHandler den Header Content-Type: application/json setzen.
-TEST_TYPE: Unit
-RELATIONS:
-- TYPE: Parent
-  VALUE: API-009
-- TYPE: File
-  VALUE: project/go-api/pkg/api/handlers_test.go
