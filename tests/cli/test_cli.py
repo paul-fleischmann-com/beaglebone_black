@@ -1,3 +1,5 @@
+# [SDOC_LINK: SWR-013]
+# [SDOC_LINK: SWR-014]
 import subprocess, os, pytest
 
 CLI  = os.getenv("BBCLI","./bin/bbcli-linux-amd64")

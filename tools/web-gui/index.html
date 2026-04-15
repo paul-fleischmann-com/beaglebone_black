@@ -1,3 +1,4 @@
+<!-- [SDOC_LINK: SWR-017] -->
 <!DOCTYPE html>
 <html lang="de">
 <head>
@@ -75,6 +76,8 @@ function updateHost(v){
   fetchBME280()
 }
 function toast(m,ok=true){const t=document.getElementById('toast');t.textContent=m;t.className='toast show '+(ok?'':'');setTimeout(()=>t.className='toast',2500)}
+// [SDOC_LINK: SWR-017]
+// [SDOC_LINK: SWR-021]
 async function fetchBME280(){
   try{const d=await(await fetch(API+'/api/v1/bme280')).json();
   document.getElementById('temp').textContent=d.temperature.toFixed(1);

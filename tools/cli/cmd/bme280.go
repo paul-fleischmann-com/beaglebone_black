@@ -10,6 +10,7 @@ import (
 
 var bme280Cmd = &cobra.Command{Use: "bme280", Short: "BME280 Sensor"}
 
+// [SDOC_LINK: SWR-013]
 var bme280ReadCmd = &cobra.Command{
 	Use: "read", Short: "BME280 lesen",
 	RunE: func(cmd *cobra.Command, args []string) error {

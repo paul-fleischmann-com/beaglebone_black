@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Requirements & Traceability
+
+- Requirements für Client-Tools (CLI, TUI, GUI, Web App) hinzugefügt: SYS-006, SWR-013–021 (#240)
+- Test Cases in eigenem `docs/requirements/test_case_spec.sdoc` ausgelagert (TC-001–025)
+- Bidirektionales Tracing: SDOC_LINK-Kommentare in Tools-Implementierungen und dedizierte Test-Dateien
+- Dedizierte Pytest-Test-Dateien für TUI, GUI und Web App erstellt
+- CI-Pipelines in Drone umbenannt (beschreibende Namen statt numerischer Präfixe)
+
 ### Infrastruktur & Tooling
 
 - Bump codecov/codecov-action from 4 to 5 
