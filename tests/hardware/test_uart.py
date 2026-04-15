@@ -105,10 +105,12 @@ class TestUartSend:
             pytest.fail(f"Unerwartete Ausgabe bei leerem Send: {ausgabe!r}")
 
 
+@pytest.mark.Loopback
 class TestUartLoopback:
     """
     Loopback-Tests: TX (P9_24) muss mit RX (P9_26) verbunden sein.
     Ueberprueft, dass gesendete Daten korrekt zurueckgelesen werden.
+    In CI mit '-k not Loopback' ausgeschlossen (kein Jumper vorhanden).
     """
 
     def test_loopback_einfache_nachricht(self):

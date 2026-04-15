@@ -309,13 +309,18 @@ steps:
     environment:
       BEAGLE_HOST:
         from_secret: beagle_host
+      BBCLI_REMOTE: /home/debian/app/bbcli
       STEP: test-hardware-all-backends
       CMD: |
         apk add --no-cache openssh-client curl -q
         pip install pytest pytest-timeout requests --break-system-packages -q
         echo "=== API Diagnose ===" && curl -s http://$BEAGLE_HOST:5000/health || true
         echo "=== BME280 Diagnose ===" && curl -s http://$BEAGLE_HOST:5000/api/v1/bme280 || true
-        for backend in c rust auto; do echo "=== Backend $backend ==="; HW_BACKEND=$backend pytest tests/hardware/ -v --timeout=60 || exit 1; done
+        for backend in c rust auto; do
+          echo "=== Backend $backend ==="
+          curl -sf -X POST http://$BEAGLE_HOST:5000/api/v1/backend -H 'Content-Type: application/json' -d "{\"backend\":\"$backend\"}" || true
+          HW_BACKEND=$backend pytest tests/hardware/ -v --timeout=60 -k 'not Loopback' || exit 1
+        done
     commands:
       - sh scripts/run-step.sh
     when:
@@ -1509,8 +1514,9 @@ steps:
       BBCLI_REMOTE: /home/debian/bin/bbcli
       STEP: test-uart-on-bbb
       CMD: |
-        pip install pytest --break-system-packages -q
-        pytest tests/hardware/test_uart.py -v --timeout=30 --json-report --json-report-file=reports/uart-tests.json || true
+        apk add --no-cache openssh-client -q
+        pip install pytest pytest-timeout requests --break-system-packages -q
+        pytest tests/hardware/test_uart.py -v --timeout=30 -k 'not Loopback' --json-report --json-report-file=reports/uart-tests.json || true
     commands:
       - sh scripts/run-step.sh
 
