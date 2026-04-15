@@ -63,10 +63,17 @@
 <script>
 // Host aus URL-Parameter ?host=192.168.7.2 oder Fallback auf location.hostname
 const params=new URLSearchParams(location.search);
-const defaultHost=(params.get('host')||location.hostname)+':5000';
-let API='http://'+defaultHost;
+const defaultHost=params.get('host')||location.hostname;
+// Wenn Host == Seiten-Host → Nginx-Proxy (kein Port nötig), sonst :5000
+const defaultAPI=defaultHost===location.hostname
+  ? location.origin
+  : 'http://'+defaultHost+':5000';
+let API=defaultAPI;
 document.getElementById('api-host').value=defaultHost;
-function updateHost(v){API='http://'+v;fetchBME280()}
+function updateHost(v){
+  API=v===location.hostname?location.origin:'http://'+v+':5000';
+  fetchBME280()
+}
 function toast(m,ok=true){const t=document.getElementById('toast');t.textContent=m;t.className='toast show '+(ok?'':'');setTimeout(()=>t.className='toast',2500)}
 async function fetchBME280(){
   try{const d=await(await fetch(API+'/api/v1/bme280')).json();
