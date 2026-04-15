@@ -1,10 +1,10 @@
 ---
 # ════════════════════════════════════════
-# PIPELINE 9 — Builder Images
+# PIPELINE build-container-images
 # ════════════════════════════════════════
 kind: pipeline
 type: docker
-name: 9-build-container
+name: build-container-images
 
 image_pull_secrets:
   - dockerconfigjson
@@ -73,17 +73,17 @@ steps:
         path: /pipeline-results
     depends_on: [build-generic-builder, build-bausteinsicht, build-strictdoc]
     commands:
-      - sh scripts/save-pipeline-results.sh 9-build-container
+      - sh scripts/save-pipeline-results.sh build-container-images
     when:
       status: [success, failure]
 
 ---
 # ════════════════════════════════════════
-# PIPELINE 1 — C & Rust Libraries
+# PIPELINE build-libraries
 # ════════════════════════════════════════
 kind: pipeline
 type: docker
-name: 1-libraries
+name: build-libraries
 
 image_pull_secrets:
   - dockerconfigjson
@@ -165,19 +165,19 @@ steps:
         path: /pipeline-results
     depends_on: [build-libraries, save-artifacts]
     commands:
-      - sh scripts/save-pipeline-results.sh 1-libraries
+      - sh scripts/save-pipeline-results.sh build-libraries
     when:
       status: [success, failure]
 
 ---
 # ════════════════════════════════════════
-# PIPELINE 2 — Embedded SW (Go API + HAL)
+# PIPELINE embedded-test-deploy
 # ════════════════════════════════════════
 kind: pipeline
 type: docker
-name: 2-embedded-sw
+name: embedded-test-deploy
 
-depends_on: [1-libraries]
+depends_on: [build-libraries]
 
 image_pull_secrets:
   - dockerconfigjson
@@ -310,7 +310,7 @@ steps:
         path: /pipeline-results
     depends_on: [test-hal-unit, lint-go, restore-artifacts, restart-service]
     commands:
-      - sh scripts/save-pipeline-results.sh 2-embedded-sw
+      - sh scripts/save-pipeline-results.sh embedded-test-deploy
     when:
       status: [success, failure]
 
@@ -490,7 +490,7 @@ steps:
 # ════════════════════════════════════════
 kind: pipeline
 type: docker
-name: 5-release
+name: publish-release
 
 depends_on: [apps-build-test]
 
@@ -658,17 +658,17 @@ steps:
         path: /pipeline-results
     depends_on: [build-arm, build-tools, build-web-gui, checksums, build-docker-image]
     commands:
-      - sh scripts/save-pipeline-results.sh 5-release
+      - sh scripts/save-pipeline-results.sh publish-release
     when:
       status: [success, failure]
 
 ---
 # ════════════════════════════════════════
-# PIPELINE 6 — Nightly (täglich 02:00)
+# PIPELINE nightly-hardware-regression (täglich 02:00)
 # ════════════════════════════════════════
 kind: pipeline
 type: docker
-name: 6-nightly
+name: nightly-hardware-regression
 
 image_pull_secrets:
   - dockerconfigjson
@@ -706,7 +706,7 @@ steps:
         path: /pipeline-results
     depends_on: [test-all-backends]
     commands:
-      - sh scripts/save-pipeline-results.sh 6-nightly
+      - sh scripts/save-pipeline-results.sh nightly-hardware-regression
     when:
       status: [success, failure]
 
@@ -721,7 +721,7 @@ name: sw-unit-tests
 image_pull_secrets:
   - dockerconfigjson
 
-depends_on: [1-libraries]
+depends_on: [build-libraries]
 
 trigger:
   event: [push, pull_request, custom]
@@ -999,11 +999,11 @@ steps:
 
 ---
 # ════════════════════════════════════════
-# PIPELINE 7b — Static Analysis
+# PIPELINE code-quality-analysis
 # ════════════════════════════════════════
 kind: pipeline
 type: docker
-name: 7b-analysis
+name: code-quality-analysis
 
 image_pull_secrets:
   - dockerconfigjson
@@ -1078,17 +1078,17 @@ steps:
         path: /pipeline-results
     depends_on: [python-security, shellcheck, publish-shellcheck]
     commands:
-      - sh scripts/save-pipeline-results.sh 7b-analysis
+      - sh scripts/save-pipeline-results.sh code-quality-analysis
     when:
       status: [success, failure]
 
 ---
 # ════════════════════════════════════════
-# PIPELINE 7c — Documentation
+# PIPELINE docs-build-publish
 # ════════════════════════════════════════
 kind: pipeline
 type: docker
-name: 7c-docs
+name: docs-build-publish
 
 image_pull_secrets:
   - dockerconfigjson
@@ -1169,20 +1169,20 @@ steps:
         from_secret: deploy_host
     commands:
       - apk add --no-cache unzip -q
-      - mkdir -p /var/www/downloads/7c-docs/strictdoc
-      - unzip -o strictdoc-output.zip -d /var/www/downloads/7c-docs/strictdoc/
-      - echo "StrictDoc verfuegbar unter http://$DEPLOY_HOST/downloads/7c-docs/strictdoc/"
-      - sh scripts/save-pipeline-results.sh 7c-docs
+      - mkdir -p /var/www/downloads/docs-build-publish/strictdoc
+      - unzip -o strictdoc-output.zip -d /var/www/downloads/docs-build-publish/strictdoc/
+      - echo "StrictDoc verfuegbar unter http://$DEPLOY_HOST/downloads/docs-build-publish/strictdoc/"
+      - sh scripts/save-pipeline-results.sh docs-build-publish
     when:
       status: [success, failure]
 
 ---
 # ════════════════════════════════════════
-# PIPELINE 8 — Bausteinsicht
+# PIPELINE architecture-export
 # ════════════════════════════════════════
 kind: pipeline
 type: docker
-name: 8-bausteinsicht
+name: architecture-export
 
 image_pull_secrets:
   - dockerconfigjson
@@ -1308,22 +1308,22 @@ steps:
         path: /pipeline-results
     depends_on: [show-version, validate-model, export-plantuml, export-mermaid, export-table, export-png, push-exports]
     commands:
-      - sh scripts/save-pipeline-results.sh 8-bausteinsicht
+      - sh scripts/save-pipeline-results.sh architecture-export
     when:
       status: [success, failure]
 
 ---
 # ════════════════════════════════════════
-# PIPELINE 10 — Integration Tests (on-target)
+# PIPELINE hardware-integration-tests
 # ════════════════════════════════════════
 kind: pipeline
 type: docker
-name: 10-integration-tests
+name: hardware-integration-tests
 
 image_pull_secrets:
   - dockerconfigjson
 
-depends_on: [2-embedded-sw]
+depends_on: [embedded-test-deploy]
 
 trigger:
   event: [push, pull_request, custom, tag]
@@ -1543,17 +1543,17 @@ steps:
         path: /pipeline-results
     depends_on: [test-hardware-all-backends, test-api, test-uart-on-bbb, test-cli-remote, promote-to-stable]
     commands:
-      - sh scripts/save-pipeline-results.sh 10-integration-tests
+      - sh scripts/save-pipeline-results.sh hardware-integration-tests
     when:
       status: [success, failure]
 
 ---
 # ════════════════════════════════════════
-# PIPELINE 11 — Version Bump & Release
+# PIPELINE release-version
 # ════════════════════════════════════════
 kind: pipeline
 type: docker
-name: 11-version-bump
+name: release-version
 
 image_pull_secrets:
   - dockerconfigjson
@@ -1605,17 +1605,17 @@ steps:
         path: /pipeline-results
     depends_on: [bump-version]
     commands:
-      - sh scripts/save-pipeline-results.sh 11-version-bump
+      - sh scripts/save-pipeline-results.sh release-version
     when:
       status: [success, failure]
 
 ---
 # ════════════════════════════════════════
-# PIPELINE 12 — Changelog Update
+# PIPELINE changelog-update
 # ════════════════════════════════════════
 kind: pipeline
 type: docker
-name: 12-changelog
+name: changelog-update
 
 image_pull_secrets:
   - dockerconfigjson
@@ -1674,35 +1674,35 @@ steps:
         path: /pipeline-results
     depends_on: [push-changelog]
     commands:
-      - sh scripts/save-pipeline-results.sh 12-changelog
+      - sh scripts/save-pipeline-results.sh changelog-update
     when:
       status: [success, failure]
 
 ---
 # ════════════════════════════════════════
-# PIPELINE 15 — Centralized Reporting
+# PIPELINE centralized-reporting
 # ════════════════════════════════════════
 kind: pipeline
 type: docker
-name: 15-reporting
+name: centralized-reporting
 
 image_pull_secrets:
   - dockerconfigjson
 
 depends_on:
-  - 1-libraries
-  - 2-embedded-sw
+  - build-libraries
+  - embedded-test-deploy
   - apps-build-test
-  - 5-release
-  - 6-nightly
+  - publish-release
+  - nightly-hardware-regression
   - sw-unit-tests
-  - 7b-analysis
-  - 7c-docs
-  - 8-bausteinsicht
-  - 9-build-container
-  - 10-integration-tests
-  - 11-version-bump
-  - 12-changelog
+  - code-quality-analysis
+  - docs-build-publish
+  - architecture-export
+  - build-container-images
+  - hardware-integration-tests
+  - release-version
+  - changelog-update
 
 trigger:
   event: [push, pull_request, custom, tag, promote, cron]
@@ -1813,11 +1813,11 @@ steps:
 
 ---
 # ════════════════════════════════════════
-# PIPELINE 14 — Runner Cleanup
+# PIPELINE scheduled-cleanup
 # ════════════════════════════════════════
 kind: pipeline
 type: docker
-name: 14-cleanup
+name: scheduled-cleanup
 
 image_pull_secrets:
   - dockerconfigjson
