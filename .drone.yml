@@ -1323,10 +1323,12 @@ name: 10-integration-tests
 image_pull_secrets:
   - dockerconfigjson
 
+depends_on: [2-embedded-sw]
+
 trigger:
-  event: [tag]
-  ref:
-    include: [refs/tags/*-toTestOnTarget]
+  event: [push, pull_request, custom, tag]
+  branch:
+    exclude: [refs/tags/*]
 
 volumes:
   - name: www-downloads
@@ -1358,6 +1360,10 @@ steps:
         ls -lh bin/
     commands:
       - sh scripts/run-step.sh
+    when:
+      event: [tag]
+      ref:
+        include: [refs/tags/*-toTestOnTarget]
 
   - name: deploy-to-bbb
     image: appleboy/drone-scp@sha256:fa5bce5d58d4c265e88519bdee0fcd6d5721888c97dd3f3665632b38e7329384
@@ -1376,6 +1382,10 @@ steps:
         - bin/libhardware_rs.so
         - bin/bbcli-linux-arm
       target: /home/debian/bin/
+    when:
+      event: [tag]
+      ref:
+        include: [refs/tags/*-toTestOnTarget]
 
   - name: restart-bbb-service
     image: appleboy/drone-ssh
@@ -1392,11 +1402,15 @@ steps:
         - cp ~/bin/bbcli-linux-arm ~/bin/bbcli
         - chmod +x ~/bin/*
         - echo "Deploy abgeschlossen"
+    when:
+      event: [tag]
+      ref:
+        include: [refs/tags/*-toTestOnTarget]
 
   - name: test-hardware-all-backends
     image: python:3.12-alpine
     pull: if_not_exists
-    depends_on: [restart-bbb-service]
+    depends_on: [download-release-assets, restart-bbb-service]
     environment:
       BEAGLE_HOST:
         from_secret: beagle_host
@@ -1445,6 +1459,10 @@ steps:
         pytest tests/hardware/test_uart.py -v --timeout=30 -k 'not Loopback' --json-report --json-report-file=reports/uart-tests.json || true
     commands:
       - sh scripts/run-step.sh
+    when:
+      event: [tag]
+      ref:
+        include: [refs/tags/*-toTestOnTarget]
 
   - name: test-cli-on-bbb
     image: appleboy/drone-ssh
@@ -1462,6 +1480,10 @@ steps:
         - ~/bin/bbcli system status
         - ~/bin/bbcli bme280 read
         - echo "CLI on-device Tests bestanden"
+    when:
+      event: [tag]
+      ref:
+        include: [refs/tags/*-toTestOnTarget]
 
   - name: test-cli-remote
     image: python:3.12-alpine
@@ -1478,6 +1500,10 @@ steps:
         pytest tests/cli/test_cli.py -v --timeout=30 --json-report --json-report-file=reports/cli-tests.json || true
     commands:
       - sh scripts/run-step.sh
+    when:
+      event: [tag]
+      ref:
+        include: [refs/tags/*-toTestOnTarget]
 
   - name: promote-to-stable
     image: alpine
@@ -1504,6 +1530,10 @@ steps:
         echo "Promoted zu $NEW_TAG"
     commands:
       - sh scripts/run-step.sh
+    when:
+      event: [tag]
+      ref:
+        include: [refs/tags/*-toTestOnTarget]
 
   - name: save-results
     image: alpine
@@ -1511,7 +1541,7 @@ steps:
     volumes:
       - name: pipeline-results
         path: /pipeline-results
-    depends_on: [download-release-assets, test-hardware-all-backends, test-api, test-uart-on-bbb, test-cli-remote, promote-to-stable]
+    depends_on: [test-hardware-all-backends, test-api, test-uart-on-bbb, test-cli-remote, promote-to-stable]
     commands:
       - sh scripts/save-pipeline-results.sh 10-integration-tests
     when:
