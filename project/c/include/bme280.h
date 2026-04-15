@@ -391,6 +391,13 @@ int8_t bme280_compensate_data(uint8_t sensor_comp,
 int8_t bme280_cal_meas_delay(uint32_t *max_delay, const struct bme280_settings *settings);
 
 /* ── Go-CGO convenience wrappers ── */
+
+/* I2C context: holds the open file descriptor and slave address */
+typedef struct {
+    int     fd;
+    uint8_t addr;
+} bme280_i2c_ctx_t;
+
 typedef struct {
     double temperature;
     double humidity;
@@ -398,6 +405,9 @@ typedef struct {
     double altitude;
 } bme280_data_t;
 
+/* Open the I2C bus, configure the slave address, and call bme280_init().
+ * ctx must remain valid for the lifetime of dev (store it alongside dev). */
+int8_t bme280_open(const char *i2c_path, uint8_t addr, struct bme280_dev *dev, bme280_i2c_ctx_t *ctx);
 int8_t bme280_read(struct bme280_dev *dev, bme280_data_t *out);
 void   bme280_close(struct bme280_dev *dev);
 

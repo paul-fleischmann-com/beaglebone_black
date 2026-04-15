@@ -1569,8 +1569,61 @@ static int8_t null_ptr_check(const struct bme280_dev *dev)
 }
 /* ── Go-CGO convenience wrappers ── */
 #include <math.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <sys/ioctl.h>
+#include <string.h>
 
-int8_t bme280_read(struct bme280_dev *dev, bme280_data_t *out) {
+/* I2C_SLAVE ioctl constant — avoids dependency on linux/i2c-dev.h */
+#ifndef I2C_SLAVE
+#define I2C_SLAVE 0x0703
+#endif
+
+static BME280_INTF_RET_TYPE i2c_read_cb(uint8_t reg_addr, uint8_t *reg_data, uint32_t len, void *intf_ptr)
+{
+    int fd = *(int *)intf_ptr;
+    if (write(fd, &reg_addr, 1) != 1)                      return -1;
+    if (read(fd, reg_data, (size_t)len) != (ssize_t)len)   return -1;
+    return 0;
+}
+
+static BME280_INTF_RET_TYPE i2c_write_cb(uint8_t reg_addr, const uint8_t *reg_data, uint32_t len, void *intf_ptr)
+{
+    int fd = *(int *)intf_ptr;
+    uint8_t buf[257];
+    if (len > 256) return -1;
+    buf[0] = reg_addr;
+    memcpy(&buf[1], reg_data, len);
+    if (write(fd, buf, len + 1) != (ssize_t)(len + 1)) return -1;
+    return 0;
+}
+
+static void i2c_delay_us_cb(uint32_t period, void *intf_ptr)
+{
+    (void)intf_ptr;
+    usleep(period);
+}
+
+int8_t bme280_open(const char *i2c_path, uint8_t addr, struct bme280_dev *dev, bme280_i2c_ctx_t *ctx)
+{
+    ctx->fd = open(i2c_path, O_RDWR);
+    if (ctx->fd < 0) return -1;
+    if (ioctl(ctx->fd, I2C_SLAVE, (long)addr) < 0) {
+        close(ctx->fd);
+        ctx->fd = -1;
+        return -1;
+    }
+    ctx->addr     = addr;
+    dev->intf_ptr = &ctx->fd;
+    dev->intf     = BME280_I2C_INTF;
+    dev->read     = i2c_read_cb;
+    dev->write    = i2c_write_cb;
+    dev->delay_us = i2c_delay_us_cb;
+    return bme280_init(dev);
+}
+
+int8_t bme280_read(struct bme280_dev *dev, bme280_data_t *out)
+{
     int8_t ret;
     uint32_t delay_ms;
     struct bme280_data comp_data;
@@ -1596,6 +1649,12 @@ int8_t bme280_read(struct bme280_dev *dev, bme280_data_t *out) {
     return BME280_OK;
 }
 
-void bme280_close(struct bme280_dev *dev) {
-    (void)dev; /* nothing to free for stack-allocated dev */
+void bme280_close(struct bme280_dev *dev)
+{
+    if (!dev->intf_ptr) return;
+    int *fd = (int *)dev->intf_ptr;
+    if (*fd >= 0) {
+        close(*fd);
+        *fd = -1;
+    }
 }

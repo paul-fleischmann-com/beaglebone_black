@@ -20,6 +20,7 @@ import (
 
 type CDriver struct {
 	bme280 C.struct_bme280_dev
+	i2cCtx C.bme280_i2c_ctx_t
 	uart   C.uart_dev_t
 	cfg    *config.Config
 }
@@ -29,8 +30,10 @@ func (d *CDriver) Name() string         { return "C Hardware Driver" }
 func (d *CDriver) Backend() hal.Backend { return hal.BackendC }
 
 func (d *CDriver) Init() error {
-	if ret := C.bme280_init(&d.bme280); ret != 0 {
-		return fmt.Errorf("C BME280 init: %d", ret)
+	cp := C.CString(d.cfg.I2CBus)
+	defer C.free(unsafe.Pointer(cp))
+	if ret := C.bme280_open(cp, C.uint8_t(d.cfg.BME280Addr), &d.bme280, &d.i2cCtx); ret != 0 {
+		return fmt.Errorf("C BME280 open on %s@0x%02x: %d", d.cfg.I2CBus, d.cfg.BME280Addr, ret)
 	}
 	return nil
 }
