@@ -18,11 +18,13 @@ import (
 	"unsafe"
 )
 
+// bme280_dev und i2c_ctx müssen vollständig in C-Speicher liegen.
+// CGO prüft Go-Speicher auf Go-Pointer — Callback-Felder in bme280_dev
+// (read/write/delay_us/intf_ptr) lösen sonst "Go pointer to unpinned
+// Go pointer" Panics aus, auch wenn sie auf C-Speicher zeigen.
 type CDriver struct {
-	bme280 C.struct_bme280_dev
-	// i2cCtx muss in C-Speicher liegen — CGO erlaubt keinen Go-Pointer
-	// in bme280_dev.intf_ptr wenn bme280_dev selbst Go-Speicher ist.
-	i2cCtx *C.bme280_i2c_ctx_t
+	bme280 *C.struct_bme280_dev // C.malloc
+	i2cCtx *C.bme280_i2c_ctx_t  // C.malloc
 	uart   C.uart_dev_t
 	cfg    *config.Config
 }
@@ -32,22 +34,30 @@ func (d *CDriver) Name() string         { return "C Hardware Driver" }
 func (d *CDriver) Backend() hal.Backend { return hal.BackendC }
 
 func (d *CDriver) Init() error {
+	d.bme280 = (*C.struct_bme280_dev)(C.malloc(C.sizeof_struct_bme280_dev))
+	if d.bme280 == nil {
+		return fmt.Errorf("C BME280: malloc bme280_dev failed")
+	}
 	d.i2cCtx = (*C.bme280_i2c_ctx_t)(C.malloc(C.sizeof_bme280_i2c_ctx_t))
 	if d.i2cCtx == nil {
-		return fmt.Errorf("C BME280: malloc failed")
+		C.free(unsafe.Pointer(d.bme280))
+		d.bme280 = nil
+		return fmt.Errorf("C BME280: malloc i2cCtx failed")
 	}
 	cp := C.CString(d.cfg.I2CBus)
 	defer C.free(unsafe.Pointer(cp))
-	if ret := C.bme280_open(cp, C.uint8_t(d.cfg.BME280Addr), &d.bme280, d.i2cCtx); ret != 0 {
+	if ret := C.bme280_open(cp, C.uint8_t(d.cfg.BME280Addr), d.bme280, d.i2cCtx); ret != 0 {
 		C.free(unsafe.Pointer(d.i2cCtx))
+		C.free(unsafe.Pointer(d.bme280))
 		d.i2cCtx = nil
+		d.bme280 = nil
 		return fmt.Errorf("C BME280 open on %s@0x%02x: %d", d.cfg.I2CBus, d.cfg.BME280Addr, ret)
 	}
 	return nil
 }
 func (d *CDriver) BME280Read() (*hal.BME280Data, error) {
 	var raw C.bme280_data_t
-	if ret := C.bme280_read(&d.bme280, &raw); ret != 0 {
+	if ret := C.bme280_read(d.bme280, &raw); ret != 0 {
 		return nil, fmt.Errorf("C BME280 read: %d", ret)
 	}
 	return &hal.BME280Data{
@@ -126,7 +136,11 @@ func (d *CDriver) SPITransfer(device string, speed uint32, tx []byte) (*hal.SPID
 	return &hal.SPIData{RxBuf: rx, Length: len(rx), Backend: "c"}, nil
 }
 func (d *CDriver) Close() {
-	C.bme280_close(&d.bme280)
+	if d.bme280 != nil {
+		C.bme280_close(d.bme280) // schließt fd in i2cCtx
+		C.free(unsafe.Pointer(d.bme280))
+		d.bme280 = nil
+	}
 	if d.i2cCtx != nil {
 		C.free(unsafe.Pointer(d.i2cCtx))
 		d.i2cCtx = nil
