@@ -1326,9 +1326,9 @@ image_pull_secrets:
 depends_on: [embedded-test-deploy]
 
 trigger:
-  event: [push, pull_request, custom, tag]
-  branch:
-    exclude: [refs/tags/*]
+  event: [tag]
+  ref:
+    include: [refs/tags/*-toTestOnTarget]
 
 volumes:
   - name: www-downloads
