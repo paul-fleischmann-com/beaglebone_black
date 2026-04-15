@@ -70,9 +70,9 @@ func backendHandler(srv *api.Server) http.HandlerFunc {
 			return
 		}
 		hwMu.Lock()
+		defer hwMu.Unlock()
 		srv.HW.Close()
 		srv.HW = newDriver
-		hwMu.Unlock()
 		json.NewEncoder(w).Encode(map[string]string{"backend": string(newDriver.Backend()), "status": "ok"})
 	}
 }
