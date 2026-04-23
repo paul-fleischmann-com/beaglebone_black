@@ -94,7 +94,7 @@ trigger:
     exclude: [refs/tags/*]
   paths:
     include:
-      - project/c-lib/**
+      - project/c/**
       - project/rust-lib/**
       - project/go-api/pkg/hal/**
       - scripts/build-arm.sh
@@ -189,7 +189,7 @@ trigger:
   paths:
     include:
       - project/go-api/**
-      - project/c-lib/**
+      - project/c/**
       - project/rust-lib/**
       - scripts/build-arm.sh
       - Makefile
