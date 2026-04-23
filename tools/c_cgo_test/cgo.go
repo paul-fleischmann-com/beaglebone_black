@@ -4,6 +4,7 @@ package c_cgo_test
 
 /*
 #cgo CFLAGS: -I../../project/c/include
+#cgo LDFLAGS: -lm
 #include "gpio.h"
 #include "uart.h"
 #include "spi.h"
