@@ -1619,7 +1619,24 @@ int8_t bme280_open(const char *i2c_path, uint8_t addr, struct bme280_dev *dev, b
     dev->read     = i2c_read_cb;
     dev->write    = i2c_write_cb;
     dev->delay_us = i2c_delay_us_cb;
-    return bme280_init(dev);
+
+    int8_t ret = bme280_init(dev);
+    if (ret != BME280_OK) return ret;
+
+    /* bme280_init() performs a soft reset, which resets all oversampling
+     * registers to 0 (BME280_NO_OVERSAMPLING = skipped). Without explicit
+     * configuration, FORCED mode would read sentinel ADC values (0x80000 /
+     * 0x8000) that produce plausible-looking but incorrect measurements.
+     * Configure 1x oversampling for all channels so actual measurements are
+     * taken on every bme280_read() call. */
+    struct bme280_settings settings;
+    ret = bme280_get_sensor_settings(&settings, dev);
+    if (ret != BME280_OK) return ret;
+
+    settings.osr_t = BME280_OVERSAMPLING_1X;
+    settings.osr_p = BME280_OVERSAMPLING_1X;
+    settings.osr_h = BME280_OVERSAMPLING_1X;
+    return bme280_set_sensor_settings(BME280_SEL_ALL_SETTINGS, &settings, dev);
 }
 
 int8_t bme280_read(struct bme280_dev *dev, bme280_data_t *out)
