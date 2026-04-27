@@ -24,7 +24,9 @@ if [[ "$CMD" == "export" ]]; then
   sudo mkdir -p /run/dbus
   sudo dbus-daemon --system --fork 2>/dev/null || true
   shift
-  xvfb-run -a "$SCRIPT_DIR/bausteinsicht" export --model "$MODEL" "${TEMPLATE_FLAG[@]}" "$@"
+  # Put scripts/ on PATH so bausteinsicht finds the local drawio-export wrapper
+  # (adds --no-sandbox, required in containers without user namespaces).
+  PATH="$SCRIPT_DIR:$PATH" "$SCRIPT_DIR/bausteinsicht" export --model "$MODEL" "${TEMPLATE_FLAG[@]}" "$@"
 else
   shift
   "$SCRIPT_DIR/bausteinsicht" "$CMD" --model "$MODEL" "${TEMPLATE_FLAG[@]}" "$@"
