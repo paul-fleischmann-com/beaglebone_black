@@ -1221,6 +1221,18 @@ steps:
     commands:
       - sh scripts/run-step.sh
 
+  - name: sync-model
+    image: ghcr.io/paulefl/bausteinsicht:latest
+    pull: always
+    depends_on: [validate-model]
+    environment:
+      STEP: sync-model
+      CMD: |
+       bausteinsicht sync --model arch/model/beaglebone_black.jsonc
+       git diff --name-only arch/model/ || true
+    commands:
+      - sh scripts/run-step.sh
+
   - name: export-plantuml
     image: ghcr.io/paulefl/bausteinsicht:latest
     pull: always
@@ -1230,6 +1242,7 @@ steps:
       CMD: |
         mkdir -p arch/model/export/plantuml
         bausteinsicht export-diagram --model arch/model/beaglebone_black.jsonc --diagram-format plantuml --output arch/model/export/plantuml
+        git diff --name-only arch/model/export/plantuml/ || true
     commands:
       - sh scripts/run-step.sh
 
@@ -1242,6 +1255,7 @@ steps:
       CMD: |
         mkdir -p arch/model/export/mermaid
         bausteinsicht export-diagram --model arch/model/beaglebone_black.jsonc --diagram-format mermaid --output arch/model/export/mermaid
+        git diff --name-only arch/model/export/mermaid/ || true
     commands:
       - sh scripts/run-step.sh
 
@@ -1254,6 +1268,7 @@ steps:
       CMD: |
         mkdir -p arch/model/export/table
         bausteinsicht export-table --model arch/model/beaglebone_black.jsonc --table-format md --combined --output arch/model/export/table
+        git diff --name-only arch/model/export/table/ || true
     commands:
       - sh scripts/run-step.sh
 
@@ -1267,6 +1282,7 @@ steps:
         mkdir -p arch/model/export/png
         dbus-daemon --system --fork 2>/dev/null || true
         xvfb-run -a bausteinsicht export --model arch/model/beaglebone_black.jsonc --output arch/model/export/png || true
+        git diff --name-only arch/model/export/png/ || true
     commands:
       - sh scripts/run-step.sh
 
@@ -1277,7 +1293,7 @@ steps:
     commands:
       - sh scripts/ci-git-setup.sh
       - git add arch/model/export/
-      - 'git diff --staged --quiet && echo "Keine Änderungen in arch/model/export" || git commit -m "ci(bausteinsicht): update exported diagrams [skip ci]"'
+      - 'git diff --staged --quiet && echo "Keine Änderungen in arch/model/export" || (git diff --staged --name-only && git commit -m "ci(bausteinsicht): update exported diagrams [skip ci]")'
     when:
       event: [push,custom]
       branch: [main, develop]
