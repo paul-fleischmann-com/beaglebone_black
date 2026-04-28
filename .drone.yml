@@ -1279,7 +1279,7 @@ steps:
       - git add arch/model/export/
       - 'git diff --staged --quiet && echo "Keine Änderungen in arch/model/export" || git commit -m "ci(bausteinsicht): update exported diagrams [skip ci]"'
     when:
-      event: [push]
+      event: [push,custom]
       branch: [main, develop]
 
   - name: push-exports
@@ -1297,7 +1297,7 @@ steps:
       netrc_machine: github.com
       netrc_username: paulefl
     when:
-      event: [push]
+      event: [push,custom]
       branch: [main, develop]
 
   - name: save-results
