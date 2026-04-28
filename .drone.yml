@@ -1242,7 +1242,6 @@ steps:
       CMD: |
         mkdir -p arch/model/export/plantuml
         bausteinsicht export-diagram --model arch/model/beaglebone_black.jsonc --diagram-format plantuml --output arch/model/export/plantuml
-        git diff --name-only arch/model/export/plantuml/ || true
     commands:
       - sh scripts/run-step.sh
 
@@ -1255,7 +1254,6 @@ steps:
       CMD: |
         mkdir -p arch/model/export/mermaid
         bausteinsicht export-diagram --model arch/model/beaglebone_black.jsonc --diagram-format mermaid --output arch/model/export/mermaid
-        git diff --name-only arch/model/export/mermaid/ || true
     commands:
       - sh scripts/run-step.sh
 
@@ -1268,7 +1266,6 @@ steps:
       CMD: |
         mkdir -p arch/model/export/table
         bausteinsicht export-table --model arch/model/beaglebone_black.jsonc --table-format md --combined --output arch/model/export/table
-        git diff --name-only arch/model/export/table/ || true
     commands:
       - sh scripts/run-step.sh
 
@@ -1282,7 +1279,6 @@ steps:
         mkdir -p arch/model/export/png
         dbus-daemon --system --fork 2>/dev/null || true
         xvfb-run -a bausteinsicht export --model arch/model/beaglebone_black.jsonc --output arch/model/export/png || true
-        git diff --name-only arch/model/export/png/ || true
     commands:
       - sh scripts/run-step.sh
 
