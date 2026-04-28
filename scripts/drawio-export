@@ -1,0 +1,2 @@
+#!/bin/bash
+exec xvfb-run -a /usr/bin/drawio --no-sandbox "$@"
