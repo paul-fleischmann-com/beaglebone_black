@@ -30,7 +30,21 @@ SECRET_ARGS=""
 if [ -n "${REGISTRY_TOKEN:-}" ]; then
   SECRET_ARGS="--secret id=Bau_token,env=REGISTRY_TOKEN"
 fi
+
+# For the bausteinsicht image: read the required Go version from upstream go.mod
+# so the builder stage always matches what Bausteinsicht declares.
+GO_VERSION_ARG=""
+if [[ "$IMAGE" == "bausteinsicht" ]]; then
+  GO_MOD_URL="https://raw.githubusercontent.com/docToolchain/Bausteinsicht/main/go.mod"
+  GO_VERSION=$(curl -fsSL "$GO_MOD_URL" | grep -E '^go ' | awk '{print $2}' | cut -d. -f1,2)
+  if [[ -n "$GO_VERSION" ]]; then
+    echo "Detected Go version from Bausteinsicht go.mod: $GO_VERSION"
+    GO_VERSION_ARG="--build-arg GO_VERSION=$GO_VERSION"
+  fi
+fi
+
 podman build --build-arg VERSION="$VERSION" \
+  $GO_VERSION_ARG \
   $SECRET_ARGS \
   -t "$FULL_IMAGE:$VERSION" \
   -t "$FULL_IMAGE:latest" \

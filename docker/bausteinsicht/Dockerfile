@@ -7,7 +7,8 @@
 #   drawio-export — wrapper script from docker/bausteinsicht/
 
 # ── Stage 1: Build ────────────────────────────────
-FROM golang:1.24 AS builder
+ARG GO_VERSION=1.24
+FROM golang:${GO_VERSION} AS builder
 
 RUN apt-get update && apt-get install -y --no-install-recommends git && rm -rf /var/lib/apt/lists/*
 
