@@ -13,13 +13,21 @@ if [[ -z "$CMD" ]]; then
   exit 1
 fi
 
+# Use local template.drawio if present in the project root.
+TEMPLATE_FLAG=()
+if [[ -f "$SCRIPT_DIR/../template.drawio" ]]; then
+  TEMPLATE_FLAG=(--template "$SCRIPT_DIR/../template.drawio")
+fi
+
 # export braucht Xvfb + dbus (draw.io headless)
 if [[ "$CMD" == "export" ]]; then
   sudo mkdir -p /run/dbus
   sudo dbus-daemon --system --fork 2>/dev/null || true
   shift
-  xvfb-run -a "$SCRIPT_DIR/bausteinsicht" export --model "$MODEL" "$@"
+  # Put scripts/ on PATH so bausteinsicht finds the local drawio-export wrapper
+  # (adds --no-sandbox, required in containers without user namespaces).
+  PATH="$SCRIPT_DIR:$PATH" "$SCRIPT_DIR/bausteinsicht" export --model "$MODEL" "${TEMPLATE_FLAG[@]}" "$@"
 else
   shift
-  "$SCRIPT_DIR/bausteinsicht" "$CMD" --model "$MODEL" "$@"
+  "$SCRIPT_DIR/bausteinsicht" "$CMD" --model "$MODEL" "${TEMPLATE_FLAG[@]}" "$@"
 fi
