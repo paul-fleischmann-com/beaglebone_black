@@ -28,7 +28,8 @@ echo "$IMAGE:$VERSION not found in ghcr.io — building ..."
 echo "Building $IMAGE:$VERSION ..."
 SECRET_ARGS=""
 if [ -n "${REGISTRY_TOKEN:-}" ]; then
-  SECRET_ARGS="--secret id=Bau_token,env=REGISTRY_TOKEN"
+  echo -n "$REGISTRY_TOKEN" > /tmp/bau_token
+  SECRET_ARGS="--secret id=Bau_token,src=/tmp/bau_token"
 fi
 
 # For the bausteinsicht image: read the required Go version from upstream go.mod
@@ -53,4 +54,5 @@ podman build --build-arg VERSION="$VERSION" \
 
 podman push "$FULL_IMAGE:$VERSION"
 podman push "$FULL_IMAGE:latest"
+rm -f /tmp/bau_token
 echo "$IMAGE:$VERSION pushed"
