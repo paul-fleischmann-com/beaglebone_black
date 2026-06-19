@@ -1,0 +1,86 @@
+name: Yocto BBB Build (Kirkstone + meta-ti)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+
+    env:
+      YOCTO_DIR: ${{ github.workspace }}/yocto
+      DL_DIR: ${{ github.workspace }}/downloads
+      SSTATE_DIR: ${{ github.workspace }}/sstate-cache
+
+    steps:
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            gawk wget git diffstat unzip texinfo gcc build-essential \
+            chrpath socat cpio python3 python3-pip python3-pexpect \
+            xz-utils debianutils iputils-ping file locales \
+            python3-git python3-jinja2 python3-subunit \
+            zstd liblz4-tool curl
+
+      - name: Create workspace
+        run: |
+          mkdir -p $YOCTO_DIR
+          cd $YOCTO_DIR
+
+      - name: Clone Poky (Kirkstone)
+        run: |
+          cd $YOCTO_DIR
+          git clone -b kirkstone git://git.yoctoproject.org/poky
+
+      - name: Clone OpenEmbedded meta layer
+        run: |
+          cd $YOCTO_DIR
+          git clone -b kirkstone git://git.openembedded.org/meta-openembedded
+
+      - name: Clone meta-ti (BBB BSP)
+        run: |
+          cd $YOCTO_DIR
+          git clone -b kirkstone git://git.yoctoproject.org/meta-ti
+
+      - name: Initialize build environment
+        run: |
+          cd $YOCTO_DIR/poky
+          source oe-init-build-env $YOCTO_DIR/build-bbb
+
+          echo 'MACHINE = "beaglebone-yocto"' >> conf/local.conf
+
+          echo 'DL_DIR = "${YOCTO_DIR}/downloads"' >> conf/local.conf
+          echo 'SSTATE_DIR = "${YOCTO_DIR}/sstate-cache"' >> conf/local.conf
+
+      - name: Configure layers
+        run: |
+          cd $YOCTO_DIR/build-bbb
+
+          bitbake-layers add-layer ../poky/meta
+          bitbake-layers add-layer ../poky/meta-poky
+          bitbake-layers add-layer ../poky/meta-yocto-bsp
+
+          bitbake-layers add-layer ../meta-openembedded/meta-oe
+          bitbake-layers add-layer ../meta-openembedded/meta-python
+          bitbake-layers add-layer ../meta-openembedded/meta-networking
+
+          bitbake-layers add-layer ../meta-ti/meta-ti-bsp
+
+      - name: Build minimal image
+        run: |
+          cd $YOCTO_DIR/build-bbb
+          source ../poky/oe-init-build-env .
+
+          bitbake core-image-minimal
+
+      - name: Upload artifacts (wic + kernel)
+        uses: actions/upload-artifact@v4
+        with:
+          name: yocto-bbb-image
+          path: |
+            yocto/build-bbb/tmp/deploy/images/beaglebone-yocto/*.wic*
+            yocto/build-bbb/tmp/deploy/images/beaglebone-yocto/zImage*
+            yocto/build-bbb/tmp/deploy/images/beaglebone-yocto/*.dtb*
