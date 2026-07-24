@@ -22,12 +22,16 @@ BBB_LIBS_DIR="$REPO_ROOT/project/go-api/libs"
 
 mkdir -p "$YOCTO_DIR"
 
-echo "=== Baue Go/Rust/C-Artefakte (make all) ==="
-command -v arm-linux-gnueabihf-gcc >/dev/null 2>&1 || {
-  echo "FEHLER: arm-linux-gnueabihf-gcc nicht gefunden (siehe CLAUDE.md Prerequisites)." >&2
-  exit 1
-}
-make -C "$REPO_ROOT" all
+if [ -f "$BBB_BIN_DIR/embedded" ] && [ -f "$BBB_LIBS_DIR/libhardware.so" ] && [ -f "$BBB_LIBS_DIR/libhardware_rs.so" ]; then
+  echo "=== Go/Rust/C-Artefakte bereits vorhanden, überspringe 'make all' ==="
+else
+  echo "=== Baue Go/Rust/C-Artefakte (make all) ==="
+  command -v arm-linux-gnueabihf-gcc >/dev/null 2>&1 || {
+    echo "FEHLER: arm-linux-gnueabihf-gcc nicht gefunden (siehe CLAUDE.md Prerequisites)." >&2
+    exit 1
+  }
+  make -C "$REPO_ROOT" all
+fi
 
 clone_layer() {
   local name=$1 url=$2

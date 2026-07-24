@@ -1893,3 +1893,91 @@ steps:
       - find /build-cache -maxdepth 1 -mindepth 1 -type d -mtime +1 -exec rm -rf {} +
       - echo "=== Remaining builds ==="
       - ls /build-cache/
+
+---
+# ════════════════════════════════════════
+# PIPELINE build-yocto-image — Yocto BBB image (BME280 layer + Go/Rust/C stack)
+# ════════════════════════════════════════
+kind: pipeline
+type: docker
+name: build-yocto-image
+
+image_pull_secrets:
+  - dockerconfigjson
+
+trigger:
+  event: [cron, custom]
+  cron: [nightly]
+  branch:
+    exclude: [refs/tags/*]
+
+volumes:
+  - name: cargo-registry
+    host:
+      path: /var/cache/drone/cargo/registry
+  - name: cargo-git
+    host:
+      path: /var/cache/drone/cargo/git
+  - name: yocto-downloads
+    host:
+      path: /var/cache/drone/yocto/downloads
+  - name: yocto-sstate
+    host:
+      path: /var/cache/drone/yocto/sstate
+  - name: pipeline-results
+    host:
+      path: /var/cache/drone/pipeline-results
+
+steps:
+  - name: build-libraries-for-yocto
+    image: ghcr.io/paulefl/generic-builder:latest
+    pull: if_not_exists
+    volumes:
+      - name: cargo-registry
+        path: /usr/local/cargo/registry
+      - name: cargo-git
+        path: /usr/local/cargo/git
+    environment:
+      SRC: /drone/src
+      OUTPUT: /drone/src/bin
+      JUNIT: ""
+      STEP: build-libraries-for-yocto
+      CMD: bash scripts/build-arm.sh
+    commands:
+      - sh scripts/run-step.sh
+
+  - name: build-yocto-image
+    image: ubuntu:22.04
+    pull: if_not_exists
+    depends_on: [build-libraries-for-yocto]
+    volumes:
+      - name: yocto-downloads
+        path: /yocto-downloads
+      - name: yocto-sstate
+        path: /yocto-sstate
+    environment:
+      DL_DIR: /yocto-downloads
+      SSTATE_DIR: /yocto-sstate
+      STEP: build-yocto-image
+      CMD: |
+        apt-get update
+        apt-get install -y --no-install-recommends \
+          gawk wget git diffstat unzip texinfo gcc build-essential \
+          chrpath socat cpio python3 python3-pip python3-pexpect \
+          xz-utils debianutils iputils-ping file locales \
+          zstd lz4 curl ca-certificates
+        bash scripts/build_yocto.sh
+    commands:
+      - sh scripts/run-step.sh
+
+  - name: save-results
+    image: alpine
+    pull: if_not_exists
+    volumes:
+      - name: pipeline-results
+        path: /pipeline-results
+    depends_on: [build-yocto-image]
+    commands:
+      - sh scripts/save-pipeline-results.sh build-yocto-image
+    when:
+      status: [success, failure]
