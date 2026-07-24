@@ -22,15 +22,20 @@ BBB_LIBS_DIR="$REPO_ROOT/project/go-api/libs"
 
 mkdir -p "$YOCTO_DIR"
 
-if [ -f "$BBB_BIN_DIR/embedded" ] && [ -f "$BBB_LIBS_DIR/libhardware.so" ] && [ -f "$BBB_LIBS_DIR/libhardware_rs.so" ]; then
-  echo "=== Go/Rust/C-Artefakte bereits vorhanden, überspringe 'make all' ==="
-else
-  echo "=== Baue Go/Rust/C-Artefakte (make all) ==="
-  command -v arm-linux-gnueabihf-gcc >/dev/null 2>&1 || {
-    echo "FEHLER: arm-linux-gnueabihf-gcc nicht gefunden (siehe CLAUDE.md Prerequisites)." >&2
-    exit 1
-  }
-  make -C "$REPO_ROOT" all
+# Only bbb-full-image needs the prebuilt Go/Rust/C artifacts (bbb-embedded
+# recipe). The default bbb-sensor-image is BME280-layer-only and doesn't
+# require the app toolchain (gcc-arm-linux-gnueabihf/cross/cbindgen/go).
+if [ "$IMAGE" = "bbb-full-image" ]; then
+  if [ -f "$BBB_BIN_DIR/embedded" ] && [ -f "$BBB_LIBS_DIR/libhardware.so" ] && [ -f "$BBB_LIBS_DIR/libhardware_rs.so" ]; then
+    echo "=== Go/Rust/C-Artefakte bereits vorhanden, überspringe 'make all' ==="
+  else
+    echo "=== Baue Go/Rust/C-Artefakte (make all) ==="
+    command -v arm-linux-gnueabihf-gcc >/dev/null 2>&1 || {
+      echo "FEHLER: arm-linux-gnueabihf-gcc nicht gefunden (siehe CLAUDE.md Prerequisites)." >&2
+      exit 1
+    }
+    make -C "$REPO_ROOT" all
+  fi
 fi
 
 clone_layer() {

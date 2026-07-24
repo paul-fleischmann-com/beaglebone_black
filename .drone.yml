@@ -1958,6 +1958,7 @@ steps:
     environment:
       DL_DIR: /yocto-downloads
       SSTATE_DIR: /yocto-sstate
+      IMAGE: bbb-full-image
       STEP: build-yocto-image
       CMD: |
         apt-get update

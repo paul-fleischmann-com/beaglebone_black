@@ -34,6 +34,9 @@ cli-arm:
 	cd tools/cli && GOOS=linux GOARCH=arm GOARM=7 CGO_ENABLED=0 \
 	  go build -o ../../bin/bbcli-linux-arm .
 
+yocto-image:
+	./scripts/build_yocto.sh
+
 test:
 	./scripts/test.sh
 

@@ -18,6 +18,7 @@ make go-api       # Build REST API server → bin/embedded
 make cli          # Build CLI tool → bin/bbcli-*
 make test         # Run Go unit tests
 make deploy       # Deploy to BeagleBone (debian@192.168.7.2)
+make yocto-image  # Build Yocto (Kirkstone) image incl. BME280 layer
 make clean        # Clean all artifacts
 ```
 
@@ -82,6 +83,8 @@ The `HardwareDriver` interface in `project/go-api/pkg/hal/interface.go` defines 
 | `project/c/test/` | C unit tests (CI-compatible error-path tests) |
 | `project/rust-lib/src/lib.rs` | Rust FFI exports |
 | `.drone.yml` | 7 CI/CD pipelines |
+| `scripts/build_yocto.sh` | Builds Yocto (Kirkstone) image for BBB incl. `meta-bbb-sensors` layer |
+| `project/yocto/meta-bbb-sensors/` | Yocto layer: BME280 driver, kernel/DT enablement, prebuilt Go/Rust/C stack |
 
 ## Dependencies
 
