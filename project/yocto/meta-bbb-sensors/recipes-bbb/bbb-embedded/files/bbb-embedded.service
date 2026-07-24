@@ -1,0 +1,11 @@
+[Unit]
+Description=BeagleBone Black Embedded REST API (HAL: C/Rust, port 5000)
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/bbb-embedded
+Restart=on-failure
+Environment=HW_BACKEND=auto
+
+[Install]
+WantedBy=multi-user.target
