@@ -6,4 +6,4 @@ the default for local/GH-Actions builds that only need the BME280 layer."
 
 require recipes-core/images/bbb-sensor-image.bb
 
-IMAGE_INSTALL:append = " bbb-embedded"
+IMAGE_INSTALL:append = " bbb-embedded pru-fw bbb-pruss-overlay"

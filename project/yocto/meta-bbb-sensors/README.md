@@ -10,10 +10,12 @@ BeagleBone Black embedded project. Built by `scripts/build_yocto.sh`
 |---|---|
 | `recipes-bbb/bme280-driver` | Cross-builds `project/c` BME280 driver as `libhardware_bme280.so` + `bme280_smoke` binary |
 | `recipes-bbb/bbb-embedded` | Packages the prebuilt `bin/embedded` Go REST API + `libhardware.so`/`libhardware_rs.so` (built by `make all`) and a systemd unit that starts it on boot |
-| `recipes-kernel/linux/linux-yocto_%.bbappend` | Kernel config fragment enabling `CONFIG_BMP280`/`CONFIG_BMP280_I2C` (covers BME280) |
+| `recipes-kernel/linux/linux-yocto_%.bbappend` | Kernel config fragments: `CONFIG_BMP280`/`CONFIG_BMP280_I2C` (BME280), `CONFIG_REMOTEPROC`/`CONFIG_TI_PRUSS`/`CONFIG_PRU_REMOTEPROC`/`CONFIG_RPMSG_CHAR` (PRU-ICSS, issue #252) |
 | `recipes-bsp/device-tree/bbb-bme280-overlay` | Devicetree overlay enabling I2C1 + BME280@0x76 (`/boot/overlays/BBB-BME280-I2C1-00A0.dtbo`) |
 | `recipes-core/images/bbb-sensor-image.bb` | `core-image-minimal` + BME280 packages (default image, no app toolchain needed) |
-| `recipes-core/images/bbb-full-image.bb` | `bbb-sensor-image` + `bbb-embedded` (needs prebuilt Go/Rust/C artifacts) |
+| `recipes-core/images/bbb-full-image.bb` | `bbb-sensor-image` + `bbb-embedded` + `pru-fw` + `bbb-pruss-overlay` (needs prebuilt Go/Rust/C artifacts) |
+| `recipes-bbb/pru-fw` | Cross-builds `project/pru/fw/pru1_gpio_ctrl` with the GNU-PRU toolchain (fetched as `SRC_URI`, x86_64 build host required) and installs the ELF to `/lib/firmware` (see issue #252) |
+| `recipes-bsp/device-tree/bbb-pruss-overlay` | Devicetree overlay enabling PRUSS/PRU0/PRU1 remoteproc cores (`/boot/overlays/BBB-PRUSS-00A0.dtbo`) |
 
 ### Two images: `bbb-sensor-image` vs. `bbb-full-image`
 
@@ -49,4 +51,5 @@ extlinux config, depending on u-boot version):
 
 ```
 fdtoverlays /boot/overlays/BBB-BME280-I2C1-00A0.dtbo
+fdtoverlays /boot/overlays/BBB-PRUSS-00A0.dtbo
 ```
