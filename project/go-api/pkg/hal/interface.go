@@ -10,6 +10,7 @@ const (
 	BackendC    Backend = "c"
 	BackendRust Backend = "rust"
 	BackendAuto Backend = "auto"
+	BackendPRU  Backend = "pru"
 )
 
 type HardwareDriver interface {

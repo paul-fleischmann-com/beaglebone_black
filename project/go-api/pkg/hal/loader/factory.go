@@ -12,6 +12,7 @@ import (
 	"myproject/pkg/hal"
 	cdriver "myproject/pkg/hal/c"
 	"myproject/pkg/hal/config"
+	prudriver "myproject/pkg/hal/pru"
 	rustdriver "myproject/pkg/hal/rust"
 )
 
@@ -30,6 +31,13 @@ func NewDriver(cfg *config.Config) (hal.HardwareDriver, error) {
 			return nil, fmt.Errorf("Rust Driver: %w", err)
 		}
 		log.Printf("✅ Backend: Rust Library")
+		return d, nil
+	case "pru":
+		d := prudriver.New(cfg)
+		if err := d.Init(); err != nil {
+			return nil, fmt.Errorf("PRU Driver: %w", err)
+		}
+		log.Printf("✅ Backend: PRU (RPMsg GPIO)")
 		return d, nil
 	case "auto":
 		return newAutoDriver(cfg)
