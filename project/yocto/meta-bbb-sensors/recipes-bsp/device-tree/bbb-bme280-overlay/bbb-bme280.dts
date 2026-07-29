@@ -1,0 +1,25 @@
+/*
+ * BeagleBone Black capemgr overlay: enables I2C1 and registers the BME280
+ * sensor at address 0x76 (see README.md "BME280 Verkabelung": P9_19/P9_20).
+ */
+/dts-v1/;
+/plugin/;
+
+/ {
+	compatible = "ti,beaglebone-black";
+
+	fragment@0 {
+		target = <&i2c1>;
+		__overlay__ {
+			status = "okay";
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			bme280@76 {
+				compatible = "bosch,bme280";
+				reg = <0x76>;
+				status = "okay";
+			};
+		};
+	};
+};

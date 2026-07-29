@@ -1,4 +1,4 @@
-name: Yocto BBB (Kirkstone + meta-ti)
+name: Yocto BBB (Kirkstone + meta-ti + BME280)
 
 on:
   workflow_dispatch:
@@ -15,6 +15,8 @@ jobs:
       SSTATE_DIR: ${{ github.workspace }}/sstate-cache
 
     steps:
+      - uses: actions/checkout@v4
+
       - name: Install dependencies
         run: |
           sudo apt-get update
@@ -23,32 +25,6 @@ jobs:
             chrpath socat cpio python3 python3-pip python3-pexpect \
             xz-utils debianutils iputils-ping file locales \
             zstd lz4 curl
-
-      - name: Create workspace
-        run: mkdir -p $YOCTO_DIR
-
-      # ----------------------------
-      # REPOS
-      # ----------------------------
-      - name: Clone Poky (kirkstone)
-        run: |
-          cd $YOCTO_DIR
-          git clone -b kirkstone https://git.yoctoproject.org/poky
-
-      - name: Clone meta-openembedded (kirkstone)
-        run: |
-          cd $YOCTO_DIR
-          git clone -b kirkstone https://git.openembedded.org/meta-openembedded
-          
-      - name: Clone meta-arm
-        run: |
-          cd $YOCTO_DIR
-          git clone -b kirkstone https://git.yoctoproject.org/meta-arm
-
-      - name: Clone meta-ti (BBB BSP)
-        run: |
-          cd $YOCTO_DIR
-          git clone -b kirkstone https://git.yoctoproject.org/meta-ti
 
       # ----------------------------
       # CACHE RESTORE (optional but recommended)
@@ -72,30 +48,12 @@ jobs:
       # ----------------------------
       # BUILD
       # ----------------------------
-      - name: Configure and build Yocto
-        run: |
-          cd $YOCTO_DIR/poky
-
-          # init environment (IMPORTANT: same shell!)
-          source oe-init-build-env $YOCTO_DIR/build-bbb
-
-          # local config
-          echo 'MACHINE = "beaglebone-yocto"' >> conf/local.conf
-          echo "DL_DIR = \"${DL_DIR}\"" >> conf/local.conf
-          echo "SSTATE_DIR = \"${SSTATE_DIR}\"" >> conf/local.conf
-          echo 'INHERIT += "rm_work"' >> conf/local.conf
-
-          # layers
-          bitbake-layers add-layer ../meta-openembedded/meta-oe
-          bitbake-layers add-layer ../meta-openembedded/meta-python
-          bitbake-layers add-layer ../meta-openembedded/meta-networking
-
-          bitbake-layers add-layer ../meta-arm/meta-arm-toolchain
-          bitbake-layers add-layer ../meta-arm/meta-arm
-          bitbake-layers add-layer ../meta-ti/meta-ti-bsp
-
-          # build
-          bitbake core-image-minimal
+      # scripts/build_yocto.sh is the single source of truth for layer list
+      # (poky/meta-openembedded/meta-arm/meta-ti + the project's own
+      # meta-bbb-sensors BME280 layer) — shared with the Drone CI pipeline
+      # `build-yocto-image` (.drone.yml) to avoid two diverging layer lists.
+      - name: Build Yocto image (scripts/build_yocto.sh)
+        run: bash scripts/build_yocto.sh
 
       # ----------------------------
       # ARTIFACTS
@@ -108,3 +66,4 @@ jobs:
             yocto/build-bbb/tmp/deploy/images/beaglebone-yocto/*.wic*
             yocto/build-bbb/tmp/deploy/images/beaglebone-yocto/*.dtb*
             yocto/build-bbb/tmp/deploy/images/beaglebone-yocto/zImage*
+            yocto/build-bbb/tmp/deploy/images/beaglebone-yocto/*.dtbo

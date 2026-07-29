@@ -184,6 +184,30 @@ make cli          # CLI Tools → bin/bbcli-*
 make test         # Unit Tests ausführen
 ```
 
+### Yocto-Image
+
+```bash
+make yocto-image                    # bbb-sensor-image (BME280-Layer, Default)
+IMAGE=bbb-full-image make yocto-image  # + Go-REST-API/HAL-Libs (bbb-embedded)
+```
+
+`scripts/build_yocto.sh` klont Poky/meta-openembedded/meta-arm/meta-ti (idempotent)
+und bindet den eigenen Layer `project/yocto/meta-bbb-sensors` ein:
+
+| Recipe | Inhalt |
+|---|---|
+| `bme280-driver` | BME280-C-Treiber (Shared-Lib + Smoke-Test) |
+| `bbb-embedded` | Prebuilt Go-REST-API + HAL-Libraries + systemd-Unit (nur `bbb-full-image`) |
+| `linux-yocto_%.bbappend` | Kernel-Konfig (`CONFIG_BMP280`/`_I2C`) |
+| `bbb-bme280-overlay` | Devicetree-Overlay I2C1 + BME280@0x76 |
+| `bbb-sensor-image` | `core-image-minimal` + BME280-Pakete (Default) |
+| `bbb-full-image` | `bbb-sensor-image` + `bbb-embedded` (baut vorab `make all`, falls Artefakte fehlen) |
+
+Env-Vars: `YOCTO_DIR`, `BUILD_DIR`, `DL_DIR`, `SSTATE_DIR`, `MACHINE`, `IMAGE`
+(Details siehe `project/yocto/meta-bbb-sensors/README.md`). In Drone-CI läuft der
+Build als Pipeline `build-yocto-image` (`cron: nightly` + manueller `custom`-Trigger,
+kein Push/PR — ein voller Bitbake-Build dauert Stunden).
+
 ---
 
 ## 🌐 REST API
