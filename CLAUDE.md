@@ -19,6 +19,7 @@ make cli          # Build CLI tool → bin/bbcli-*
 make test         # Run Go unit tests
 make deploy       # Deploy to BeagleBone (debian@192.168.7.2)
 make yocto-image  # Build Yocto (Kirkstone) image incl. BME280 layer
+make pru-fw       # Build PRU1-RPMsg-GPIO-Firmware → bin/pru/bbb-pru1-gpio-ctrl.elf
 make clean        # Clean all artifacts
 ```
 
@@ -42,6 +43,9 @@ BEAGLE_HOST=192.168.7.2 pytest tests/hardware/ -v
 
 # Test all backends
 for b in c rust auto; do HW_BACKEND=$b pytest tests/hardware/ -v; done
+
+# PRU-Backend (nur GPIO, siehe Issue #252)
+HW_BACKEND=pru pytest tests/hardware/test_pru.py -v
 ```
 
 Quality gates: ≥90% test success rate, ≥75% average coverage, ≥50% per file.
@@ -54,19 +58,20 @@ Client Tools (CLI/TUI/GUI/Web)
 REST API Server (project/go-api/cmd/main.go, :5000)
         ↓
 HAL Interface (project/go-api/pkg/hal/interface.go)
-    ↙           ↘
-C Driver      Rust Driver      Mock Driver (tests only)
-(CGO)         (FFI)
-    ↘           ↙
-Hardware (BME280/GPIO/UART/SPI)
+    ↙        ↘         ↘            ↘
+C Driver   Rust Driver  PRU Driver   Mock Driver (tests only)
+(CGO)      (FFI)        (CGO, RPMsg)
+    ↘        ↙            ↓
+Hardware (BME280/GPIO/UART/SPI)   PRU-ICSS (R30/R31-GPIO, siehe #252)
 ```
 
 **HAL Backends** — selected via `HW_BACKEND` env var:
 - `c` — calls C shared library via CGO
 - `rust` — calls Rust shared library via FFI
 - `auto` — tries C first, falls back to Rust on error (default in production)
+- `pru` — PRU1 via RPMsg (deterministisches GPIO, R30/R31-Bit 0-15 statt Linux-Sysfs-GPIO-Nummer; BME280/UART/SPI nicht unterstützt, siehe Issue #252)
 
-The `HardwareDriver` interface in `project/go-api/pkg/hal/interface.go` defines all hardware operations. New hardware features must be added to all three backend drivers (C, Rust, Mock) plus the interface.
+The `HardwareDriver` interface in `project/go-api/pkg/hal/interface.go` defines all hardware operations. New hardware features must be added to all backend drivers (C, Rust, Mock; PRU nur soweit PRU-seitig sinnvoll, sonst "nicht unterstützt"-Fehler) plus the interface.
 
 ## Key Files
 
@@ -82,9 +87,13 @@ The `HardwareDriver` interface in `project/go-api/pkg/hal/interface.go` defines 
 | `project/c/include/` | C headers for all hardware interfaces |
 | `project/c/test/` | C unit tests (CI-compatible error-path tests) |
 | `project/rust-lib/src/lib.rs` | Rust FFI exports |
-| `.drone.yml` | 7 CI/CD pipelines |
+| `project/go-api/pkg/hal/pru/driver.go` | CGO bindings to PRU RPMsg comm layer (GPIO only) |
+| `project/c/src/pru.c` | remoteproc-sysfs load/stop + rpmsg-chardev discovery/command |
+| `project/pru/fw/pru1_gpio_ctrl/` | PRU1 firmware (RPMsg GPIO SET/GET on R30/R31), built with the GNU-PRU toolchain |
+| `scripts/setup_pru_toolchain.sh` / `scripts/build_pru_firmware.sh` | Fetch GNU-PRU toolchain + PSSP, build the PRU1 firmware |
+| `.drone.yml` | 17 CI/CD pipelines |
 | `scripts/build_yocto.sh` | Builds Yocto (Kirkstone) image for BBB incl. `meta-bbb-sensors` layer |
-| `project/yocto/meta-bbb-sensors/` | Yocto layer: BME280 driver, kernel/DT enablement, prebuilt Go/Rust/C stack |
+| `project/yocto/meta-bbb-sensors/` | Yocto layer: BME280 driver, PRUSS DT overlay + firmware recipe, kernel/DT enablement, prebuilt Go/Rust/C stack |
 
 ## Dependencies
 
