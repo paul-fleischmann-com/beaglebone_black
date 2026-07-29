@@ -50,8 +50,13 @@ Getroffene technische Entscheidungen (abweichend von reinen TI-CCS-Beispielen):
 ## Phase 3 — Host-Kommunikationsschicht (C)
 - `project/c/include/pru.h` + `project/c/src/pru.c`: `pru_load()`/`pru_stop()`
   (remoteproc-sysfs: `/sys/class/remoteproc/remoteprocN/{firmware,state}`), `pru_open()`
-  (rpmsg-Zeichengerät, z. B. `/dev/rpmsg_pru31`), `pru_gpio_set()`/`pru_gpio_get()` (3-Byte
-  Kommandoprotokoll). In `c-lib/Makefile` SRCS ergänzt.
+  (findet das passende `/dev/rpmsgN` **nicht** über einen festen Pfad, sondern per
+  Sysfs-Scan `/sys/class/rpmsg/rpmsg*/{name,src}` nach Kanalname `rpmsg-raw` +
+  Port 31 — korrigiert gegenüber der Issue-Beschreibung `/dev/rpmsg_pruX`: der
+  Mainline-`rpmsg_char`-Treiber vergibt fortlaufende `/dev/rpmsg<N>`-Nodes, kein
+  PRU-spezifisches Naming, siehe `drivers/rpmsg/rpmsg_char.c`),
+  `pru_gpio_set()`/`pru_gpio_get()` (4-Byte Kommandoprotokoll,
+  `project/c/include/pru_protocol.h`). In `c-lib/Makefile` SRCS ergänzt.
 - Error-Path-Tests in `project/c/test/test_c_lib.c` (CI ohne Hardware: Fehlschlag ohne
   `/sys/class/remoteproc`/`/dev/rpmsg_*` erwartet, analog GPIO/UART-Tests).
 
@@ -63,8 +68,8 @@ Getroffene technische Entscheidungen (abweichend von reinen TI-CCS-Beispielen):
   `SPITransfer` liefern `nicht unterstützt`-Fehler (PRU-Backend deckt nur deterministisches
   GPIO ab).
 - `factory.go`: `case "pru"`. Kein Teil von `auto` (bleibt C→Rust-Fallback).
-- `config.go`: `HW_PRU_CORE` (Default `1`), `HW_PRU_RPMSG_DEV` (Default `/dev/rpmsg_pru31`),
-  `HW_PRU_FIRMWARE` (Default `bbb-pru1-gpio-ctrl.elf`).
+- `config.go`: `HW_PRU_CORE` (Default `1`), `HW_PRU_RPMSG_PORT` (Default `31`, für den
+  Sysfs-Scan), `HW_PRU_FIRMWARE` (Default `bbb-pru1-gpio-ctrl.elf`).
 
 ## Phase 5 — Yocto-Integration
 - `meta-bbb-sensors/recipes-kernel/linux/files/bbb-pruss.cfg`: `CONFIG_REMOTEPROC`,

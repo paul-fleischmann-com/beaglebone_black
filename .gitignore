@@ -66,6 +66,11 @@ secrets/
 .drone.yml.local
 docker-compose.yml
 
+# ── PRU-Toolchain (siehe scripts/setup_pru_toolchain.sh) ─
+toolchain/
+project/pru/fw/*/out/
+bin/pru/
+
 # ── Node (Web GUI) ────────────────────────
 node_modules/
 dist/

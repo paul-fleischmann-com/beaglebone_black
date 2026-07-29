@@ -1,7 +1,7 @@
 CC      = arm-linux-gnueabihf-gcc
 CFLAGS  = -Wall -Wextra -O2 -fPIC -I../project/c/include
 LDFLAGS = -lm -shared
-SRCS    = ../project/c/src/bme280.c ../project/c/src/gpio.c ../project/c/src/uart.c ../project/c/src/spi.c
+SRCS    = ../project/c/src/bme280.c ../project/c/src/gpio.c ../project/c/src/uart.c ../project/c/src/spi.c ../project/c/src/pru.c
 OBJS    = $(SRCS:.c=.o)
 TARGET  = libhardware.so
 all: $(TARGET)
