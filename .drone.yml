@@ -1982,3 +1982,62 @@ steps:
       - sh scripts/save-pipeline-results.sh build-yocto-image
     when:
       status: [success, failure]
+
+---
+# ════════════════════════════════════════
+# PIPELINE pru-firmware-build — PRU1-RPMsg-Firmware Compile-Check (#252)
+# ════════════════════════════════════════
+kind: pipeline
+type: docker
+name: pru-firmware-build
+
+image_pull_secrets:
+  - dockerconfigjson
+
+trigger:
+  event: [push, pull_request, custom]
+  branch:
+    exclude: [refs/tags/*]
+  paths:
+    include:
+      - project/pru/**
+      - project/c/include/pru.h
+      - project/c/include/pru_protocol.h
+      - project/c/src/pru.c
+      - scripts/setup_pru_toolchain.sh
+      - scripts/build_pru_firmware.sh
+      - .drone.yml
+
+volumes:
+  - name: pru-toolchain
+    host:
+      path: /var/cache/drone/pru/toolchain
+  - name: pipeline-results
+    host:
+      path: /var/cache/drone/pipeline-results
+
+steps:
+  - name: build-pru-firmware
+    image: ghcr.io/paulefl/generic-builder:latest
+    pull: if_not_exists
+    volumes:
+      - name: pru-toolchain
+        path: /pru-toolchain
+    environment:
+      PRU_TOOLCHAIN_DIR: /pru-toolchain
+      STEP: build-pru-firmware
+      CMD: bash scripts/build_pru_firmware.sh
+    commands:
+      - sh scripts/run-step.sh
+
+  - name: save-results
+    image: alpine
+    pull: if_not_exists
+    volumes:
+      - name: pipeline-results
+        path: /pipeline-results
+    depends_on: [build-pru-firmware]
+    commands:
+      - sh scripts/save-pipeline-results.sh pru-firmware-build
+    when:
+      status: [success, failure]
