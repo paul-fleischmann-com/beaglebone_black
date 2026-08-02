@@ -2041,3 +2041,59 @@ steps:
       - sh scripts/save-pipeline-results.sh pru-firmware-build
     when:
       status: [success, failure]
+
+---
+# ════════════════════════════════════════
+# PIPELINE open1722-userspace-build — Open1722 ACF-CAN/CVF User-Space Compile-Check (#257)
+# ════════════════════════════════════════
+kind: pipeline
+type: docker
+name: open1722-userspace-build
+
+image_pull_secrets:
+  - dockerconfigjson
+
+trigger:
+  event: [push, pull_request, custom]
+  branch:
+    exclude: [refs/tags/*]
+  paths:
+    include:
+      - scripts/setup_open1722.sh
+      - scripts/build_open1722_userspace.sh
+      - tools/cli/cmd/acfcan.go
+      - .drone.yml
+
+volumes:
+  - name: open1722-src
+    host:
+      path: /var/cache/drone/open1722/src
+  - name: pipeline-results
+    host:
+      path: /var/cache/drone/pipeline-results
+
+steps:
+  - name: build-open1722-userspace
+    image: ghcr.io/paulefl/generic-builder:latest
+    pull: if_not_exists
+    volumes:
+      - name: open1722-src
+        path: /open1722-src
+    environment:
+      OPEN1722_DIR: /open1722-src
+      STEP: build-open1722-userspace
+      CMD: bash scripts/build_open1722_userspace.sh
+    commands:
+      - sh scripts/run-step.sh
+
+  - name: save-results
+    image: alpine
+    pull: if_not_exists
+    volumes:
+      - name: pipeline-results
+        path: /pipeline-results
+    depends_on: [build-open1722-userspace]
+    commands:
+      - sh scripts/save-pipeline-results.sh open1722-userspace-build
+    when:
+      status: [success, failure]

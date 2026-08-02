@@ -40,6 +40,9 @@ yocto-image:
 pru-fw:
 	./scripts/build_pru_firmware.sh
 
+open1722-userspace:
+	./scripts/build_open1722_userspace.sh
+
 test:
 	./scripts/test.sh
 
@@ -199,6 +202,7 @@ info:
 	@echo "  build-arm        ARM cross-build via generic-builder container"
 	@echo "  yocto-image      Build Yocto (Kirkstone) image incl. BME280 layer"
 	@echo "  pru-fw           Build PRU1-RPMsg-GPIO-Firmware → bin/pru/bbb-pru1-gpio-ctrl.elf"
+	@echo "  open1722-userspace  Build Open1722 ACF-CAN/CVF user-space tools → bin/open1722/"
 	@echo ""
 	@echo "Test"
 	@echo "  test             Run Go unit tests"
@@ -241,4 +245,4 @@ info:
 	@echo "  info             Show this help"
 	@echo ""
 
-.PHONY: all c-lib rust-lib go-api cli cli-arm yocto-image pru-fw test test-ci test-cover lint shellcheck-report test-python test-report test-report-open traceability traceability-check aspice-report velocity-report reports deploy clean req-tracing version adoc-build adoc-summary build-arm checksums release-candidate prepend-changelog install-java install-asciidoctor setup-env info publish-allure report-all
+.PHONY: all c-lib rust-lib go-api cli cli-arm yocto-image pru-fw open1722-userspace test test-ci test-cover lint shellcheck-report test-python test-report test-report-open traceability traceability-check aspice-report velocity-report reports deploy clean req-tracing version adoc-build adoc-summary build-arm checksums release-candidate prepend-changelog install-java install-asciidoctor setup-env info publish-allure report-all

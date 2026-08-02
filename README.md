@@ -258,6 +258,27 @@ curl -X POST http://192.168.7.2:5000/api/v1/backend \
 
 ---
 
+## 🚗 IEEE 1722 / ACF-CAN
+
+Zusätzlich zur HAL gibt es Werkzeuge rund um
+[Open1722](https://github.com/COVESA/Open1722) zum Tunneln von CAN-Frames als
+IEEE-1722-ACF_CAN-Nachrichten über Ethernet — kein HAL-Backend, unabhängig von
+`:5000/api/v1/*`:
+
+- Kernel-Modul `acfcan` (Issue #256) — SocketCAN-Interface, transparent für `cansend`/`candump`
+- User-Space-Tools `acf-can-talker`/`-listener`/`-bridge`, `cvf-talker`/`-listener` (Issue #257)
+
+```bash
+make open1722-userspace   # → bin/open1722/{acf-can-talker,acf-can-listener,acf-can-bridge,cvf-talker,cvf-listener}
+
+# Auf dem Board: acf-can-bridge als Hintergrundprozess verwalten
+bbcli acf-can bridge start --ethif eth0 --canif vcan0 --dst-mac aa:bb:cc:dd:ee:ff
+bbcli acf-can bridge status
+bbcli acf-can bridge stop
+```
+
+---
+
 ## 🖥 Client Tools
 
 ### CLI (bbcli)
