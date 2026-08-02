@@ -110,6 +110,8 @@ The `HardwareDriver` interface in `project/go-api/pkg/hal/interface.go` defines 
 | `tools/cli/cmd/acfcan.go` | `bbcli acf-can bridge start/stop/status` — manages the local acf-can-bridge process (no REST API involved) |
 | `scripts/setup_acfcan_vcan_demo.sh` | BBB-side of the vcan→Eth→container demo (Issue #259): vcan0 + frame generator + acf-can-talker |
 | `tools/acfcan-viewer/` | Container: Open1722 ETH-node receiver (acf-can-listener) + live web dashboard (Issue #259) |
+| `project/macsec/mkad-board.conf` / `scripts/setup_macsec_mka.sh` | mkad (MACsec Key Agreement) config + BBB-side startup script (Issue #260) |
+| `project/yocto/meta-bbb-sensors/recipes-bbb/mkad/` | Yocto recipe for mkad (Technica-Engineering/MKAdaemon, waf-based) |
 | `.drone.yml` | 20 CI/CD pipelines |
 | `scripts/build_yocto.sh` | Builds Yocto (Kirkstone) image for BBB incl. `meta-bbb-sensors` layer |
 | `project/yocto/meta-bbb-sensors/` | Yocto layer: BME280 driver, PRUSS DT overlay + firmware recipe, kernel/DT enablement, prebuilt Go/Rust/C stack |

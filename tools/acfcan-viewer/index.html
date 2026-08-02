@@ -20,7 +20,10 @@
   td.data{font-family:monospace;color:#e2e8f0}
   td.ts{color:#64748b;font-size:.8rem}
   .empty{color:#64748b;text-align:center;padding:2rem}
-  .counter{color:#94a3b8;font-size:.85rem;margin-bottom:.75rem}
+  .counter{display:flex;align-items:center;gap:1rem;color:#94a3b8;font-size:.85rem;margin-bottom:.75rem}
+  .badge{display:inline-flex;align-items:center;gap:.4rem;padding:.25rem .6rem;border-radius:999px;font-size:.75rem;font-weight:600;border:1px solid #334155;color:#64748b}
+  .badge.on{color:#22c55e;border-color:#22c55e}
+  .badge .dot2{width:8px;height:8px;border-radius:50%;background:currentColor}
 </style>
 </head>
 <body>
@@ -29,7 +32,10 @@
   <div class="status"><span class="dot" id="dot"></span><span id="status-text">Verbinde...</span></div>
 </header>
 <div class="wrap">
-  <div class="counter" id="counter">0 Frames empfangen</div>
+  <div class="counter">
+    <span id="counter">0 Frames empfangen</span>
+    <span class="badge" id="macsec-badge"><span class="dot2"></span><span id="macsec-text">MACsec: prüfe …</span></span>
+  </div>
   <table>
     <thead><tr><th>Zeit</th><th>CAN-ID</th><th>DLC</th><th>Daten</th></tr></thead>
     <tbody id="rows"><tr><td colspan="4" class="empty">Warte auf ACF-CAN-Frames …</td></tr></tbody>
@@ -58,6 +64,21 @@ const source = new EventSource('/stream');
 source.onopen = () => { dot.className = 'dot live'; statusText.textContent = 'Live'; };
 source.onerror = () => { dot.className = 'dot'; statusText.textContent = 'Getrennt — reconnect …'; };
 source.onmessage = (e) => addRow(JSON.parse(e.data));
+
+const macsecBadge = document.getElementById('macsec-badge');
+const macsecText = document.getElementById('macsec-text');
+async function pollMacsec() {
+  try {
+    const s = await (await fetch('/macsec-status')).json();
+    macsecBadge.className = 'badge' + (s.active ? ' on' : '');
+    macsecText.textContent = 'MACsec: ' + (s.active ? 'aktiv 🔒' : (s.reason || 'inaktiv'));
+  } catch (e) {
+    macsecBadge.className = 'badge';
+    macsecText.textContent = 'MACsec: unbekannt';
+  }
+}
+pollMacsec();
+setInterval(pollMacsec, 5000);
 </script>
 </body>
 </html>

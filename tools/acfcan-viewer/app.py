@@ -15,6 +15,8 @@ kein eigener IEEE-1722-Parser.
 import json
 import os
 import queue
+import re
+import subprocess
 import threading
 import time
 from datetime import datetime, timezone
@@ -24,6 +26,7 @@ from flask import Flask, Response, send_from_directory
 
 CAN_IF = os.environ.get("ACFCAN_VIEWER_CANIF", "vcan1")
 HTTP_PORT = int(os.environ.get("ACFCAN_VIEWER_PORT", "8080"))
+MACSEC_IF = os.environ.get("ACFCAN_VIEWER_MACSEC_IF", "macsec0")
 MAX_HISTORY = 100
 
 app = Flask(__name__)
@@ -92,6 +95,29 @@ def stream():
                 _subscribers.remove(q)
 
     return Response(gen(), mimetype="text/event-stream")
+
+
+@app.route("/macsec-status")
+def macsec_status():
+    """Status-Badge für die MACsec/MKA-Absicherung (#260) — best-effort per
+    `ip macsec show`, kein DBus-Client (mkad läuft mit DISABLE_DBUS=1)."""
+    try:
+        result = subprocess.run(  # nosec B603 B607 — kein User-Input, fester Interface-Name
+            ["ip", "macsec", "show", MACSEC_IF],
+            capture_output=True, text=True, timeout=5,
+        )
+    except FileNotFoundError:
+        return {"active": False, "reason": "ip-Kommando nicht verfügbar"}
+
+    if result.returncode != 0:
+        return {"active": False, "interface": MACSEC_IF, "reason": "Interface nicht vorhanden"}
+
+    active_sa = bool(re.search(r"state on", result.stdout))
+    return {
+        "active": active_sa,
+        "interface": MACSEC_IF,
+        "reason": "SA aktiv" if active_sa else "Interface vorhanden, keine aktive SA",
+    }
 
 
 @app.route("/health")
