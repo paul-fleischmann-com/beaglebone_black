@@ -2041,3 +2041,61 @@ steps:
       - sh scripts/save-pipeline-results.sh pru-firmware-build
     when:
       status: [success, failure]
+
+---
+# ════════════════════════════════════════
+# PIPELINE acfcan-module-build — Open1722-ACF-CAN-Kernel-Modul Compile-Check (#256)
+# ════════════════════════════════════════
+kind: pipeline
+type: docker
+name: acfcan-module-build
+
+image_pull_secrets:
+  - dockerconfigjson
+
+trigger:
+  event: [push, pull_request, custom]
+  branch:
+    exclude: [refs/tags/*]
+  paths:
+    include:
+      - scripts/setup_open1722.sh
+      - scripts/build_open1722_acfcan.sh
+      - scripts/ci_check_acfcan_compile.sh
+      - project/yocto/meta-bbb-sensors/recipes-bbb/acfcan-mod/**
+      - project/yocto/meta-bbb-sensors/recipes-kernel/linux/files/bbb-can.cfg
+      - .drone.yml
+
+volumes:
+  - name: open1722-src
+    host:
+      path: /var/cache/drone/open1722/src
+  - name: pipeline-results
+    host:
+      path: /var/cache/drone/pipeline-results
+
+steps:
+  - name: build-acfcan-module
+    image: ghcr.io/paulefl/generic-builder:latest
+    pull: if_not_exists
+    volumes:
+      - name: open1722-src
+        path: /open1722-src
+    environment:
+      OPEN1722_DIR: /open1722-src
+      STEP: build-acfcan-module
+      CMD: bash scripts/ci_check_acfcan_compile.sh
+    commands:
+      - sh scripts/run-step.sh
+
+  - name: save-results
+    image: alpine
+    pull: if_not_exists
+    volumes:
+      - name: pipeline-results
+        path: /pipeline-results
+    depends_on: [build-acfcan-module]
+    commands:
+      - sh scripts/save-pipeline-results.sh acfcan-module-build
+    when:
+      status: [success, failure]
