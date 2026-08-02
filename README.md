@@ -258,6 +258,21 @@ curl -X POST http://192.168.7.2:5000/api/v1/backend \
 
 ---
 
+## 🚗 IEEE 1722 / ACF-CAN
+
+Zusätzlich zur HAL gibt es ein eigenständiges Linux-Kernel-Modul (`acfcan`,
+[Open1722](https://github.com/COVESA/Open1722), Issue #256): tunnelt
+SocketCAN-Frames transparent als IEEE-1722-ACF_CAN-Nachrichten über Ethernet.
+Kein HAL-Backend — `cansend`/`candump` funktionieren gegen ein
+`acfcan`-Interface wie gegen einen echten CAN-Bus, angesprochen wird es über
+`ip link ... type acfcan` + sysfs, nicht über `:5000/api/v1/*`.
+
+```bash
+make acfcan-mod   # KERNEL_SRC muss auf einen Yocto-Kernel-Quellbaum zeigen
+```
+
+---
+
 ## 🖥 Client Tools
 
 ### CLI (bbcli)
