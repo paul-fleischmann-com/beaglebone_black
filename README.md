@@ -265,11 +265,20 @@ Zusätzlich zur HAL gibt es Werkzeuge rund um
 IEEE-1722-ACF_CAN-Nachrichten über Ethernet — kein HAL-Backend, unabhängig von
 `:5000/api/v1/*`:
 
-- Kernel-Modul `acfcan` (Issue #256) — SocketCAN-Interface, transparent für `cansend`/`candump`
+- Kernel-Modul `acfcan` (Issue #256) — SocketCAN-Interface, transparent für
+  `cansend`/`candump`, angesprochen über `ip link ... type acfcan` + sysfs
 - User-Space-Tools `acf-can-talker`/`-listener`/`-bridge`, `cvf-talker`/`-listener` (Issue #257)
 - vcan→Eth→Container-Demo mit Live-Visualisierung (Issue #259) — `tools/acfcan-viewer/`
 
 ```bash
+make acfcan-mod           # KERNEL_SRC muss auf einen Yocto-Kernel-Quellbaum zeigen
+make open1722-userspace   # → bin/open1722/{acf-can-talker,acf-can-listener,acf-can-bridge,cvf-talker,cvf-listener}
+
+# Auf dem Board: acf-can-bridge als Hintergrundprozess verwalten
+bbcli acf-can bridge start --ethif eth0 --canif vcan0 --dst-mac aa:bb:cc:dd:ee:ff
+bbcli acf-can bridge status
+bbcli acf-can bridge stop
+
 # Board: CAN-Traffic per vcan0 erzeugen und über Ethernet tunneln
 ACFCAN_DEMO_DST_MAC=<Viewer-MAC> ./scripts/setup_acfcan_vcan_demo.sh
 
