@@ -268,6 +268,7 @@ IEEE-1722-ACF_CAN-Nachrichten über Ethernet — kein HAL-Backend, unabhängig v
 - Kernel-Modul `acfcan` (Issue #256) — SocketCAN-Interface, transparent für
   `cansend`/`candump`, angesprochen über `ip link ... type acfcan` + sysfs
 - User-Space-Tools `acf-can-talker`/`-listener`/`-bridge`, `cvf-talker`/`-listener` (Issue #257)
+- vcan→Eth→Container-Demo mit Live-Visualisierung (Issue #259) — `tools/acfcan-viewer/`
 
 ```bash
 make acfcan-mod           # KERNEL_SRC muss auf einen Yocto-Kernel-Quellbaum zeigen
@@ -277,6 +278,14 @@ make open1722-userspace   # → bin/open1722/{acf-can-talker,acf-can-listener,ac
 bbcli acf-can bridge start --ethif eth0 --canif vcan0 --dst-mac aa:bb:cc:dd:ee:ff
 bbcli acf-can bridge status
 bbcli acf-can bridge stop
+
+# Board: CAN-Traffic per vcan0 erzeugen und über Ethernet tunneln
+ACFCAN_DEMO_DST_MAC=<Viewer-MAC> ./scripts/setup_acfcan_vcan_demo.sh
+
+# Gegenstelle: Container mit Live-Dashboard
+cd tools/acfcan-viewer && docker build -t acfcan-viewer . \
+  && docker run --network host --cap-add=NET_ADMIN acfcan-viewer
+# → http://<host>:8080/
 ```
 
 ---

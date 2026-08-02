@@ -108,7 +108,9 @@ The `HardwareDriver` interface in `project/go-api/pkg/hal/interface.go` defines 
 | `tests/hardware/test_acfcan.py` | ACF-CAN tunneling test (SSH-driven, single-board `veth` setup) |
 | `scripts/build_open1722_userspace.sh` | Cross-builds Open1722 user-space demo tools (acf-can-talker/-listener/-bridge, cvf-talker/-listener), Issue #257 |
 | `tools/cli/cmd/acfcan.go` | `bbcli acf-can bridge start/stop/status` — manages the local acf-can-bridge process (no REST API involved) |
-| `.drone.yml` | 18 CI/CD pipelines |
+| `scripts/setup_acfcan_vcan_demo.sh` | BBB-side of the vcan→Eth→container demo (Issue #259): vcan0 + frame generator + acf-can-talker |
+| `tools/acfcan-viewer/` | Container: Open1722 ETH-node receiver (acf-can-listener) + live web dashboard (Issue #259) |
+| `.drone.yml` | 20 CI/CD pipelines |
 | `scripts/build_yocto.sh` | Builds Yocto (Kirkstone) image for BBB incl. `meta-bbb-sensors` layer |
 | `project/yocto/meta-bbb-sensors/` | Yocto layer: BME280 driver, PRUSS DT overlay + firmware recipe, kernel/DT enablement, prebuilt Go/Rust/C stack |
 
