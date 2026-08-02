@@ -62,3 +62,24 @@ func TestLoadConfig_UARTPort_EnvOverride(t *testing.T) {
 		t.Errorf("HW_UART override: %q", cfg.UARTPort)
 	}
 }
+
+func TestLoadConfig_PRUDefaults(t *testing.T) {
+	cfg := LoadConfig()
+	if cfg.PRUCore != 1 {
+		t.Errorf("PRUCore default: %d", cfg.PRUCore)
+	}
+	if cfg.PRURpmsgPort != 31 {
+		t.Errorf("PRURpmsgPort default: %d", cfg.PRURpmsgPort)
+	}
+	if cfg.PRUFirmware != "bbb-pru1-gpio-ctrl.elf" {
+		t.Errorf("PRUFirmware default: %q", cfg.PRUFirmware)
+	}
+}
+
+func TestLoadConfig_PRUCore_EnvOverride(t *testing.T) {
+	t.Setenv("HW_PRU_CORE", "0")
+	cfg := LoadConfig()
+	if cfg.PRUCore != 0 {
+		t.Errorf("HW_PRU_CORE override: %d", cfg.PRUCore)
+	}
+}

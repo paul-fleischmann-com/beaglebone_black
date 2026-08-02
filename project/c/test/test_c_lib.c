@@ -9,6 +9,7 @@
 #include "bme280.h"
 #include "gpio.h"
 #include "uart.h"
+#include "pru.h"
 
 void setUp(void)    {}
 void tearDown(void) {}
@@ -79,6 +80,35 @@ void test_uart_close_invalid_fd(void) {
     TEST_PASS_MESSAGE("uart_close with fd=-1 did not crash");
 }
 
+/* ── pru ──────────────────────────────────────────────────────────────── */
+
+void test_pru_load_fails_no_remoteproc(void) {
+    int ret = pru_load(1, "bbb-pru1-gpio-ctrl.elf");
+    TEST_ASSERT_TRUE_MESSAGE(ret < 0, "pru_load should fail without /sys/class/remoteproc pru1");
+}
+
+void test_pru_open_fails_no_rpmsg(void) {
+    pru_dev_t dev;
+    memset(&dev, 0, sizeof(dev));
+    int ret = pru_open(&dev, 31);
+    TEST_ASSERT_TRUE_MESSAGE(ret < 0, "pru_open should fail without a matching /sys/class/rpmsg device");
+}
+
+void test_pru_command_fails_invalid_fd(void) {
+    pru_dev_t dev;
+    dev.fd = -1;
+    pru_msg_t msg = {.opcode = PRU_CMD_GPIO_SET, .pin = 0, .value = 1, .status = 0};
+    int ret = pru_command(&dev, &msg, 100);
+    TEST_ASSERT_TRUE_MESSAGE(ret < 0, "pru_command should fail with an invalid fd");
+}
+
+void test_pru_close_invalid_fd(void) {
+    pru_dev_t dev;
+    dev.fd = -1;
+    pru_close(&dev);
+    TEST_PASS_MESSAGE("pru_close with fd=-1 did not crash");
+}
+
 /* ── main ─────────────────────────────────────────────────────────────── */
 
 int main(void) {
@@ -93,6 +123,10 @@ int main(void) {
     RUN_TEST(test_gpio_write_fails_no_sysfs);
     RUN_TEST(test_uart_open_fails_no_device);
     RUN_TEST(test_uart_close_invalid_fd);
+    RUN_TEST(test_pru_load_fails_no_remoteproc);
+    RUN_TEST(test_pru_open_fails_no_rpmsg);
+    RUN_TEST(test_pru_command_fails_invalid_fd);
+    RUN_TEST(test_pru_close_invalid_fd);
 
     return UNITY_END();
 }

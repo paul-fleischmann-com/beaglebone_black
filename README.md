@@ -236,13 +236,14 @@ curl -X POST http://192.168.7.2:5000/api/v1/backend \
 
 ## 🔌 HAL Backend
 
-Das System unterstützt drei Backends:
+Das System unterstützt vier Backends:
 
 | Backend | Beschreibung |
 |---|---|
 | `c` | C Library via CGO — maximale Performance |
 | `rust` | Rust Library via FFI — Memory Safety |
 | `auto` | Automatischer Fallback: C primär → Rust bei Fehler |
+| `pru` | PRU1 via RPMsg — deterministisches GPIO (R30/R31-Bit 0-15), kein Sensor/UART/SPI (siehe Issue #252) |
 
 ```bash
 # Backend wechseln
