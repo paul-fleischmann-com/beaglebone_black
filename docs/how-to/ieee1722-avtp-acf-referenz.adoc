@@ -1,0 +1,173 @@
+= IEEE 1722 / AVTP / ACF — Referenz: Standard vs. Open1722 vs. dieses Projekt
+:toc:
+:toc-title: Inhalt
+:icons: font
+:source-highlighter: rouge
+
+Referenzdokumentation für IEEE 1722-2025 (AVTP/ACF) im Kontext dieses
+Projekts — siehe Issue #258. Fasst zusammen, was der allgemeine Standard, die
+Open1722-Referenzimplementierung (verwendet in #256/#257) und das
+AUTOSAR-Modul `IEEE1722Tp` jeweils abdecken.
+
+WARNING: Der vollständige IEEE-1722-2025-Text ist kostenpflichtig (IEEE
+Standards Store). Grundlage dieser Tabelle sind die Header-Dateien aus
+https://github.com/COVESA/Open1722[COVESA/Open1722]
+(`include/avtp/CommonHeader.h`, `include/avtp/acf/AcfCommon.h`), die explizit
+gegen konkrete Kapitel des Standards zitieren.
+
+Dieses Projekt ist *kein* AUTOSAR-Classic-Platform-Stack — die
+AUTOSAR-Spalte dient nur der Einordnung (woher die Formatgrenzen stammen,
+falls das Projekt später in AUTOSAR-Richtung erweitert wird), nicht als
+Implementierungsziel.
+
+== AVTPDU-Subtypes
+
+[cols="1,1,2,2", options="header"]
+|===
+| Subtype | Wert | Im allgemeinen Standard | Im AUTOSAR-Modul `IEEE1722Tp` (R24-11)
+
+| `61883_IIDC`
+| `0x00`
+| Ja
+| Ja — `IEEE1722TpStreamIIDC`
+
+| `AAF`
+| `0x02`
+| Ja
+| Ja — `IEEE1722TpStreamAAF`
+
+| `CVF`
+| `0x03`
+| Ja (von Open1722s `cvf-talker`/`-listener` genutzt, siehe #257)
+| Nein — AUTOSAR nutzt für Video nur `61883_IIDC`
+
+| `CRF`
+| `0x04`
+| Ja
+| Ja — `IEEE1722TpStreamCRF`
+
+| `TSCF`
+| `0x05`
+| Ja
+| Ja — als ACF-Rahmen
+
+| `RVF`
+| `0x07`
+| Ja
+| Ja — `IEEE1722TpStreamRVF`
+
+| `NTSCF`
+| `0x82`
+| Ja (von `acfcan`/`acf-can-*` in diesem Projekt genutzt, siehe #256/#257)
+| Ja — als ACF-Rahmen
+
+| `ADP`/`AECP`/`ACMP`/`MAAP` (AVDECC)
+| `0xFA`–`0xFE`
+| Ja
+| Nein — Laufzeit-Discovery widerspricht dem ARXML-Entwurfszeit-Modell
+|===
+
+== ACF-Nachrichtentypen
+
+[cols="1,1,2,2,2", options="header"]
+|===
+| Typ | Wert | Im allgemeinen Standard | In Open1722 | In diesem Projekt
+
+| `CAN` (+ `CAN_BRIEF`)
+| `0x1` (+ `0x2`)
+| Ja
+| Ja
+| Ja — Kernel-Modul (#256, nur `CAN`, kein `CAN_BRIEF`) + User-Space-Tools (#257)
+
+| `LIN`
+| `0x3`
+| Ja
+| Ja
+| Nein
+
+| `FLEXRAY`
+| `0x0`
+| Ja (seit 2016)
+| Ja
+| Nein
+
+| `MOST`
+| `0x4`
+| Ja (seit 2016)
+| Ja
+| Nein
+
+| `CAN_XL` / `CAN_XL_BRIEF`
+| `0x11` / `0x12`
+| Ja (neu 2025)
+| Nein (Stand dieser Recherche)
+| Nein — s. u. "Ausblick"
+
+| `CAN_V2` / `CAN_BRIEF_V2`
+| `0x21` / `0x22`
+| Ja (neu 2025)
+| Ja (`CanV2.h`, `CanBriefV2.h`)
+| Nein — s. u. "Ausblick"
+
+| `LIN_V2`
+| `0x23`
+| Ja (neu 2025, nur als Typ-Eintrag)
+| Nein
+| Nein
+
+| `BYTE_BUS` (GBB) / `BYTE_BUS_BRIEF` (ABB)
+| `0xD` / `0xE`
+| Ja (neu 2025)
+| Nein (Stand dieser Recherche)
+| Nein
+
+| `GISF`
+| `0xC`
+| Ja (neu 2025, eigenes Kapitel 18)
+| Nein (Stand dieser Recherche)
+| Nein
+|===
+
+TIP: Vollständige Herleitung/Kontext dieser beiden Tabellen: siehe die
+Blog-Serie unter
+`website/site/content/autosar/IEEE1722Transport/ieee1722-teil-6-standard-vs-autosar.adoc`
+(Teile 6–9).
+
+== Ausblick: Kandidaten für zukünftige Erweiterung
+
+Das `acfcan`-Kernel-Modul (#256) und die User-Space-Tools (#257) decken
+aktuell nur klassisches `ACF_CAN` (NTSCF, kein `CAN_BRIEF`, keine Bündelung
+mehrerer Nachrichten pro Frame — Stand des Open1722-READMEs zur Zeit der
+Recherche) ab. Zwei Formate sind als Kandidaten für eine spätere Erweiterung
+vorgemerkt, sobald Open1722 sie im Kernel-Modul nachzieht:
+
+[cols="1,3", options="header"]
+|===
+| Format | Warum relevant
+
+| `CAN_XL`
+| Bis zu 2048 Byte Nutzdaten pro Frame (statt 8/64 Byte bei CAN/CAN-FD) —
+  schließt die Bandbreitenlücke zwischen klassischem CAN und Ethernet,
+  praktisch relevant für moderne Zonal-Architekturen mit gebündelten
+  Sensordaten
+
+| `CAN_V2` / `CAN_BRIEF_V2`
+| 11-Bit- statt 5-Bit-Bus-ID (2048 statt 32 mögliche Werte) — inhaltlich mit
+  `CAN`/`CAN_BRIEF` identisch, nur relevant, sobald mehr als 32
+  CAN-Teilnetze über ein gemeinsames TSN-Backbone laufen. In Open1722
+  bereits implementiert (`CanV2.h`), im Kernel-Modul (#256) noch nicht
+  genutzt
+|===
+
+Kein Implementierungsauftrag — reine Tracking-Notiz für den Fall, dass eines
+dieser Formate für ein zukünftiges Milestone gebraucht wird.
+
+== ARXML/AUTOSAR-Konfiguration
+
+Dieses Projekt konfiguriert kein `IEEE1722Tp`-AUTOSAR-Modul und keine ARXML —
+die Container-Struktur (`IEEE1722TpStream`, `IEEE1722TpLowerLayerPduPool`,
+...) ist hier nur insofern relevant, als sie erklärt, *warum* die
+AUTOSAR-Spalte in den Tabellen oben schmaler ist als der allgemeine Standard.
+Details dazu (inkl. der Erkenntnis, dass die Stream-zu-Switch-Port-Zuordnung
+im `IEEE1722Tp`-Modul nur indirekt über generisches PDU-Routing läuft):
+`website/site/content/autosar/IEEE1722Transport/ieee1722-teil-3-arxml-konfiguration.adoc`.
