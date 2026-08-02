@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 # Lädt COVESA/Open1722 (BSD-3-Clause), Referenzimplementierung von IEEE 1722
-# (AVTP/ACF), für den ACF-CAN-Kernel-Modul-Build (scripts/build_open1722_acfcan.sh).
+# (AVTP/ACF), für den ACF-CAN-Kernel-Modul-Build
+# (scripts/build_open1722_acfcan.sh, Issue #256) und die User-Space-Demo-Tools
+# (scripts/build_open1722_userspace.sh, Issue #257).
 # Idempotent: überspringt einen bereits vorhandenen Checkout, damit das Script
-# lokal und in CI wiederverwendbar ist. Siehe Issue #256.
+# lokal und in CI wiederverwendbar ist.
 
 set -e
 

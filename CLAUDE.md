@@ -21,6 +21,7 @@ make deploy       # Deploy to BeagleBone (debian@192.168.7.2)
 make yocto-image  # Build Yocto (Kirkstone) image incl. BME280 layer
 make pru-fw       # Build PRU1-RPMsg-GPIO-Firmware → bin/pru/bbb-pru1-gpio-ctrl.elf
 make acfcan-mod   # Build Open1722 ACF-CAN kernel module → bin/kernel/bbb-acfcan.ko
+make open1722-userspace  # Build Open1722 ACF-CAN/CVF user-space tools → bin/open1722/
 make clean        # Clean all artifacts
 ```
 
@@ -105,6 +106,8 @@ The `HardwareDriver` interface in `project/go-api/pkg/hal/interface.go` defines 
 | `scripts/setup_open1722.sh` / `scripts/build_open1722_acfcan.sh` | Fetch COVESA/Open1722, cross-build the `acfcan` ACF-CAN kernel module (Issue #256) |
 | `project/yocto/meta-bbb-sensors/recipes-bbb/acfcan-mod/` | Yocto recipe for the `acfcan` kernel module |
 | `tests/hardware/test_acfcan.py` | ACF-CAN tunneling test (SSH-driven, single-board `veth` setup) |
+| `scripts/build_open1722_userspace.sh` | Cross-builds Open1722 user-space demo tools (acf-can-talker/-listener/-bridge, cvf-talker/-listener), Issue #257 |
+| `tools/cli/cmd/acfcan.go` | `bbcli acf-can bridge start/stop/status` — manages the local acf-can-bridge process (no REST API involved) |
 | `.drone.yml` | 18 CI/CD pipelines |
 | `scripts/build_yocto.sh` | Builds Yocto (Kirkstone) image for BBB incl. `meta-bbb-sensors` layer |
 | `project/yocto/meta-bbb-sensors/` | Yocto layer: BME280 driver, PRUSS DT overlay + firmware recipe, kernel/DT enablement, prebuilt Go/Rust/C stack |
