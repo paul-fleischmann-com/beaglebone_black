@@ -20,6 +20,8 @@ make test         # Run Go unit tests
 make deploy       # Deploy to BeagleBone (debian@192.168.7.2)
 make yocto-image  # Build Yocto (Kirkstone) image incl. BME280 layer
 make pru-fw       # Build PRU1-RPMsg-GPIO-Firmware → bin/pru/bbb-pru1-gpio-ctrl.elf
+make acfcan-mod   # Build Open1722 ACF-CAN kernel module → bin/kernel/bbb-acfcan.ko
+make open1722-userspace  # Build Open1722 ACF-CAN/CVF user-space tools → bin/open1722/
 make clean        # Clean all artifacts
 ```
 
@@ -46,6 +48,9 @@ for b in c rust auto; do HW_BACKEND=$b pytest tests/hardware/ -v; done
 
 # PRU-Backend (nur GPIO, siehe Issue #252)
 HW_BACKEND=pru pytest tests/hardware/test_pru.py -v
+
+# Open1722-ACF-CAN-Kernel-Modul (kein HAL-Backend, siehe Issue #256)
+BEAGLE_HOST=192.168.7.2 pytest tests/hardware/test_acfcan.py -v
 ```
 
 Quality gates: ≥90% test success rate, ≥75% average coverage, ≥50% per file.
@@ -71,6 +76,13 @@ Hardware (BME280/GPIO/UART/SPI)   PRU-ICSS (R30/R31-GPIO, siehe #252)
 - `auto` — tries C first, falls back to Rust on error (default in production)
 - `pru` — PRU1 via RPMsg (deterministisches GPIO, R30/R31-Bit 0-15 statt Linux-Sysfs-GPIO-Nummer; BME280/UART/SPI nicht unterstützt, siehe Issue #252)
 
+**Open1722-ACF-CAN-Kernel-Modul** (`acfcan`, Issue #256) — kein HAL-Backend,
+sondern ein eigenständiges Linux-Kernel-Netzwerkmodul unterhalb von
+HAL/REST-API: tunnelt SocketCAN-Frames transparent als
+IEEE-1722-ACF_CAN-Nachrichten über Ethernet (`cansend`/`candump` funktionieren
+unverändert). Wird per `ip link ... type acfcan` + sysfs unter
+`/sys/class/net/<dev>/acfcan/` angesprochen, nicht über `:5000/api/v1/*`.
+
 The `HardwareDriver` interface in `project/go-api/pkg/hal/interface.go` defines all hardware operations. New hardware features must be added to all backend drivers (C, Rust, Mock; PRU nur soweit PRU-seitig sinnvoll, sonst "nicht unterstützt"-Fehler) plus the interface.
 
 ## Key Files
@@ -91,9 +103,16 @@ The `HardwareDriver` interface in `project/go-api/pkg/hal/interface.go` defines 
 | `project/c/src/pru.c` | remoteproc-sysfs load/stop + rpmsg-chardev discovery/command |
 | `project/pru/fw/pru1_gpio_ctrl/` | PRU1 firmware (RPMsg GPIO SET/GET on R30/R31), built with the GNU-PRU toolchain |
 | `scripts/setup_pru_toolchain.sh` / `scripts/build_pru_firmware.sh` | Fetch GNU-PRU toolchain + PSSP, build the PRU1 firmware |
+| `scripts/setup_open1722.sh` / `scripts/build_open1722_acfcan.sh` | Fetch COVESA/Open1722, cross-build the `acfcan` ACF-CAN kernel module (Issue #256) |
+| `project/yocto/meta-bbb-sensors/recipes-bbb/acfcan-mod/` | Yocto recipe for the `acfcan` kernel module |
+| `tests/hardware/test_acfcan.py` | ACF-CAN tunneling test (SSH-driven, single-board `veth` setup) |
+| `scripts/build_open1722_userspace.sh` | Cross-builds Open1722 user-space demo tools (acf-can-talker/-listener/-bridge, cvf-talker/-listener), Issue #257 |
+| `tools/cli/cmd/acfcan.go` | `bbcli acf-can bridge start/stop/status` — manages the local acf-can-bridge process (no REST API involved) |
+| `scripts/setup_acfcan_vcan_demo.sh` | BBB-side of the vcan→Eth→container demo (Issue #259): vcan0 + frame generator + acf-can-talker |
+| `tools/acfcan-viewer/` | Container: Open1722 ETH-node receiver (acf-can-listener) + live web dashboard (Issue #259) |
 | `project/macsec/mkad-board.conf` / `scripts/setup_macsec_mka.sh` | mkad (MACsec Key Agreement) config + BBB-side startup script (Issue #260) |
 | `project/yocto/meta-bbb-sensors/recipes-bbb/mkad/` | Yocto recipe for mkad (Technica-Engineering/MKAdaemon, waf-based) |
-| `.drone.yml` | 17 CI/CD pipelines |
+| `.drone.yml` | 20 CI/CD pipelines |
 | `scripts/build_yocto.sh` | Builds Yocto (Kirkstone) image for BBB incl. `meta-bbb-sensors` layer |
 | `project/yocto/meta-bbb-sensors/` | Yocto layer: BME280 driver, PRUSS DT overlay + firmware recipe, kernel/DT enablement, prebuilt Go/Rust/C stack |
 

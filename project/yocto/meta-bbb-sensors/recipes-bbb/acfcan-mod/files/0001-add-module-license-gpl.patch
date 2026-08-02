@@ -1,0 +1,21 @@
+Upstream-Status: Pending
+
+Open1722 acfcanmain.c/1722ethernet.c declare kein MODULE_LICENSE(). Ohne das
+markiert der Kernel das Modul beim Laden als "unspecified" (Taint-Flag) und
+kann u. U. die genutzten GPL-only-Exports des CAN-Subsystems
+(linux/can/dev.h — z. B. can_dropped_invalid_skb, can_create_echo_skb) gar
+nicht auflösen. Die Datei ist laut eigenem Lizenz-Header dual-lizenziert
+(BSD-3-Clause-artig ODER GPLv2) — GPL ist also explizit als Option vorgesehen,
+nur im Code nicht deklariert. Ergänzt MODULE_LICENSE("GPL") entsprechend.
+Siehe Issue #256.
+
+--- a/examples/acf-can/linux-kernel-mod/acfcanmain.c
++++ b/examples/acf-can/linux-kernel-mod/acfcanmain.c
+@@ -330,3 +330,7 @@
+
+ module_param(version, charp, 0);
+ MODULE_PARM_DESC(version, "IEEE-1722 version");
++
++MODULE_LICENSE("GPL");
++MODULE_AUTHOR("COVESA Open1722 contributors");
++MODULE_DESCRIPTION("Virtual IEEE 1722 acf-can CAN network interface (ACF-CAN over Ethernet)");

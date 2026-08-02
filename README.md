@@ -265,18 +265,35 @@ Zusätzlich zur HAL gibt es Werkzeuge rund um
 IEEE-1722-ACF_CAN-Nachrichten über Ethernet — kein HAL-Backend, unabhängig von
 `:5000/api/v1/*`:
 
-- Kernel-Modul `acfcan` (Issue #256) — SocketCAN-Interface, transparent für `cansend`/`candump`
+- Kernel-Modul `acfcan` (Issue #256) — SocketCAN-Interface, transparent für
+  `cansend`/`candump`, angesprochen über `ip link ... type acfcan` + sysfs
 - User-Space-Tools `acf-can-talker`/`-listener`/`-bridge`, `cvf-talker`/`-listener` (Issue #257)
 - vcan→Eth→Container-Demo mit Live-Visualisierung (Issue #259) — `tools/acfcan-viewer/`
 - MACsec/MKA-Absicherung der Verbindung via [MKAdaemon](https://github.com/Technica-Engineering/MKAdaemon) (Issue #260)
 
 ```bash
-# Board: mkad starten (MACsec-Interface macsec0), dann CAN-Traffic darüber tunneln
+make acfcan-mod           # KERNEL_SRC muss auf einen Yocto-Kernel-Quellbaum zeigen
+make open1722-userspace   # → bin/open1722/{acf-can-talker,acf-can-listener,acf-can-bridge,cvf-talker,cvf-listener}
+
+# Auf dem Board: acf-can-bridge als Hintergrundprozess verwalten
+bbcli acf-can bridge start --ethif eth0 --canif vcan0 --dst-mac aa:bb:cc:dd:ee:ff
+bbcli acf-can bridge status
+bbcli acf-can bridge stop
+
+# Board: CAN-Traffic per vcan0 erzeugen und über Ethernet tunneln
+ACFCAN_DEMO_DST_MAC=<Viewer-MAC> ./scripts/setup_acfcan_vcan_demo.sh
+
+# Gegenstelle: Container mit Live-Dashboard
+cd tools/acfcan-viewer && docker build -t acfcan-viewer . \
+  && docker run --network host --cap-add=NET_ADMIN acfcan-viewer
+# → http://<host>:8080/
+
+# Optional: mit MACsec/MKA absichern (Board: mkad starten, Interface macsec0)
 scp project/macsec/mkad-board.conf debian@192.168.7.2:/app/mkad-board.conf
 ssh debian@192.168.7.2 './scripts/setup_macsec_mka.sh &'
 ACFCAN_DEMO_ETHIF=macsec0 ACFCAN_DEMO_DST_MAC=<Viewer-MAC> ./scripts/setup_acfcan_vcan_demo.sh
 
-# Gegenstelle: Container mit MACsec + Live-Dashboard
+# Gegenstelle mit MACsec-Support starten
 cd tools/acfcan-viewer && docker build -t acfcan-viewer . \
   && docker run --network host --cap-add=NET_ADMIN \
        -e ACFCAN_VIEWER_ENABLE_MACSEC=1 acfcan-viewer
