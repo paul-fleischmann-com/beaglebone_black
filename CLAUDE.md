@@ -91,6 +91,8 @@ The `HardwareDriver` interface in `project/go-api/pkg/hal/interface.go` defines 
 | `project/c/src/pru.c` | remoteproc-sysfs load/stop + rpmsg-chardev discovery/command |
 | `project/pru/fw/pru1_gpio_ctrl/` | PRU1 firmware (RPMsg GPIO SET/GET on R30/R31), built with the GNU-PRU toolchain |
 | `scripts/setup_pru_toolchain.sh` / `scripts/build_pru_firmware.sh` | Fetch GNU-PRU toolchain + PSSP, build the PRU1 firmware |
+| `project/macsec/mkad-board.conf` / `scripts/setup_macsec_mka.sh` | mkad (MACsec Key Agreement) config + BBB-side startup script (Issue #260) |
+| `project/yocto/meta-bbb-sensors/recipes-bbb/mkad/` | Yocto recipe for mkad (Technica-Engineering/MKAdaemon, waf-based) |
 | `.drone.yml` | 17 CI/CD pipelines |
 | `scripts/build_yocto.sh` | Builds Yocto (Kirkstone) image for BBB incl. `meta-bbb-sensors` layer |
 | `project/yocto/meta-bbb-sensors/` | Yocto layer: BME280 driver, PRUSS DT overlay + firmware recipe, kernel/DT enablement, prebuilt Go/Rust/C stack |
