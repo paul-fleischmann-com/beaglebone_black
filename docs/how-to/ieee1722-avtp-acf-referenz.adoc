@@ -9,6 +9,10 @@ Projekts — siehe Issue #258. Fasst zusammen, was der allgemeine Standard, die
 Open1722-Referenzimplementierung (verwendet in #256/#257) und das
 AUTOSAR-Modul `IEEE1722Tp` jeweils abdecken.
 
+TIP: Praktische Schritt-für-Schritt-Anleitung zum Aufbauen der Demo (inkl.
+optionaler MACsec/MKA-Absicherung, #260): siehe
+`docs/how-to/ieee1722-acfcan-demo-userguide.adoc`.
+
 WARNING: Der vollständige IEEE-1722-2025-Text ist kostenpflichtig (IEEE
 Standards Store). Grundlage dieser Tabelle sind die Header-Dateien aus
 https://github.com/COVESA/Open1722[COVESA/Open1722]
