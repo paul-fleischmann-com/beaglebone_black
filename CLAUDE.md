@@ -91,7 +91,9 @@ The `HardwareDriver` interface in `project/go-api/pkg/hal/interface.go` defines 
 | `project/c/src/pru.c` | remoteproc-sysfs load/stop + rpmsg-chardev discovery/command |
 | `project/pru/fw/pru1_gpio_ctrl/` | PRU1 firmware (RPMsg GPIO SET/GET on R30/R31), built with the GNU-PRU toolchain |
 | `scripts/setup_pru_toolchain.sh` / `scripts/build_pru_firmware.sh` | Fetch GNU-PRU toolchain + PSSP, build the PRU1 firmware |
-| `.drone.yml` | 17 CI/CD pipelines |
+| `scripts/setup_acfcan_vcan_demo.sh` | BBB-side of the vcan→Eth→container demo (Issue #259): vcan0 + frame generator + acf-can-talker |
+| `tools/acfcan-viewer/` | Container: Open1722 ETH-node receiver (acf-can-listener) + live web dashboard (Issue #259) |
+| `.drone.yml` | 18 CI/CD pipelines |
 | `scripts/build_yocto.sh` | Builds Yocto (Kirkstone) image for BBB incl. `meta-bbb-sensors` layer |
 | `project/yocto/meta-bbb-sensors/` | Yocto layer: BME280 driver, PRUSS DT overlay + firmware recipe, kernel/DT enablement, prebuilt Go/Rust/C stack |
 

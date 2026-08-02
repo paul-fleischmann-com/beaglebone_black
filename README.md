@@ -258,6 +258,29 @@ curl -X POST http://192.168.7.2:5000/api/v1/backend \
 
 ---
 
+## 🚗 IEEE 1722 / ACF-CAN
+
+Zusätzlich zur HAL gibt es Werkzeuge rund um
+[Open1722](https://github.com/COVESA/Open1722) zum Tunneln von CAN-Frames als
+IEEE-1722-ACF_CAN-Nachrichten über Ethernet — kein HAL-Backend, unabhängig von
+`:5000/api/v1/*`:
+
+- Kernel-Modul `acfcan` (Issue #256) — SocketCAN-Interface, transparent für `cansend`/`candump`
+- User-Space-Tools `acf-can-talker`/`-listener`/`-bridge`, `cvf-talker`/`-listener` (Issue #257)
+- vcan→Eth→Container-Demo mit Live-Visualisierung (Issue #259) — `tools/acfcan-viewer/`
+
+```bash
+# Board: CAN-Traffic per vcan0 erzeugen und über Ethernet tunneln
+ACFCAN_DEMO_DST_MAC=<Viewer-MAC> ./scripts/setup_acfcan_vcan_demo.sh
+
+# Gegenstelle: Container mit Live-Dashboard
+cd tools/acfcan-viewer && docker build -t acfcan-viewer . \
+  && docker run --network host --cap-add=NET_ADMIN acfcan-viewer
+# → http://<host>:8080/
+```
+
+---
+
 ## 🖥 Client Tools
 
 ### CLI (bbcli)

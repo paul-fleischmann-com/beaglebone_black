@@ -2041,3 +2041,51 @@ steps:
       - sh scripts/save-pipeline-results.sh pru-firmware-build
     when:
       status: [success, failure]
+
+---
+# ════════════════════════════════════════
+# PIPELINE acfcan-viewer-build — Docker-Build-Check (#259, kein Push)
+# ════════════════════════════════════════
+kind: pipeline
+type: docker
+name: acfcan-viewer-build
+
+image_pull_secrets:
+  - dockerconfigjson
+
+trigger:
+  event: [push, pull_request, custom]
+  branch:
+    exclude: [refs/tags/*]
+  paths:
+    include:
+      - tools/acfcan-viewer/**
+      - .drone.yml
+
+volumes:
+  - name: pipeline-results
+    host:
+      path: /var/cache/drone/pipeline-results
+
+steps:
+  - name: build-acfcan-viewer-image
+    image: quay.io/podman/stable
+    pull: if_not_exists
+    privileged: true
+    environment:
+      STEP: build-acfcan-viewer-image
+      CMD: podman build -t acfcan-viewer:ci-check tools/acfcan-viewer
+    commands:
+      - sh scripts/run-step.sh
+
+  - name: save-results
+    image: alpine
+    pull: if_not_exists
+    volumes:
+      - name: pipeline-results
+        path: /pipeline-results
+    depends_on: [build-acfcan-viewer-image]
+    commands:
+      - sh scripts/save-pipeline-results.sh acfcan-viewer-build
+    when:
+      status: [success, failure]
