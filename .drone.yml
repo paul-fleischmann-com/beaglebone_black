@@ -1294,20 +1294,24 @@ steps:
       event: [push,custom]
       branch: [main, develop]
 
+  # alpine/git statt plugins/git-action: der Plugin-Push war ein blindes
+  # `git push`, das bei zwei zeitgleich laufenden architecture-export-
+  # Builds (häufig bei mehreren Merges kurz hintereinander) mit
+  # "non-fast-forward" fehlschlug, sobald der jeweils andere Lauf zuerst
+  # gepusht hatte. scripts/ci-git-push-retry.sh holt in dem Fall den
+  # aktuellen Stand, rebased den lokalen [skip ci]-Commit und probiert
+  # erneut, statt sofort aufzugeben.
   - name: push-exports
-    image: plugins/git-action
+    image: alpine/git
     pull: if_not_exists
     depends_on: [commit-exports]
     environment:
-      PLUGIN_NETRC_PASSWORD:
+      GIT_TOKEN:
         from_secret: git_token
-    settings:
-      actions:
-        - push
-      remote: https://github.com/paulefl/beaglebone_black.git
-      branch: ${DRONE_BRANCH}
-      netrc_machine: github.com
-      netrc_username: paulefl
+      DRONE_BRANCH: ${DRONE_BRANCH}
+    commands:
+      - sh scripts/ci-git-setup.sh
+      - sh scripts/ci-git-push-retry.sh
     when:
       event: [push,custom]
       branch: [main, develop]
