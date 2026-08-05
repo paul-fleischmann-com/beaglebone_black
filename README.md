@@ -270,6 +270,7 @@ IEEE-1722-ACF_CAN-Nachrichten über Ethernet — kein HAL-Backend, unabhängig v
 - User-Space-Tools `acf-can-talker`/`-listener`/`-bridge`, `cvf-talker`/`-listener` (Issue #257)
 - vcan→Eth→Container-Demo mit Live-Visualisierung (Issue #259) — `tools/acfcan-viewer/`
 - MACsec/MKA-Absicherung der Verbindung via [MKAdaemon](https://github.com/Technica-Engineering/MKAdaemon) (Issue #260)
+- End-to-End-Demo REST→CAN→ACF-CAN→CAN→BME280 über 5 virtuelle Devices (Issue #270)
 
 ```bash
 make acfcan-mod           # KERNEL_SRC muss auf einen Yocto-Kernel-Quellbaum zeigen
@@ -299,6 +300,64 @@ cd tools/acfcan-viewer && docker build -t acfcan-viewer . \
        -e ACFCAN_VIEWER_ENABLE_MACSEC=1 acfcan-viewer
 # → http://<host>:8080/ (MACsec-Status-Badge im Dashboard)
 ```
+
+### End-to-End-Demo: REST → CAN → ACF-CAN → CAN → BME280 (Issue #270)
+
+Verbindet die komplette ACF-CAN-Kette mit der BME280-REST-API zu einer
+einzigen Anfrage: eine ganz gewöhnliche `GET /temperature` durchläuft REST →
+CAN → ACF-CAN (IEEE 1722) → CAN → HAL, und die Antwort läuft symmetrisch
+zurück — sichtbar wird, dass der Tunnel ein reales Nutzsignal transportiert,
+nicht nur synthetische Testframes wie in der Demo oben. Nur ein physisches
+Board vorhanden — alle 5 "Devices" laufen als eigene Network-Namespaces:
+
+```
+D1 (REST-Client) --veth(REST)--> D2 (rest-can-gateway) --vxcan(CAN)--> D3 (acfcan)
+                                                                            │ veth
+                                                                            │ (ACF_CAN
+                                                                            │  über Ethernet,
+                                                                            │  IEEE 1722)
+                                                                            ▼
+                            D5 (can-hal-bridge, HAL) <--vxcan(CAN)-- D4 (acfcan)
+```
+
+- D2/D5 sind neue, schlanke Go-Prozesse (`project/go-api/cmd/rest-can-gateway`,
+  `project/go-api/cmd/can-hal-bridge`) — CAN-Protokoll: ID `0x100` = Anfrage
+  (leer), ID `0x101` = Antwort (Temperatur als `float32`, big-endian).
+  D5 nutzt standardmäßig `pkg/hal/mock` (kein CGO, CI-tauglich); echte
+  Hardware ist über `make can-hal-bridge-hw` (Go-Build-Tag `hwreal`) erreichbar.
+- D3/D4 sind das bereits vorhandene `acfcan`-Kernelmodul (#256); die
+  Weiterleitung zwischen dem CAN-seitigen `vxcan`-Interface und dem
+  ACF-CAN-Interface läuft rein im Kernel über `can-gw` (`cangw`-Tool,
+  can-utils) — kein zusätzlicher Relay-Prozess.
+
+```bash
+make acfcan-mod can-hal-bridge rest-can-gateway
+scp bin/kernel/bbb-acfcan.ko debian@192.168.7.2:/lib/modules/$(uname -r)/extra/acfcan.ko
+ssh debian@192.168.7.2 depmod -a
+scp bin/can-hal-bridge bin/rest-can-gateway debian@192.168.7.2:/app/
+
+# Auf dem Board: alle 5 Namespaces + Links in einem Rutsch aufbauen
+ssh debian@192.168.7.2
+sudo ./scripts/setup_e2e_demo.sh
+
+# Zweite Sitzung: Test-Anfrage von D1 aus
+sudo ip netns exec dev1 curl http://10.270.1.2:8080/temperature
+
+# Aufräumen
+sudo ./scripts/setup_e2e_demo.sh teardown
+```
+
+**Troubleshooting:**
+- Namespaces müssen in Reihenfolge D1→D2→D3→D4→D5 entstehen, bevor die
+  jeweiligen `veth`/`vxcan`-Peers angelegt werden (Skript ist idempotent,
+  einfach erneut ausführen).
+- `vxcan`-Kernelmodul muss geladen sein (`modprobe vxcan`) — zwei separate
+  `vcan0` in unterschiedlichen Namespaces sind isoliert und NICHT verbunden.
+- Gegenläufig gespiegelte Stream-IDs (`tx_streamid` auf einer Seite =
+  `rx_streamid` auf der anderen) sind die häufigste ACF-Fehlerquelle, siehe
+  auch #256/#259.
+- Automatisierter Hardwaretest: `tests/hardware/test_e2e_demo.py` (siehe
+  Docstring für Deployment-Voraussetzungen).
 
 ---
 

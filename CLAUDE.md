@@ -112,7 +112,12 @@ The `HardwareDriver` interface in `project/go-api/pkg/hal/interface.go` defines 
 | `tools/acfcan-viewer/` | Container: Open1722 ETH-node receiver (acf-can-listener) + live web dashboard (Issue #259) |
 | `project/macsec/mkad-board.conf` / `scripts/setup_macsec_mka.sh` | mkad (MACsec Key Agreement) config + BBB-side startup script (Issue #260) |
 | `project/yocto/meta-bbb-sensors/recipes-bbb/mkad/` | Yocto recipe for mkad (Technica-Engineering/MKAdaemon, waf-based) |
-| `.drone.yml` | 20 CI/CD pipelines |
+| `project/go-api/pkg/e2edemo/` | Minimal CAN request/response protocol + CGO-free SocketCAN wrapper for the E2E demo (Issue #270) |
+| `project/go-api/cmd/rest-can-gateway/` | D2: `GET /temperature` REST↔CAN gateway of the E2E demo (Issue #270) |
+| `project/go-api/cmd/can-hal-bridge/` | D5: CAN→HAL bridge of the E2E demo — mock HAL default, real hardware via `-tags hwreal` (Issue #270) |
+| `scripts/setup_e2e_demo.sh` | Builds the 5-namespace REST→CAN→ACF-CAN→CAN→BME280 demo topology in one go (Issue #270) |
+| `tests/hardware/test_e2e_demo.py` | End-to-end round-trip test for the Issue #270 demo (SSH-driven, single-board namespace setup) |
+| `.drone.yml` | 21 CI/CD pipelines |
 | `scripts/build_yocto.sh` | Builds Yocto (Kirkstone) image for BBB incl. `meta-bbb-sensors` layer |
 | `project/yocto/meta-bbb-sensors/` | Yocto layer: BME280 driver, PRUSS DT overlay + firmware recipe, kernel/DT enablement, prebuilt Go/Rust/C stack |
 
