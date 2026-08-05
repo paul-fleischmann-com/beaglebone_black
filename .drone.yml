@@ -2075,8 +2075,13 @@ volumes:
       path: /var/cache/drone/pipeline-results
 
 steps:
+  # debian:trixie statt ghcr.io/paulefl/generic-builder:latest (debian:bookworm):
+  # bookworms linux-headers-amd64 hängt auf dem 6.1-LTS-Zweig, dem u.a.
+  # netdev_get_by_name() fehlt (erst ab Kernel 6.5) — der acfcan-Code
+  # kompiliert damit grundsätzlich nicht, unabhängig vom Runner-Host-Kernel
+  # (verifiziert). trixies 6.12-Zweig hat die Funktion.
   - name: build-acfcan-module
-    image: ghcr.io/paulefl/generic-builder:latest
+    image: debian:trixie
     pull: if_not_exists
     volumes:
       - name: open1722-src
@@ -2084,7 +2089,9 @@ steps:
     environment:
       OPEN1722_DIR: /open1722-src
       STEP: build-acfcan-module
-      CMD: bash scripts/ci_check_acfcan_compile.sh
+      CMD: |
+        apt-get update -qq && apt-get install -y -qq git
+        bash scripts/ci_check_acfcan_compile.sh
     commands:
       - sh scripts/run-step.sh
 
@@ -2290,7 +2297,7 @@ trigger:
       - project/go-api/pkg/hal/mock/**
       - tests/integration/test_e2e_local.py
       - tests/conftest.py
-      - scripts/ci_check_acfcan_compile.sh
+      - scripts/build_acfcan_native.sh
       - scripts/setup_open1722.sh
       - .drone.yml
 
@@ -2309,8 +2316,14 @@ volumes:
       path: /var/cache/drone/pipeline-results
 
 steps:
+  # debian:trixie statt ghcr.io/paulefl/generic-builder:latest (debian:bookworm,
+  # siehe acfcan-module-build weiter oben) — build_acfcan_native.sh braucht
+  # linux-headers-$(uname -r) für den Runner-Host-Kernel (Debian 13/trixie,
+  # +deb13-Paketnamen); bookworms Archiv führt solche Pakete grundsätzlich
+  # nicht, unabhängig vom Patch-Level (Issue #276). Go/Python/git fehlen in
+  # debian:trixie daher explizit installiert statt aus generic-builder geerbt.
   - name: test-e2e-local
-    image: ghcr.io/paulefl/generic-builder:latest
+    image: debian:trixie
     pull: if_not_exists
     privileged: true
     volumes:
@@ -2322,15 +2335,20 @@ steps:
         path: /open1722-src
     environment:
       OPEN1722_DIR: /open1722-src
+      GOPATH: /go
       STEP: test-e2e-local
       CMD: |
-        apt-get update -q && apt-get install -y -q iproute2 can-utils tcpdump
-        bash scripts/ci_check_acfcan_compile.sh
+        set -e
+        apt-get update -q
+        apt-get install -y -q iproute2 can-utils tcpdump kmod git curl ca-certificates python3 python3-pip
+        curl -fsSL https://go.dev/dl/go1.24.1.linux-amd64.tar.gz | tar -C /usr/local -xz
+        export PATH="/usr/local/go/bin:$PATH"
+        bash scripts/build_acfcan_native.sh
         cd project/go-api
         go build -ldflags="-s -w" -o ../../bin/can-hal-bridge-native ./cmd/can-hal-bridge/
         go build -ldflags="-s -w" -o ../../bin/rest-can-gateway-native ./cmd/rest-can-gateway/
         cd ../..
-        pip install --quiet -r tests/requirements-dev.txt
+        pip install --quiet pytest pytest-timeout --break-system-packages
         pytest tests/integration/test_e2e_local.py -v -s --timeout=60
     commands:
       - sh scripts/run-step.sh
