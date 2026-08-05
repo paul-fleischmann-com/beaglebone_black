@@ -14,7 +14,7 @@ def _reachable(host: str, port: int = 5000, timeout: float = 2.0) -> bool:
         return False
 
 
-_NO_HARDWARE_DIRS = {"web"}  # Test-Verzeichnisse die keine BBB-Verbindung brauchen
+_NO_HARDWARE_DIRS = {"web", "integration"}  # Test-Verzeichnisse die keine BBB-Verbindung brauchen
 
 
 def pytest_collection_modifyitems(items):

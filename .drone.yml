@@ -2266,3 +2266,83 @@ steps:
       - sh scripts/save-pipeline-results.sh e2e-demo-build
     when:
       status: [success, failure]
+
+---
+# ════════════════════════════════════════
+# PIPELINE e2e-demo-local-test — hardware-freie E2E-ACF-CAN-Verifikation (#271)
+# ════════════════════════════════════════
+kind: pipeline
+type: docker
+name: e2e-demo-local-test
+
+image_pull_secrets:
+  - dockerconfigjson
+
+trigger:
+  event: [push, pull_request, custom]
+  branch:
+    exclude: [refs/tags/*]
+  paths:
+    include:
+      - project/go-api/pkg/e2edemo/**
+      - project/go-api/cmd/can-hal-bridge/**
+      - project/go-api/cmd/rest-can-gateway/**
+      - project/go-api/pkg/hal/mock/**
+      - tests/integration/test_e2e_local.py
+      - tests/conftest.py
+      - scripts/ci_check_acfcan_compile.sh
+      - scripts/setup_open1722.sh
+      - .drone.yml
+
+volumes:
+  - name: go-mod-cache
+    host:
+      path: /var/cache/drone/go/pkg/mod
+  - name: go-build-cache
+    host:
+      path: /var/cache/drone/go/build
+  - name: open1722-src
+    host:
+      path: /var/cache/drone/open1722/src
+  - name: pipeline-results
+    host:
+      path: /var/cache/drone/pipeline-results
+
+steps:
+  - name: test-e2e-local
+    image: ghcr.io/paulefl/generic-builder:latest
+    pull: if_not_exists
+    privileged: true
+    volumes:
+      - name: go-mod-cache
+        path: /go/pkg/mod
+      - name: go-build-cache
+        path: /root/.cache/go-build
+      - name: open1722-src
+        path: /open1722-src
+    environment:
+      OPEN1722_DIR: /open1722-src
+      STEP: test-e2e-local
+      CMD: |
+        apt-get update -q && apt-get install -y -q iproute2 can-utils tcpdump
+        bash scripts/ci_check_acfcan_compile.sh
+        cd project/go-api
+        go build -ldflags="-s -w" -o ../../bin/can-hal-bridge-native ./cmd/can-hal-bridge/
+        go build -ldflags="-s -w" -o ../../bin/rest-can-gateway-native ./cmd/rest-can-gateway/
+        cd ../..
+        pip install --quiet -r tests/requirements-dev.txt
+        pytest tests/integration/test_e2e_local.py -v -s --timeout=60
+    commands:
+      - sh scripts/run-step.sh
+
+  - name: save-results
+    image: alpine
+    pull: if_not_exists
+    volumes:
+      - name: pipeline-results
+        path: /pipeline-results
+    depends_on: [test-e2e-local]
+    commands:
+      - sh scripts/save-pipeline-results.sh e2e-demo-local-test
+    when:
+      status: [success, failure]
