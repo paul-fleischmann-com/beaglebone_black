@@ -37,9 +37,13 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 OPEN1722_DIR=${OPEN1722_DIR:-$REPO_ROOT/toolchain/open1722}
 MOD_DIR="$OPEN1722_DIR/examples/acf-can/linux-kernel-mod"
 
-if [ ! -d "$OPEN1722_DIR/.git" ]; then
-  "$REPO_ROOT/scripts/setup_open1722.sh"
-fi
+# Immer aufrufen, nicht nur wenn $OPEN1722_DIR/.git fehlt: setup_open1722.sh
+# ist selbst vollständig idempotent (Clone/Checkout/lokale Patches, siehe
+# scripts/patches/) und muss bei jedem Lauf erneut geprüft werden — sonst
+# bleiben lokale Patches bei einem warmen Cache (open1722-src-Volume in CI)
+# dauerhaft unangewendet, weil .git schon vom letzten Lauf existiert (siehe
+# Issue #278: der Patch griff deshalb in CI nie).
+"$REPO_ROOT/scripts/setup_open1722.sh"
 
 echo "=== Installiere generische Kernel-Headers (linux-headers-amd64) ==="
 apt-get update -qq
