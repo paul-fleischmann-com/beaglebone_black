@@ -2203,3 +2203,66 @@ steps:
       - sh scripts/save-pipeline-results.sh acfcan-viewer-build
     when:
       status: [success, failure]
+
+---
+# ════════════════════════════════════════
+# PIPELINE e2e-demo-build — Go vet/test/build für D2/D5 (#270, Mock-Variante)
+# ════════════════════════════════════════
+kind: pipeline
+type: docker
+name: e2e-demo-build
+
+trigger:
+  event: [push, pull_request, custom]
+  branch:
+    exclude: [refs/tags/*]
+  paths:
+    include:
+      - project/go-api/pkg/e2edemo/**
+      - project/go-api/cmd/can-hal-bridge/**
+      - project/go-api/cmd/rest-can-gateway/**
+      - scripts/setup_e2e_demo.sh
+      - .drone.yml
+
+volumes:
+  - name: go-mod-cache
+    host:
+      path: /var/cache/drone/go/pkg/mod
+  - name: go-build-cache
+    host:
+      path: /var/cache/drone/go/build
+  - name: pipeline-results
+    host:
+      path: /var/cache/drone/pipeline-results
+
+steps:
+  - name: test-e2e-demo
+    image: golang:1.24
+    pull: if_not_exists
+    volumes:
+      - name: go-mod-cache
+        path: /go/pkg/mod
+      - name: go-build-cache
+        path: /root/.cache/go-build
+    environment:
+      STEP: test-e2e-demo
+      CMD: |
+        cd project/go-api
+        go vet ./pkg/e2edemo/ ./cmd/can-hal-bridge/ ./cmd/rest-can-gateway/
+        go test ./pkg/e2edemo/... ./cmd/can-hal-bridge/... ./cmd/rest-can-gateway/... -v -count=1
+        GOOS=linux GOARCH=arm GOARM=7 CGO_ENABLED=0 go build -o /tmp/can-hal-bridge ./cmd/can-hal-bridge/
+        GOOS=linux GOARCH=arm GOARM=7 CGO_ENABLED=0 go build -o /tmp/rest-can-gateway ./cmd/rest-can-gateway/
+    commands:
+      - sh scripts/run-step.sh
+
+  - name: save-results
+    image: alpine
+    pull: if_not_exists
+    volumes:
+      - name: pipeline-results
+        path: /pipeline-results
+    depends_on: [test-e2e-demo]
+    commands:
+      - sh scripts/save-pipeline-results.sh e2e-demo-build
+    when:
+      status: [success, failure]
