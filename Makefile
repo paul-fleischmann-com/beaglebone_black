@@ -57,6 +57,11 @@ can-hal-bridge-hw: c-lib rust-lib
 	cd project/go-api && GOOS=linux GOARCH=arm GOARM=7 CGO_ENABLED=1 CC=$(CC) \
 	  go build -tags hwreal -ldflags="-s -w" -o ../../bin/can-hal-bridge-hw ./cmd/can-hal-bridge/
 
+# E2E-Demo (Issue #270): D2 REST↔CAN-Gateway — keine Hardware-Abhängigkeit, CGO-frei.
+rest-can-gateway:
+	cd project/go-api && GOOS=linux GOARCH=arm GOARM=7 CGO_ENABLED=0 \
+	  go build -ldflags="-s -w" -o ../../bin/rest-can-gateway ./cmd/rest-can-gateway/
+
 test:
 	./scripts/test.sh
 
@@ -97,7 +102,7 @@ shellcheck-report:
 	[ -s reports/shellcheck.txt ] && cat reports/shellcheck.txt || echo "No findings."
 
 lint:
-	cd project/go-api && go vet ./pkg/hal/ ./pkg/hal/mock/ ./pkg/hal/config/ ./pkg/e2edemo/ ./cmd/can-hal-bridge/
+	cd project/go-api && go vet ./pkg/hal/ ./pkg/hal/mock/ ./pkg/hal/config/ ./pkg/e2edemo/ ./cmd/can-hal-bridge/ ./cmd/rest-can-gateway/
 	cd tools/cli && go mod tidy && go vet ./...
 	cd tools/tui && go mod tidy && go vet ./...
 	test -z "$$(gofmt -l project/go-api/ tools/)" || (echo "❌ Formatierung prüfen: gofmt -w ." && exit 1)
@@ -220,6 +225,7 @@ info:
 	@echo "  open1722-userspace  Build Open1722 ACF-CAN/CVF user-space tools → bin/open1722/"
 	@echo "  can-hal-bridge   Build E2E-Demo D5 (Mock-Default) → bin/can-hal-bridge"
 	@echo "  can-hal-bridge-hw  Build E2E-Demo D5 (echte Hardware) → bin/can-hal-bridge-hw"
+	@echo "  rest-can-gateway  Build E2E-Demo D2 → bin/rest-can-gateway"
 	@echo ""
 	@echo "Test"
 	@echo "  test             Run Go unit tests"
@@ -262,4 +268,4 @@ info:
 	@echo "  info             Show this help"
 	@echo ""
 
-.PHONY: all c-lib rust-lib go-api cli cli-arm yocto-image pru-fw acfcan-mod open1722-userspace can-hal-bridge can-hal-bridge-hw test test-ci test-cover lint shellcheck-report test-python test-report test-report-open traceability traceability-check aspice-report velocity-report reports deploy clean req-tracing version adoc-build adoc-summary build-arm checksums release-candidate prepend-changelog install-java install-asciidoctor setup-env info publish-allure report-all
+.PHONY: all c-lib rust-lib go-api cli cli-arm yocto-image pru-fw acfcan-mod open1722-userspace can-hal-bridge can-hal-bridge-hw rest-can-gateway test test-ci test-cover lint shellcheck-report test-python test-report test-report-open traceability traceability-check aspice-report velocity-report reports deploy clean req-tracing version adoc-build adoc-summary build-arm checksums release-candidate prepend-changelog install-java install-asciidoctor setup-env info publish-allure report-all
