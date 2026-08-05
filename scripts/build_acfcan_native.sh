@@ -25,9 +25,10 @@ OPEN1722_DIR=${OPEN1722_DIR:-$REPO_ROOT/toolchain/open1722}
 MOD_DIR="$OPEN1722_DIR/examples/acf-can/linux-kernel-mod"
 OUT_DIR="$REPO_ROOT/bin/kernel"
 
-if [ ! -d "$OPEN1722_DIR/.git" ]; then
-  "$REPO_ROOT/scripts/setup_open1722.sh"
-fi
+# Immer aufrufen, nicht nur wenn $OPEN1722_DIR/.git fehlt — siehe
+# ci_check_acfcan_compile.sh für die Begründung (Issue #278: lokale Patches
+# blieben bei warmem Cache sonst dauerhaft unangewendet).
+"$REPO_ROOT/scripts/setup_open1722.sh"
 
 if ! [ -d "/lib/modules/$(uname -r)/build" ]; then
   echo "=== Installiere Kernel-Headers für $(uname -r) ==="

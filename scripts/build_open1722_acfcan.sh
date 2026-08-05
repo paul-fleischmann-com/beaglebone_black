@@ -34,9 +34,10 @@ if [ -z "$KERNEL_SRC" ]; then
   exit 1
 fi
 
-if [ ! -d "$OPEN1722_DIR/.git" ]; then
-  OPEN1722_DIR="$OPEN1722_DIR" "$REPO_ROOT/scripts/setup_open1722.sh"
-fi
+# Immer aufrufen, nicht nur wenn $OPEN1722_DIR/.git fehlt — siehe
+# ci_check_acfcan_compile.sh für die Begründung (Issue #278: lokale Patches
+# blieben bei warmem Cache sonst dauerhaft unangewendet).
+OPEN1722_DIR="$OPEN1722_DIR" "$REPO_ROOT/scripts/setup_open1722.sh"
 
 echo "=== Baue Open1722-ACF-CAN-Kernel-Modul gegen $KERNEL_SRC ==="
 make -C "$KERNEL_SRC" M="$MOD_DIR" ARCH=arm CROSS_COMPILE="$CROSS" \

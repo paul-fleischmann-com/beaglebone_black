@@ -16,9 +16,10 @@ OUT_DIR="$REPO_ROOT/bin/open1722"
 
 BINARIES="acf-can-talker acf-can-listener acf-can-bridge cvf-talker cvf-listener"
 
-if [ ! -d "$OPEN1722_DIR/.git" ]; then
-  OPEN1722_DIR="$OPEN1722_DIR" "$REPO_ROOT/scripts/setup_open1722.sh"
-fi
+# Immer aufrufen, nicht nur wenn $OPEN1722_DIR/.git fehlt — siehe
+# ci_check_acfcan_compile.sh für die Begründung (Issue #278: lokale Patches
+# blieben bei warmem Cache sonst dauerhaft unangewendet).
+OPEN1722_DIR="$OPEN1722_DIR" "$REPO_ROOT/scripts/setup_open1722.sh"
 
 echo "=== Konfiguriere Open1722-User-Space-Build (CMake, Cross arm-linux-gnueabihf) ==="
 cmake -S "$OPEN1722_DIR" -B "$BUILD_DIR" \
