@@ -1,0 +1,30 @@
+Fix: Open1722s Kernel-Versions-Guard fuer den rtnl_newlink_params-basierten
+newlink()-Callback ist falsch (>= 6.10 statt >= 6.15). struct
+rtnl_newlink_params existiert im Linux-Kernel (include/net/rtnetlink.h) erst
+ab v6.15 (verifiziert per Diff v6.10..v6.17: 0 Treffer bis einschliesslich
+v6.14, 5 Treffer ab v6.15) -- auf jedem Kernel im Bereich 6.10 <= Version <
+6.15 (z.B. Debian trixie, 6.12.x) nimmt der Guard faelschlich den neuen
+Zweig und der Build bricht mit einem Typkonflikt bei .newlink ab. Siehe
+Issue #278.
+
+Wird von scripts/setup_open1722.sh nach dem Checkout angewendet, damit
+sowohl der native Compile-Check (scripts/ci_check_acfcan_compile.sh) als
+auch der host-kernel-gebundene Build (scripts/build_acfcan_native.sh) und
+der ARM-Cross-Build (scripts/build_open1722_acfcan.sh) den Fix bekommen.
+
+--- a/examples/acf-can/linux-kernel-mod/acfcanmain.c
++++ b/examples/acf-can/linux-kernel-mod/acfcanmain.c
+@@ -258,7 +258,7 @@
+ 	printk(KERN_INFO "ACFCAN interface %s unregistered\n", dev->name);
+ }
+
+-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 10, 0)
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 15, 0)
+ static int acfcan_newlink(struct net_device *dev,
+ 						  struct rtnl_newlink_params *params,
+ 						  struct netlink_ext_ack *extack)
+ #else
+ static int acfcan_newlink(struct net *net, struct net_device *dev,
+ 						  struct nlattr *tb[], struct nlattr *data[],
+ 						  struct netlink_ext_ack *extack)
+ #endif
