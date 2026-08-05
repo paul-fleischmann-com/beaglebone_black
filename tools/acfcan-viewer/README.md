@@ -4,6 +4,10 @@ Open1722-ETH-Node mit Live-Visualisierung für die ACF-CAN-Demo (Issue #259).
 Läuft als Container auf einem beliebigen Host im selben Netz wie die
 BeagleBone Black — kein zweites Board nötig.
 
+Vollständige Schritt-für-Schritt-Anleitung für die Gesamt-Demo (inkl.
+optionaler MACsec/MKA-Absicherung, Issue #260):
+[`docs/how-to/ieee1722-acfcan-demo-userguide.adoc`](../../docs/how-to/ieee1722-acfcan-demo-userguide.adoc).
+
 ```
 BeagleBone Black                    Host (dieser Container)
 vcan0 → acf-can-talker → eth0  ───▶  eth0 → acf-can-listener → vcan1 → app.py → Browser
@@ -44,3 +48,7 @@ Siehe auch #256 (Kernel-Modul-Alternative) und #257 (User-Space-Tools).
 | `ACFCAN_VIEWER_ETHIF` | `eth0` | Ethernet-Interface, auf dem ACF-CAN-Frames empfangen werden |
 | `ACFCAN_VIEWER_PORT` | `8080` | HTTP-Port des Dashboards |
 | `ACFCAN_VIEWER_LISTENER_ARGS` | (leer) | Zusätzliche Flags für `acf-can-listener`, z.B. `--stream-id cafe11` |
+| `ACFCAN_VIEWER_ENABLE_MACSEC` | (aus) | `1` aktiviert mkad + MACsec-Pfad (Issue #260) — siehe User-Guide |
+| `ACFCAN_VIEWER_MACSEC_IF` | `macsec0` | MACsec-Interface, auf dem `acf-can-listener` bei aktivem MACsec hört |
+| `ACFCAN_VIEWER_MKAD_CONFIG` | `/app/mkad-viewer.conf` | mkad-Konfigurationsdatei im Container |
+| `ACFCAN_VIEWER_MKAD_WAIT_TIMEOUT` | `15` | Sekunden, die auf das Erscheinen von `macsec0` gewartet wird |

@@ -1,0 +1,314 @@
+= IEEE 1722 / ACF-CAN Demo — User Guide
+:toc:
+:toc-title: Inhalt
+:icons: font
+:source-highlighter: rouge
+
+Praktische Schritt-für-Schritt-Anleitung für die vcan→Ethernet→Container-Demo
+(Issue #259), optional abgesichert per MACsec/MKA (Issue #260). Für den
+protokoll-/formatseitigen Hintergrund (AVTPDU-Subtypes, ACF-Typen, Open1722-
+Grenzen) siehe `docs/how-to/ieee1722-avtp-acf-referenz.adoc`.
+
+== Überblick
+
+Die Demo tunnelt CAN-Frames von einem virtuellen CAN-Bus (`vcan0`) auf der
+BeagleBone Black als IEEE-1722-ACF_CAN-Nachrichten über Ethernet zu einem
+Container auf einem beliebigen Host im selben Netz — kein zweites Board
+nötig. Der Container dekodiert die Frames zurück auf einen eigenen virtuellen
+CAN-Bus (`vcan1`) und zeigt sie live in einem Web-Dashboard.
+
+[source]
+----
+BeagleBone Black                          Host (acfcan-viewer-Container)
+─────────────────                         ───────────────────────────────
+vcan0 → acf-can-talker → eth0  ────────▶  eth0 → acf-can-listener → vcan1 → app.py → Browser
+                          (IEEE 1722 / ACF-CAN, EtherType 0x22F0)
+----
+
+Optional dazwischengeschaltet: MACsec/MKA (mkad auf beiden Seiten), sodass
+die Ethernet-Verbindung verschlüsselt/integritätsgesichert ist:
+
+[source]
+----
+BeagleBone Black                          Host (acfcan-viewer-Container)
+─────────────────                         ───────────────────────────────
+vcan0 → acf-can-talker → macsec0 ──────▶  macsec0 → acf-can-listener → vcan1 → app.py → Browser
+                  ▲                                       ▲
+                mkad ◀──────── MKA (gemeinsames PSK) ────▶ mkad
+----
+
+.Bausteine
+[cols="1,3,3", options="header"]
+|===
+| Issue | Baustein | Wo im Repo
+
+| #256
+| `acfcan`-Kernel-Modul (Alternative zu den User-Space-Tools, SocketCAN-transparent)
+| `scripts/build_open1722_acfcan.sh`, `project/yocto/meta-bbb-sensors/recipes-bbb/acfcan-mod/`
+
+| #257
+| Open1722 User-Space-Tools (`acf-can-talker`/`-listener`/`-bridge`) + `bbcli acf-can bridge`
+| `scripts/build_open1722_userspace.sh`, `tools/cli/cmd/acfcan.go`
+
+| #258
+| IEEE-1722/ACF-Referenzdokumentation
+| `docs/how-to/ieee1722-avtp-acf-referenz.adoc`
+
+| #259
+| vcan→Eth→Container-Demo + Live-Dashboard
+| `scripts/setup_acfcan_vcan_demo.sh`, `tools/acfcan-viewer/`
+
+| #260
+| MACsec/MKA-Absicherung der Demo-Verbindung
+| `project/macsec/mkad-board.conf`, `scripts/setup_macsec_mka.sh`, `project/yocto/meta-bbb-sensors/recipes-bbb/mkad/`
+|===
+
+Diese Anleitung deckt den durchgängigen Weg über die User-Space-Tools (#257)
+ab — das ist der Pfad, den die Demo (#259/#260) tatsächlich nutzt. Das
+`acfcan`-Kernel-Modul (#256) ist eine unabhängige Alternative auf
+Netzwerkschicht-Ebene und wird am Ende kurz eingeordnet.
+
+== Voraussetzungen
+
+.Benötigt
+* BeagleBone Black mit Debian-Image, erreichbar per SSH (Standard `debian@192.168.7.2`)
+* ARM-Cross-Compiler auf dem Build-Host: `sudo apt install gcc-arm-linux-gnueabihf make cmake git`
+* Ein zweiter Host im selben Netz wie die BeagleBone Black, mit Docker — dort läuft der `acfcan-viewer`-Container (kein zweites Board nötig)
+* MAC-Adresse des Ethernet-Interfaces auf dem Viewer-Host (Ziel für `acf-can-talker`):
++
+[source,bash]
+----
+cat /sys/class/net/eth0/address
+----
+
+== Schritt 1: User-Space-Tools bauen und aufs Board bringen
+
+[source,bash]
+----
+# Build-Host: cross-baut acf-can-talker/-listener/-bridge (+ cvf-talker/-listener)
+make open1722-userspace
+# → bin/open1722/{acf-can-talker,acf-can-listener,acf-can-bridge,cvf-talker,cvf-listener}
+
+# Aufs Board kopieren — /app/open1722/ ist der von den Demo-Skripten und
+# bbcli erwartete Standardpfad (siehe ACFCAN_DEMO_TALKER_BIN in
+# scripts/setup_acfcan_vcan_demo.sh bzw. --binary in bbcli acf-can bridge)
+ssh debian@192.168.7.2 "mkdir -p /app/open1722"
+scp bin/open1722/acf-can-talker bin/open1722/acf-can-listener bin/open1722/acf-can-bridge \
+    debian@192.168.7.2:/app/open1722/
+----
+
+== Schritt 2: Demo auf dem Board starten (ohne MACsec)
+
+Legt `vcan0` an, startet einen Testframe-Generator (1 Frame/s, hochzählende
+CAN-ID) und tunnelt darüber per `acf-can-talker` zum Viewer-Host:
+
+[source,bash]
+----
+ssh debian@192.168.7.2
+ACFCAN_DEMO_DST_MAC=<MAC des Viewer-Hosts> ./scripts/setup_acfcan_vcan_demo.sh
+----
+
+.Umgebungsvariablen `setup_acfcan_vcan_demo.sh`
+[cols="2,1,3", options="header"]
+|===
+| Variable | Standard | Bedeutung
+
+| `ACFCAN_DEMO_DST_MAC`
+| _(Pflicht)_
+| MAC-Adresse der Viewer-Gegenstelle
+
+| `ACFCAN_DEMO_CANIF`
+| `vcan0`
+| Lokales vcan-Interface, auf dem Testframes erzeugt werden
+
+| `ACFCAN_DEMO_ETHIF`
+| `eth0`
+| Ethernet-Interface, über das getunnelt wird (bei aktivem MACsec: `macsec0`, siehe Schritt 4)
+
+| `ACFCAN_DEMO_TALKER_BIN`
+| `/app/open1722/acf-can-talker`
+| Pfad zur `acf-can-talker`-Binary auf dem Board
+
+| `ACFCAN_DEMO_FRAME_INTERVAL`
+| `1`
+| Sekunden zwischen zwei generierten Testframes
+|===
+
+== Schritt 3: Viewer-Container bauen und starten
+
+Auf dem zweiten Host (nicht auf der BeagleBone Black):
+
+[source,bash]
+----
+cd tools/acfcan-viewer
+docker build -t acfcan-viewer .
+docker run --rm -it \
+  --network host \
+  --cap-add=NET_ADMIN \
+  -e ACFCAN_VIEWER_ETHIF=eth0 \
+  acfcan-viewer
+----
+
+`--network host` + `--cap-add=NET_ADMIN` sind nötig, damit der Container ein
+`vcan`-Interface anlegen und rohe Ethernet-Frames auf dem echten
+Host-Interface empfangen kann.
+
+Dashboard danach unter `\http://<viewer-host>:8080/` — nach wenigen Sekunden
+sollten die vom Board generierten Testframes erscheinen (Status-Punkt
+`Live`, hochzählender Frame-Zähler).
+
+== Schritt 4 (optional): MACsec/MKA-Absicherung aktivieren
+
+Baut auf Schritt 2/3 auf — Board und Viewer sprechen zusätzlich über ein
+`mkad`-verschlüsseltes MACsec-Interface (`macsec0`) statt über das rohe
+Ethernet-Interface. `mkad` (https://github.com/Technica-Engineering/MKAdaemon)
+ist Teil des Yocto-Images (`bbb-full-image`, Issue #260) bzw. wird im
+Viewer-Image mitgebaut.
+
+WARNING: `mkad-board.conf` und `mkad-viewer.conf` enthalten ein
+Demo-Pre-Shared-Key (`cak`/`ckn`), identisch zum MKAdaemon-Upstream-Beispiel.
+Für echten Einsatz durch selbst generierte Werte ersetzen
+(`openssl rand -hex 16` für `cak`, `openssl rand -hex 2` für `ckn`) — beide
+Seiten müssen exakt übereinstimmen.
+
+[source,bash]
+----
+# Board: mkad-Konfiguration deployen und mkad starten
+scp project/macsec/mkad-board.conf debian@192.168.7.2:/app/mkad-board.conf
+ssh debian@192.168.7.2 './scripts/setup_macsec_mka.sh &'
+
+# Board: Demo jetzt über das MACsec-Interface statt über eth0 tunneln
+ACFCAN_DEMO_ETHIF=macsec0 ACFCAN_DEMO_DST_MAC=<MAC des Viewer-Hosts> \
+    ./scripts/setup_acfcan_vcan_demo.sh &
+
+# Viewer-Host: Container mit aktivierter MACsec-Unterstützung starten
+cd tools/acfcan-viewer
+docker build -t acfcan-viewer .
+docker run --rm -it \
+  --network host \
+  --cap-add=NET_ADMIN \
+  -e ACFCAN_VIEWER_ENABLE_MACSEC=1 \
+  acfcan-viewer
+----
+
+Im Dashboard erscheint zusätzlich ein MACsec-Status-Badge (`aktiv 🔒` bei
+aktiver Security Association). Ohne aktive SA fallen `acf-can-listener` nicht
+auf das rohe Interface zurück — es kommt bewusst kein Frame an (siehe
+Fehlerdiagnose).
+
+.Umgebungsvariablen MACsec/MKA
+[cols="2,1,3", options="header"]
+|===
+| Variable | Standard | Bedeutung
+
+| `ACFCAN_VIEWER_ENABLE_MACSEC`
+| _(aus)_
+| `1` aktiviert mkad + MACsec-Pfad im Viewer-Container
+
+| `ACFCAN_VIEWER_MACSEC_IF`
+| `macsec0`
+| MACsec-Interface, auf dem `acf-can-listener` bei aktivem MACsec hört
+
+| `ACFCAN_VIEWER_MKAD_CONFIG`
+| `/app/mkad-viewer.conf`
+| mkad-Konfigurationsdatei im Container
+
+| `MKAD_CONFIG` (Board, `setup_macsec_mka.sh`)
+| `/app/mkad-board.conf`
+| mkad-Konfigurationsdatei auf dem Board
+
+| `MACSEC_WAIT_TIMEOUT` / `ACFCAN_VIEWER_MKAD_WAIT_TIMEOUT`
+| `15`
+| Sekunden, die auf das Erscheinen von `macsec0` gewartet wird, bevor abgebrochen wird
+|===
+
+== Alternative: `bbcli acf-can bridge` statt Talker-Skript
+
+Für einen bidirektionalen Tunnel (Talker + Listener in einem Prozess) direkt
+auf dem Board, verwaltet als Hintergrundprozess über `bbcli` statt über
+`scripts/setup_acfcan_vcan_demo.sh`:
+
+[source,bash]
+----
+bbcli acf-can bridge start \
+  --ethif eth0 --canif vcan0 --dst-mac <MAC der Gegenstelle>
+bbcli acf-can bridge status
+bbcli acf-can bridge stop
+----
+
+`acf-can-bridge` ist kein HAL-Feature und läuft nicht über die REST-API —
+`bbcli` startet/stoppt den lokalen Subprozess direkt (PID-/Log-Datei unter
+`/tmp/bbcli-acf-can-bridge.*`). Details: `tools/cli/cmd/acfcan.go`.
+
+== Einordnung: `acfcan`-Kernel-Modul (#256)
+
+Das `acfcan`-Kernel-Modul ist eine unabhängige Alternative zu den
+User-Space-Tools: ein eigenständiges SocketCAN-Netzwerkinterface, das
+`cansend`/`candump` transparent unterstützt und ACF-CAN-Tunneling direkt im
+Kernel erledigt (angesprochen über `ip link ... type acfcan` + sysfs unter
+`/sys/class/net/<dev>/acfcan/`). Es ist **nicht** Teil des in dieser
+Anleitung beschriebenen Demo-Pfads (der nutzt die User-Space-Tools aus
+#257) — sinnvoll, wenn eine Anwendung ACF-CAN transparent wie einen
+gewöhnlichen CAN-Bus ansprechen soll, ohne einen separaten
+Talker/Listener-Prozess zu verwalten. Build/Deploy und ein
+Ein-Board-Testaufbau (veth-gebrückte `ecu0`/`ecu1`-Interfaces) sind in
+`tests/hardware/test_acfcan.py` dokumentiert.
+
+== Automatisierte Tests
+
+[source,bash]
+----
+# Basis-Demo (ohne MACsec) — Board sendet Frame, Frame erscheint im Viewer
+BEAGLE_HOST=192.168.7.2 VIEWER_HOST=<viewer-host> \
+    pytest tests/hardware/test_acfcan_demo.py -v
+
+# MACsec/MKA — Positiv- (aktive SA + Frame kommt an) und Negativtest
+# (ohne aktive SA kommt kein Frame über den MACsec-Pfad an)
+BEAGLE_HOST=192.168.7.2 VIEWER_HOST=<viewer-host> \
+    pytest tests/hardware/test_macsec_mka.py -v
+----
+
+Beide Tests brauchen einen erreichbaren `acfcan-viewer`-Container
+(`VIEWER_HOST` ohne Standardwert — Pflicht) und werden übersprungen, wenn
+dieser nicht erreichbar ist.
+
+== Fehlerdiagnose
+
+[cols="2,2,3", options="header"]
+|===
+| Problem | Ursache | Lösung
+
+| `ACFCAN_DEMO_DST_MAC ... muss gesetzt sein`
+| Pflicht-Env-Variable fehlt
+| MAC-Adresse des Viewer-Hosts ermitteln (`cat /sys/class/net/eth0/address`) und setzen
+
+| Dashboard bleibt bei „Warte auf ACF-CAN-Frames …“
+| `acf-can-talker` auf dem Board nicht erreichbar/falsches Interface, oder Docker-Networking blockiert rohe Frames
+| `--network host --cap-add=NET_ADMIN` prüfen; `ACFCAN_VIEWER_ETHIF`/`ACFCAN_DEMO_ETHIF` müssen auf dasselbe physische Netz zeigen
+
+| `docker run` schlägt an `ip link add ... type vcan` fehl
+| Fehlende `NET_ADMIN`-Capability oder `vcan`-Kernelmodul auf dem Host nicht verfügbar
+| `--cap-add=NET_ADMIN` setzen; `modprobe vcan` auf dem Docker-Host prüfen
+
+| MACsec-Badge bleibt „prüfe …“ / „inaktiv“
+| `mkad` läuft nicht auf einer/beiden Seiten, oder `cak`/`ckn` stimmen nicht überein
+| `mkad`-Log auf Board und Container prüfen; `mkad-board.conf`/`mkad-viewer.conf` auf identisches PSK abgleichen
+
+| `FEHLER: macsec0 nach 15s nicht erschienen`
+| MKA-Handshake kommt nicht zustande (PSK-Mismatch, `eth0` falsch, Firewall blockiert MKA-Multicast)
+| `MACSEC_WAIT_TIMEOUT`/`ACFCAN_VIEWER_MKAD_WAIT_TIMEOUT` erhöhen und `mkad --config ... ` manuell im Vordergrund mit `log_level: debug` laufen lassen
+
+| Kein Frame trotz aktiver MACsec-SA
+| `ACFCAN_DEMO_ETHIF` zeigt noch auf `eth0` statt `macsec0`
+| `ACFCAN_DEMO_ETHIF=macsec0` beim Neustart von `setup_acfcan_vcan_demo.sh` setzen
+|===
+
+== Referenz
+
+* Protokoll-/Formathintergrund (AVTPDU-Subtypes, ACF-Typen, Open1722 vs. Standard): `docs/how-to/ieee1722-avtp-acf-referenz.adoc`
+* Container-Details (Umgebungsvariablen, Build): `tools/acfcan-viewer/README.md`
+* Talker/Demo-Skript: `scripts/setup_acfcan_vcan_demo.sh`
+* MACsec-Startskript (Board): `scripts/setup_macsec_mka.sh`
+* mkad-Konfiguration: `project/macsec/mkad-board.conf`, `tools/acfcan-viewer/mkad-viewer.conf`
+* Web-Dashboard/API des Viewers: `tools/acfcan-viewer/app.py` (`/history`, `/stream`, `/macsec-status`, `/health`)
+* Zugehörige Issues: #256, #257, #258, #259, #260 (Milestone „IEEE1722 demo“)
