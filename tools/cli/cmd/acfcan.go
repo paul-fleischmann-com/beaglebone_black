@@ -6,7 +6,6 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
-	"syscall"
 
 	"github.com/spf13/cobra"
 )
@@ -35,6 +34,9 @@ var acfCanBridgeStartCmd = &cobra.Command{
 	Use:   "start",
 	Short: "Startet acf-can-bridge im Hintergrund",
 	RunE: func(cmd *cobra.Command, args []string) error {
+		if err := acfCanBridgeSupported(); err != nil {
+			return err
+		}
 		if pid, alive := acfCanBridgeRunning(); alive {
 			return fmt.Errorf("acf-can-bridge läuft bereits (PID %d) — zuerst 'bbcli acf-can bridge stop'", pid)
 		}
@@ -59,7 +61,7 @@ var acfCanBridgeStartCmd = &cobra.Command{
 		proc := exec.Command(acfCanBinary, bridgeArgs...)
 		proc.Stdout = logFile
 		proc.Stderr = logFile
-		proc.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
+		setDetachedProcAttr(proc)
 
 		if err := proc.Start(); err != nil {
 			return fmt.Errorf("acf-can-bridge konnte nicht gestartet werden: %w", err)
@@ -82,7 +84,7 @@ var acfCanBridgeStopCmd = &cobra.Command{
 		if !alive {
 			return fmt.Errorf("keine laufende acf-can-bridge gefunden (%s)", acfCanPidFile)
 		}
-		if err := syscall.Kill(-pid, syscall.SIGTERM); err != nil {
+		if err := killProcessGroup(pid); err != nil {
 			return fmt.Errorf("acf-can-bridge (PID %d) konnte nicht beendet werden: %w", pid, err)
 		}
 		os.Remove(acfCanPidFile)
@@ -104,8 +106,10 @@ var acfCanBridgeStatusCmd = &cobra.Command{
 	},
 }
 
-// acfCanBridgeRunning prüft anhand der PID-Datei, ob der Prozess noch lebt
-// (Signal 0 löst keine tatsächliche Zustellung aus, nur eine Existenzprüfung).
+// acfCanBridgeRunning prüft anhand der PID-Datei, ob der Prozess noch lebt.
+// setDetachedProcAttr/killProcessGroup/processAlive/acfCanBridgeSupported
+// sind plattformspezifisch (acfcan_unix.go/acfcan_windows.go) — unter
+// Windows fehlen syscall.Setsid/syscall.Kill (siehe Issue #275).
 func acfCanBridgeRunning() (int, bool) {
 	data, err := os.ReadFile(acfCanPidFile)
 	if err != nil {
@@ -115,7 +119,7 @@ func acfCanBridgeRunning() (int, bool) {
 	if err != nil {
 		return 0, false
 	}
-	if err := syscall.Kill(pid, 0); err != nil {
+	if !processAlive(pid) {
 		os.Remove(acfCanPidFile)
 		return 0, false
 	}

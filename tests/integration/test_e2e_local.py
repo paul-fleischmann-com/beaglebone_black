@@ -15,7 +15,7 @@ Was dieser Test beweist:
       arbeiten korrekt zusammen — Round-Trip-Wert an D1 entspricht exakt
       dem deterministischen Mock-Sensorwert von D5.
     - Das acfcan-Kernelmodul wird hier NATIV für den Kernel des Test-Hosts
-      gebaut (siehe scripts/ci_check_acfcan_compile.sh) — derselbe
+      gebaut (siehe scripts/build_acfcan_native.sh) — derselbe
       Open1722-Quellcode wie im Cross-Build fuer den echten BBB-Kernel
       (scripts/build_open1722_acfcan.sh), aber eine andere Binärdatei.
 
@@ -28,9 +28,10 @@ Was dieser Test NICHT beweist:
 Voraussetzungen (werden per Fixture geprüft, Test wird sonst geskippt):
     - root/CAP_NET_ADMIN (Namespaces, veth, vxcan) und CAP_SYS_MODULE
       (acfcan-Kernelmodul laden), z.B. via privilegiertem Docker-Container
+    - kmod (modprobe/lsmod/insmod/rmmod) installiert
     - Kernel-Module vxcan, can, can-gw ladbar (Mainline-Kernel-Standard)
     - acfcan.ko: entweder bereits geladen (lsmod) oder unter
-      E2E_LOCAL_ACFCAN_KO vorhanden (siehe scripts/ci_check_acfcan_compile.sh)
+      E2E_LOCAL_ACFCAN_KO vorhanden (siehe scripts/build_acfcan_native.sh)
     - can-hal-bridge/rest-can-gateway nativ gebaut (kein GOARM=7-Cross-Build
       wie im Makefile, siehe E2E_LOCAL_BRIDGE_BIN/E2E_LOCAL_GATEWAY_BIN):
           cd project/go-api
@@ -114,6 +115,8 @@ def voraussetzungen_verfuegbar():
     Hardware-Tests."""
     if shutil.which("ip") is None:
         pytest.skip("iproute2 (ip) nicht gefunden")
+    if shutil.which("modprobe") is None:
+        pytest.skip("modprobe (Paket kmod) nicht gefunden")
     if not _can_manage_netns():
         pytest.skip(
             "CAP_NET_ADMIN/CAP_SYS_ADMIN fehlt — Netzwerk-Namespaces koennen "
@@ -127,7 +130,7 @@ def voraussetzungen_verfuegbar():
     if not acfcan_loaded and not os.path.isfile(ACFCAN_KO):
         pytest.skip(
             f"acfcan-Kernelmodul weder geladen noch unter E2E_LOCAL_ACFCAN_KO "
-            f"({ACFCAN_KO}) gefunden — siehe scripts/ci_check_acfcan_compile.sh"
+            f"({ACFCAN_KO}) gefunden — siehe scripts/build_acfcan_native.sh"
         )
 
     for label, path in (("E2E_LOCAL_BRIDGE_BIN", BRIDGE_BIN), ("E2E_LOCAL_GATEWAY_BIN", GATEWAY_BIN)):
