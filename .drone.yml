@@ -1664,20 +1664,21 @@ steps:
     commands:
       - sh scripts/run-step.sh
 
+  # alpine/git statt plugins/git-action — derselbe Race-Condition-Fix wie bei
+  # push-exports (architecture-export-Pipeline, siehe scripts/ci-git-push-retry.sh):
+  # ein blinder Push scheitert mit "non-fast-forward", sobald ein anderer,
+  # zeitgleich laufender Build (z.B. push-exports desselben Commits)
+  # zwischenzeitlich schon auf main gepusht hat.
   - name: push-changelog
-    image: plugins/git-action
+    image: alpine/git
     pull: if_not_exists
     depends_on: [update-changelog]
     environment:
-      PLUGIN_NETRC_PASSWORD:
+      GIT_TOKEN:
         from_secret: git_token
-    settings:
-      actions:
-        - push
-      remote: https://github.com/paulefl/beaglebone_black.git
-      branch: main
-      netrc_machine: github.com
-      netrc_username: paulefl
+      DRONE_BRANCH: main
+    commands:
+      - sh scripts/ci-git-push-retry.sh
     when:
       event: [push]
       branch: [main]
