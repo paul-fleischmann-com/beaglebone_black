@@ -33,10 +33,14 @@ if [ -n "${REGISTRY_TOKEN:-}" ]; then
 fi
 
 # For the bausteinsicht image: read the required Go version from upstream go.mod
-# so the builder stage always matches what Bausteinsicht declares.
+# so the builder stage always matches what Bausteinsicht declares. Reads from
+# the SAME pinned tag as BAUSTEINSICHT_REV in docker/bausteinsicht/Dockerfile
+# (not "main") — otherwise the pin only covers the cloned source, not the Go
+# toolchain selection, and an unrelated upstream main-branch bump could still
+# break this build. Keep both in sync when bumping the pin.
 GO_VERSION_ARG=""
 if [[ "$IMAGE" == "bausteinsicht" ]]; then
-  GO_MOD_URL="https://raw.githubusercontent.com/docToolchain/Bausteinsicht/main/go.mod"
+  GO_MOD_URL="https://raw.githubusercontent.com/docToolchain/Bausteinsicht/v1.2.1/go.mod"
   GO_VERSION=$(curl -fsSL "$GO_MOD_URL" | grep -E '^go ' | awk '{print $2}' | cut -d. -f1,2)
   if [[ -n "$GO_VERSION" ]]; then
     echo "Detected Go version from Bausteinsicht go.mod: $GO_VERSION"
