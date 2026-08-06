@@ -301,6 +301,860 @@ Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
 - Update exported diagrams [skip ci] 
 - Update exported diagrams [skip ci] 
 - Update exported diagrams [skip ci] 
+- Update unreleased section [skip ci] 
+
+### Software-Änderungen
+
+- Add bausteinsicht modell 
+-  add bausteinsicht bin and script to call it 
+- Add exported images from jsonc modell 
+- Break import cycle between pkg/hal and pkg/hal/c 
+- Update go.sum after go mod tidy 
+- Fix issues found by go linter 
+- Fix issue of wrong state of test case 
+- Add md file to create issues with help of claude 
+- Add md  fill about ReqMgmt tool 
+- Integrate StrictDoc as requirements management tool (#33) 
+- Upload output/strictdoc/html/ to fix GitHub Pages URL 
+- Export StrictDoc PDF, Excel, ReqIF and deploy to GitHub Pages 
+- Limit source traceability scan to go-api/, c-lib/, rust-lib/ 
+- Integrate pytest JUnit XML test reports into StrictDoc 
+- Add tests/ to include_source_paths 
+- Add Makefile to include_source_paths for SYS-005 relation 
+- Fix PDF output path and add continue-on-error to artifact downloads 
+- Add custom grammar with SYS/SW/HW_REQUIREMENT, SOURCE_CODE, TEST_CASE types 
+- Add setup-labels workflow for reproducible label setup 
+- Remove hardcoded /home/claude/ fallback path (#34) 
+- Automated changelog handling with Keep a Changelog + VERSION in Makefile (#42) 
+- Add automated release workflow with workflow_dispatch (#44) 
+- Use find -type f for checksums to skip directories in release job 
+- Add contents:write permission to release job 
+- Podman container script and CI workflow (#45) (#46) 
+- Mount model dir rw, fix export paths, add export dirs step 
+- Disable git credential prompt for public repo clone 
+- Bypass git credential helper for public repo clone 
+- Move git clone to workflow step, script only builds image 
+- Use actions/checkout to clone Bausteinsicht repo 
+- Drop container approach, run binary directly in CI 
+- Install draw.io CLI and use xvfb-run for PNG export 
+- SonarCloud Integration für Quality Monitoring (#47) (#48) 
+- Remove duplicate OUTPUT env for git-cliff, increase Pages smoke-test sleep to 30s 
+- Replace fixed sleep with retry loop for Pages smoke-test (max 3min) 
+- Git-cliff write to temp file then prepend to CHANGELOG.md 
+- Copy bb_dashboard.html to index.html for GitHub Pages 
+- Start_ticket zeigt automatisch Issue-Liste bei leerem Argument (#61) 
+- Automatisches PR-Review mit Bot-Token-Support in start_ticket (#64) 
+- ShellCheck SARIF Report für SonarCloud (#55) (#68) 
+- Deaktiviere C/C++ SonarCloud-Analyse + verbessertes Error Reporting (#70) 
+- POST /api/v1/backend wechselt jetzt tatsächlich den HAL-Backend (#72) 
+- Trend-Cache Git-Fallback via reports-Branch (#74) 
+- POST-Handler geben 400 bei ungültigem JSON zurück (#75) 
+- HTTP-Server mit ReadTimeout/WriteTimeout/IdleTimeout (Issue #21) (#77) 
+- Regression Test für BME280StreamHandler Flusher nil-Check (Issue #27) (#79) 
+- Flag.Parse() aus Library-Package entfernt (Issue #26) (#81) 
+- CORS OPTIONS Preflight-Requests behandeln (Issue #22) (#83) 
+- Collect_results.py + statisch/dynamisch Trennung (Issue #15) (#84) 
+- Phase 1 — Tooling in tooling/ Ordner gruppieren (Issue #85) (#86) 
+- Phase 3 — tooling/ aus Repo entfernen, via Release-Download (Issue #85) (#87) 
+- C Code Coverage CI-Integration (#88) 
+- Use download-tooling composite action 
+- Use go-test composite action 
+- Use shellcheck-sarif and c-test composite actions 
+- Add explicit download-tooling step before go-test 
+- Git worktree --orphan syntax für git 2.40+ 
+- Use strictdoc and test-report composite actions 
+- Use sonarcloud composite action 
+- Remove download-tooling steps — scripts via GITHUB_ACTION_PATH 
+- Add security-events:write for SARIF upload, bump to v1.1.9 
+- Add strictdoc SARIF + requirements coverage, bump to v1.1.11 
+- Alle SARIF- und Rust-Coverage-Pfade in sonar-project.properties ergänzen 
+- SonarQube Issues Report in CI einbinden 
+- Default case (*) in report.sh + tooling-Scan im CI (Issue #115) (#117) 
+- Download-tooling Step durch shellcheck-sarif include-tooling ersetzen 
+- Duplicate string literals durch Konstanten ersetzen (S1192 CRITICAL) (#132) 
+- If-Statement auf neue Zeile, else ergänzt in bme280.c (S3972 CRITICAL) (#136) 
+- Explizite Casts für integer precision conversions in bme280.c und spi.c (S5276 MAJOR) (#144) 
+- SonarCloud Quality Gate Wait aktivieren — PR-Merge bei neuen Issues blockieren 
+- Changelog race condition — rebase auf origin/main vor Branch-Erstellung 
+- ShellCheck-Findings SC2034/SC2188/SC2069/SC2064 beheben (#143) (#150) 
+- Add scripts/ to sonar.sources for SARIF path resolution (#151) 
+- Resolve Quality Gate issues and SARIF path resolution (#152) 
+- Add add args for sonarqube action 
+- Add step to build and deploy for beaglebone balck board 
+- Add ci file for bbb 
+- Add ci file for bbb and remove it from ci.yml 
+- Add selfhosted ci and files 
+- Fix no allowed pip hanlding 
+- Add debug to python test 
+- Add bash to docker 
+- Add bb input parameters 
+- Fix ssh issue 
+- Fix ssh issue 
+- Fix ssh issue 
+- Fix ssh issue 
+- Add handling to provide log function for python tests 
+- Add tee koging mechanism for running binaries on BBB 
+- Add handling to not executed lib 
+- Add coverage handling 
+- Fix coverage handling 
+- Fix coverage handling 
+- Fix coverage handling 
+- Fix coverage handling 
+- Fix coverage handling 
+- Fix coverage handling 
+- Fix coverage handling 
+- Fix coverage handling 
+- Fix coverage handling 
+- Fix coverage handling 
+- Fix coverage handling 
+- Fix coverage handling 
+- Add first BME280 test 
+- Add first BME280 test - fix path for test c file 
+- Add a html report of tests 
+- Fix missing declartation 
+- Fix missing ; 
+- Fix lib path 
+- Fix src path for cov 
+- Add code from https://github.com/boschsensortec/BME280_SensorAP 
+- Add code from https://github.com/boschsensortec/BME280_SensorAP 
+- Add code from https://github.com/boschsensortec/BME280_SensorAP 
+- Add code from https://github.com/boschsensortec/BME280_SensorAP 
+- Add code from https://github.com/boschsensortec/BME280_SensorAP 
+- Add code from https://github.com/boschsensortec/BME280_SensorAP 
+- Add i2c handling in rust code 
+- Fix compile issue in rust code 
+- Fix compile issue in rust code 
+- Fix issue in compile go tests 
+- Fix sudo issue 
+- Fix git action reference issue 
+- Add token for self host runner 
+- Add token for all runners 
+- Fix checkout action issue 
+- Fix issue von fehlerhaften test steps 
+- Fix issue von fehlerhaften test steps - step 2 
+- Fix issue von fehlerhaften test steps - step 3 
+- Fix issue von fehlerhaften test steps - step 4 
+- Fix issue von fehlerhaften test steps - step 5 
+- Fix issue von fehlerhaften test steps - step 6 
+- Fix issue von fehlerhaften test steps - step 7 
+- Fix issue von fehlerhaften test steps - step 8 
+- Fix issue von fehlerhaften test steps - step 9 
+- Fix issue von fehlerhaften test steps - step 10 
+- Fix issue von fehlerhaften test steps - step 11 
+- Fix issue von fehlerhaften test steps - step 12 
+- Fix issue von fehlerhaften test steps - step 13 
+- Fix issue von fehlerhaften test steps - step 14 
+- Fix issue von fehlerhaften test steps - step 15 
+- Fix publish test report issue 
+- Add python sonarqube report file 
+- Add python sonarqube report file - Ver 2 
+- Add python sonarqube report file - Ver 2 
+- Fix  issue -- The right-hand operands of && and || should not contain side effects c:S912 -- gefunden von sonarqube 
+- Fix security hotspots 
+- Fix security issus 
+- Fix issus reported by sonarqube 
+- Add how to für BME280 senor board anschließen und setup env targets 
+- Correct yaml list item for gocover-cobertura install 
+- Use golang:1.23 to match go.mod requirement 
+- Use golang:1.24 to match tools/tui go.mod requirement 
+- Test only mock-compatible packages, exclude c/rust CGO packages 
+- Shellcheck only fail on errors, not warnings/infos 
+- Pipeline 7 remove step volumes, use shared /drone/src workspace 
+- Inline SRC/OUTPUT env vars to avoid map-into-string parse error 
+- Add debug information to build-docker-image 
+- Add custom evtent as trigger 
+- Add custom evtent as trigger and also on develop 
+- Consolidate apt-get installs — remove duplicate python3-venv/pip install that caused disk full 
+- Remove VERSION files for builder/strictdoc — version managed in drone.yml 
+- Use Bau_token for plugins/buildah registry auth (consistent with other steps) 
+- Use \${DRONE_REPO_OWNER} in plugins/buildah repo field 
+- Replace plugins/buildah with podman for builder and strictdoc 
+- Use multiline from_secret syntax for plugins/buildah 
+- Drop plugins/buildah, use podman for all image builds 
+- Add VERSION files for builder and strictdoc 
+- Skip container build if version already exists in ghcr.io 
+- Extract container build logic into scripts/build-container.sh 
+- Use skopeo inspect for remote registry version check 
+- Remove --creds from skopeo, use podman login auth store 
+- Use curl ghcr.io v2 API for version existence check 
+- Use OCI token exchange for ghcr.io manifest check 
+- Use podman pull for ghcr.io version existence check 
+- Check manifest JSON content instead of exit code 
+- Grep schemaVersion without quotes (output uses escaped quotes) 
+- Generate build-libraries-junit.xml from ARM build steps 
+- Merge junit report steps into one using glob reports/*.xml 
+- Add Allure report generation and SCP upload 
+- Add Allure report generation and SCP upload to all pipelines 
+- Optimize drone.yml (1291 → 1267 lines) 
+- Replace deprecated openjdk:17-slim with eclipse-temurin:17-jre-alpine 
+- Prevent duplicate JUnit XML from build-arm.sh 
+- Move SRC/OUTPUT from inline env to environment: block in build-arm steps 
+- Use generic-builder for test-c-lib, skip apt-get install 
+- Use generic-builder for test-rust-lib and test-go, skip package installs 
+- Add gocover-cobertura to generic-builder image 
+- Use eclipse-temurin:17-jre (debian) instead of alpine for allure steps 
+- Refine trigger paths — add hal/go-api, build script, builder image; remove .drone.yml 
+- Refine trigger conditions for all pipelines 
+- Pre-fetch Rust crate dependencies in image (v1.2.0) 
+- Replace manual SSH deploy with drone-scp + drone-ssh plugins 
+- Move allure-generate after notify to fix unknown step dependency linter error 
+- Add xauth package — required by xvfb-run (v1.1.0) 
+- Use GitHub API to resolve git-cliff download URL dynamically 
+- Add mkdir to upload-allure steps 
+- Fix falsches command handling 
+- @pr-reviewer Agent — Code-Review + Requirements-Traceability via GitHub PR Review (#220) 
+- Add @requirements-checker agent for SDoc traceability (#233) 
+- ASPICE SWE.1 Level 2 — Traceability, Coverage & Requirements (#237) 
+- Vollstaendige Hook-Konfiguration fuer Projekt-Automatisierung (#238) 
+- Phase 2-6 — User Story, ASPICE-Agenten, Sprint-Manager, Reporting (#234) (#239) 
+- Drawio symlink non-fatal wenn binary nicht gefunden (#stage9) 
+- Allure-report.zip nach publish-allure im Downloads-Verzeichnis behalten 
+- Make info target mit Übersicht aller Make-Targets 
+- Fix issue build bausteinschict container 
+- Fix issue build bausteinschict container 
+- Drawio via apt-get install statt dpkg --ignore-scripts 
+- Drawio-export wrapper script für headless Betrieb hinzugefügt 
+- Dbus-x11 für dbus-run-session in drawio-export hinzugefügt 
+- Bausteinsicht ohne clone-step — git clone im Dockerfile, kein repo-src im Build-Context 
+- Git clone mit podman build-secret statt interaktiver Auth 
+- GIT_TERMINAL_PROMPT=0 statt secret für public repo clone 
+- Bau_token als build-secret für git clone in bausteinsicht Dockerfile 
+- Shellcheck speichert findings in reports/shellcheck.txt mit Summary 
+- Shellcheck report persistent unter /downloads/shellcheck/ speichern 
+- Shellcheck JUnit XML pro Script-Datei generieren 
+- Shellcheck CMD in Makefile-Target shellcheck-report ausgelagert 
+- Drawio und base-deps in einem RUN-Step — apt-lists bleiben für dep-Auflösung erhalten 
+- Fix issue build bausteinschict container - correct next version 
+- Drawio via dpkg -i + apt-get install -f für robuste Dep-Auflösung 
+- Header-copy vor Go-Build, go.sum für cli, shellcheck ohne make 
+- Pipe 3 optimiert — CLI/TUI builds konsolidiert, go mod tidy entfernt 
+- Build.rs + cbindgen.toml für automatische hardware_rs.h Generierung 
+- Pipe 8 zeigt bausteinsicht container version im show-version step 
+- YAML-Fehler in show-version command — colon in plain scalar gequotet 
+- Go.sum für tools/tui hinzugefügt 
+- RsUartHandle mit *mut c_void statt Trait-Object — FFI-safe für cbindgen 
+- Drawio symlink nach apt-install manuell anlegen via find 
+- Drawio install mit apt -f fallback + explizite Fehlerdiagnose 
+- VERSION auf 1.1.5 (nächste nach latest 1.1.4 in registry) 
+- Drawio install ohne --no-install-recommends und ohne || true 
+- Ca-certificates für wget HTTPS zu github.com hinzugefügt 
+- Bme280 CGO-Wrapper hinzugefügt, RsUartHandle.port → .r im Rust-Driver 
+- GIT_USER direkt als paulefl statt nicht-auflösendem Secret 
+- Paulefl direkt in Push-URL hardcodiert, GIT_USER entfernt 
+- Git-cliff version gepinnt, make installiert, CMD in Script ausgelagert 
+- Git_token durch Bau_token ersetzt in allen GIT_TOKEN Steps 
+- GIT_TOKEN zurück auf git_token 
+- GitHub repo URL hardcodiert, DRONE_GIT_HTTP_URL entfernt 
+- PLUGIN_NETRC_PASSWORD via environment statt settings für Drone secret resolution 
+- YAML plain scalar mit Doppelpunkt in commit-exports gequotet 
+- BME280_POWERMODE_FORCED und settings via bme280_get_sensor_settings; fix(ci): ci-prepend-changelog.sh shebang auf sh 
+- Mkdir go-api/libs vor cp der .so-Dateien 
+- Deploy-Pfad auf /home/debian/app/ geändert (kein sudo nötig) 
+- Restart-service auf failure:ignore, korrekter SCP-Zielpfad 
+- Systemctl --user statt sudo systemctl für embedded-sw 
+- XDG_RUNTIME_DIR für systemctl --user, pytest-timeout in allen Test-Steps 
+- Korrekter ExecStart-Pfad, dynamische UID, GCOV_PREFIX für Unity-Runner 
+- JSON-Fehlerantworten statt plain-text; fix(ci): openssh-client im hardware-test Container 
+- HW_BME280_ADDR env var; fix(ci): I2C bus 2 und Adresse 0x77 im Service 
+- Pass I2C bus path and address to C BME280 init 
+- Reduce false SKIPPED tests in hardware test suite 
+- Konfigurierbarer API-Host für Cross-Origin Setup 
+- Kein Port wenn Nginx-Proxy auf gleichem Host 
+- I2cCtx in C-Speicher allozieren (CGO-Pointer-Regel) 
+- Defer hwMu.Unlock() in backendHandler verhindert Mutex-Deadlock 
+- Bme280_dev vollständig in C-Speicher (CGO-Pointer-Regel) 
+- Client-Tools Requirements (CLI/TUI/GUI/Web) mit Tests und Traceability (#240) (#242) 
+- BME280 Oversampling nach Soft-Reset in bme280_open konfigurieren 
+- -lm zu CGO-Linker-Flags hinzufügen (pow() in bme280.c) 
+- Add execute permissions for scripts 
+- Add bausteinsicht v100 
+- Fix zu lange description 
+- Fix zu lange description 
+- Fix zu lange description 
+- Fix container build for bausteinsicht 
+- Add meta-bbb-sensors layer with BME280 driver, kernel cfg, DT overlay (#250) 
+- Add scripts/build_yocto.sh and bbb-embedded recipe (Go API + HAL libs) 
+- Feat(pru): PRU1-RPMsg-GPIO-Firmware + Host-Kommunikationsschicht (#252)
+- scripts/setup_pru_toolchain.sh: lädt GNU-PRU-Toolchain (dinuxbg/gnupru) +
+  GCC-kompatible pru-software-support-package
+- project/pru/fw/pru1_gpio_ctrl: RPMsg-Firmware (SET/GET auf R30/R31-Bit),
+  mit echter Toolchain kompiliert und verifiziert (resource_table/pru_irq_map
+  Sections korrekt platziert)
+- project/c/src/pru.c: remoteproc-sysfs Load/Stop + rpmsg-chardev-Discovery
+  über /sys/class/rpmsg (kein fester /dev/rpmsg_pruX-Pfad, siehe Plan-Doku)
+- Error-Path-Tests in test_c_lib.c (CI ohne Hardware) 
+- Feat(hal): neuer PRU-Backend für deterministisches GPIO (#252)
+interface.go: BackendPRU-Konstante. pkg/hal/pru/driver.go: CGO-Bindings an
+pru.c (RPMsg-Kommando SET/GET auf R30/R31-Bit 0-15). BME280/UART/SPI liefern
+für dieses Backend einen 'nicht unterstützt'-Fehler. factory.go: case "pru",
+kein Teil von 'auto' (bleibt C→Rust-Fallback). config.go: HW_PRU_CORE,
+HW_PRU_RPMSG_PORT, HW_PRU_FIRMWARE. 
+- Feat(yocto): PRUSS-DT-Overlay + Kernel-Cfg + pru-fw-Rezept (#252)
+- bbb-pruss.cfg: CONFIG_REMOTEPROC/TI_PRUSS/PRU_REMOTEPROC/RPMSG_CHAR
+  (Symbole gegen drivers/soc/ti + drivers/remoteproc + drivers/rpmsg
+  Kconfig verifiziert)
+- bbb-pruss-overlay: DT-Overlay adaptiert von beagleboard/bb.org-overlays
+  (AM335X-PRU-RPROC-4-19-TI-00A0.dts), lokal mit dtc kompiliert und
+  verifiziert (BBB-PRUSS-00A0.dtbo)
+- pru-fw_1.0.bb: baut project/pru/fw/pru1_gpio_ctrl per SRC_URI-gefetchter
+  GNU-PRU-Toolchain + PSSP (kein Netzwerk in do_compile), installiert nach
+  /lib/firmware. Setzt x86_64-Build-Host voraus (Prebuilt-Toolchain-Release)
+- bbb-full-image: pru-fw + bbb-pruss-overlay ergänzt 
+- Feat(security): MACsec/MKA-Absicherung der ACF-CAN-Demo via mkad (#260)
+- bbb-macsec.cfg: CONFIG_MACSEC (verifiziert gegen drivers/net/Kconfig)
+- mkad_1.0.bb: Yocto-Recipe für Technica-Engineering/MKAdaemon (inherit waf,
+  DISABLE_DBUS=1 spart glib/gio/libxml2 als Cross-Deps — feste YAML-Config
+  reicht für diese Demo), DEPENDS auf openssl/libyaml/libbsd/libnl
+- project/macsec/mkad-board.conf + tools/acfcan-viewer/mkad-viewer.conf:
+  identisches PSK (cak/ckn) auf beiden Seiten, macsec: CONF_0 (Vertraulichkeit
+  + Integrität), SOFTWARE-Modus (kein HW-Offload nötig)
+- scripts/setup_macsec_mka.sh: startet mkad auf dem Board, wartet auf macsec0
+- tools/acfcan-viewer/: Dockerfile um mkad-Build-Stage erweitert,
+  entrypoint.sh startet mkad optional vor acf-can-listener
+  (ACFCAN_VIEWER_ENABLE_MACSEC=1, Default aus — #259-Basisdemo bleibt
+  unverändert nutzbar), app.py: /macsec-status per `ip macsec show`
+  (kein DBus-Client, mkad läuft ohne DBus), index.html: Status-Badge
+- tests/hardware/test_macsec_mka.py: Positiv- (aktive SA + Frame kommt an)
+  und Negativ-Test (ohne aktive SA kommt kein Frame über den MACsec-Pfad an)
+Hinweis: scripts/setup_acfcan_vcan_demo.sh, tests/hardware/test_acfcan_demo.py
+und tools/acfcan-viewer/{app.py,Dockerfile,entrypoint.sh,index.html,...} ohne
+die MACsec-Erweiterungen sind identisch zu #264 (PR für #259) — hier
+dupliziert, damit dieser PR unabhängig baubar/review-fähig ist, bis #264
+gemergt ist. 
+- Feat(demo): vcan→Eth→Container-Demo mit Live-Visualisierung (#259)
+- scripts/setup_acfcan_vcan_demo.sh: BBB-Seite — vcan0 anlegen, Testframe-
+  Generator, tunnelt per acf-can-talker (#257) über Ethernet zur
+  Viewer-Gegenstelle
+- tools/acfcan-viewer/: Container-Gegenstelle, kein eigener AVTP-Parser —
+  nutzt Open1722s acf-can-listener (nativ x86_64 gebaut) als Decoder auf ein
+  lokales vcan1, app.py (Flask) liest das per python-can/SocketCAN und
+  streamt per Server-Sent-Events an ein Dashboard (index.html, Stil von
+  tools/web-gui/index.html: vanilla JS, Dark Theme, kein Framework).
+  Zusätzlich /history-JSON-Endpoint für Tests/Skripte.
+- .drone.yml: acfcan-viewer-build (Docker-Build-Check, kein Push — anders
+  als die interne build-container-images-Pipeline, da Demo-/Nutzer-Image,
+  keine CI-Infrastruktur-Image)
+- tests/hardware/test_acfcan_demo.py: End-to-End-Test (Board sendet Frame →
+  erscheint im Viewer über /history), separat von test_acfcan*.py und per
+  VIEWER_HOST eigenständig skippable, falls kein Viewer erreichbar ist 
+- Feat(tools): Open1722 User-Space-Tools + bbcli acf-can bridge (#257)
+- scripts/setup_open1722.sh: übernommen von #256 (unabhängig buildbare PR,
+  wird von beiden Issues gebraucht — reine Doppelung bis eine der beiden PRs
+  gemergt ist)
+- scripts/build_open1722_userspace.sh: cross-baut das CMake-Target "examples"
+  (EXCLUDE_FROM_ALL) gegen arm-linux-gnueabihf — acf-can-talker/-listener/
+  -bridge + cvf-talker/-listener, kopiert nach bin/open1722/
+- tools/cli/cmd/acfcan.go: bbcli acf-can bridge start/stop/status — verwaltet
+  den lokalen acf-can-bridge-Prozess direkt (kein REST-API-Umweg, anders als
+  alle übrigen bbcli-Kommandos, da acf-can-bridge kein HAL-Feature ist).
+  CLI-Flags (-i/--canif/-d/--talker-stream-id/--listener-stream-id) exakt
+  gegen die argp-Optionen in Open1722s acf-can-bridge.c abgeglichen.
+- .drone.yml: open1722-userspace-build Compile-Check-Pipeline
+- tests/hardware/test_acfcan_userspace.py: SSH/bbcli-getriebener Test —
+  Start/Stop-Lifecycle + Verifikation per tcpdump, dass gesendete CAN-Frames
+  tatsächlich als IEEE-1722-Frames (EtherType 0x22F0) auf eth0 auftauchen.
+  Bewusst kein Zwei-Bridge-Loopback-Test (analog test_acfcan.py) — der
+  bbcli-Wrapper verwaltet nur eine Instanz pro Board (eine PID-Datei)
+- Makefile/CLAUDE.md/README.md ergänzt 
+- Feat(kernel): Open1722-ACF-CAN-Kernel-Modul-Build (#256)
+scripts/setup_open1722.sh: klont COVESA/Open1722 (BSD-3-Clause) auf
+gepinnten Commit, analog scripts/setup_pru_toolchain.sh.
+scripts/build_open1722_acfcan.sh: cross-kompiliert acfcan.ko gegen einen
+Yocto-Kernel-Quellbaum (KERNEL_SRC) mit arm-linux-gnueabihf-. Bewusst kein
+Aufruf des Open1722-eigenen `make all` (baut hart gegen den laufenden
+Host-Kernel via uname -r), stattdessen direkter Kbuild-Aufruf
+-C $KERNEL_SRC M=<moduldir>. Makefile: acfcan-mod Target. 
+- Feat(yocto): acfcan-mod-Rezept + CAN-Kernel-Cfg + CI-Compile-Check (#256)
+- bbb-can.cfg: CONFIG_CAN/CONFIG_CAN_RAW/CONFIG_CAN_DEV (Voraussetzung fürs
+  Open1722-acfcan-Modul, laut dessen README vor insmod per modprobe zu laden)
+- acfcan-mod_1.0.bb: baut examples/acf-can/linux-kernel-mod aus COVESA/Open1722
+  (gepinnt auf denselben Commit wie scripts/setup_open1722.sh) gegen den
+  Yocto-Kernel-Baum. Kein `inherit module`, da das Open1722-Makefile keine
+  KERNEL_SRC-Variable honoriert (baut hart gegen den laufenden Host-Kernel) —
+  stattdessen expliziter Kbuild-Aufruf wie im lokalen Build-Skript.
+  Patch 0001: ergänzt fehlendes MODULE_LICENSE("GPL") (Datei ist laut Header
+  dual-lizenziert, Modul nutzt aber GPL-only-CAN-Subsystem-Symbole ohne das
+  bislang zu deklarieren).
+- bbb-full-image.bb: acfcan-mod + kernel-module-can(-raw) ergänzt
+- .drone.yml: acfcan-module-build Pipeline (nativer Compile-Check gegen die
+  CI-Container-Kernelversion, schneller Signal-Check — der echte
+  Cross-Compile gegen den BBB-Yocto-Kernel läuft bereits über
+  build-yocto-image, da acfcan-mod jetzt Teil von bbb-full-image ist) 
+- End-to-End-Kette REST → CAN → ACF-CAN (IEEE 1722) → CAN → BME280 (#270) (#272) 
+- Fix(ci): Bausteinsicht-Image-Build reparieren und auf v1.2.1 pinnen
+Der build-container-images-Pipeline-Step build-bausteinsicht schlug
+fehl: Upstream hat cmd/ um ein zweites main-Package (bausteinsicht-lsp)
+erweitert, wodurch `go build -o <Datei> ./cmd/...` mit "cannot write
+multiple packages to non-directory" abbrach.
+- docker/bausteinsicht/Dockerfile: baut nur noch ./cmd/bausteinsicht
+  (das einzige von .drone.yml genutzte Binary), Clone gepinnt auf Tag
+  v1.2.1 statt des unveränderten main-HEAD (analog zu
+  scripts/setup_open1722.sh), GO_VERSION-Default auf 1.25 angehoben
+  (go.mod verlangt go 1.25.8)
+- scripts/build-container.sh: liest die Go-Version ebenfalls vom
+  gepinnten v1.2.1-Tag statt von main, sonst wäre der Pin nur beim
+  Quellcode wirksam gewesen, nicht bei der Toolchain-Auswahl
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com> 
+- Fix(cli): acf-can-bridge Windows-Cross-Build reparieren (#275)
+build-cli kompiliert tools/cli für 5 Targets inkl. windows/amd64.
+tools/cli/cmd/acfcan.go nutzte syscall.SysProcAttr{Setsid: true} und
+syscall.Kill direkt — beides Unix-only-APIs, die im syscall-Package für
+windows nicht existieren:
+    cmd/acfcan.go:62:43: unknown field Setsid in struct literal of type syscall.SysProcAttr
+    cmd/acfcan.go:85:21: undefined: syscall.Kill
+    cmd/acfcan.go:118:20: undefined: syscall.Kill
+acf-can-bridge startet/verwaltet einen lokalen Linux-Subprozess (Open1722
+User-Space-Tool, #257) — es gibt kein Windows-Binary dafür, der Befehl ist
+inhärent Unix-only. Nur der Build für Windows soll deswegen nicht scheitern.
+- tools/cli/cmd/acfcan_unix.go (//go:build !windows): bisherige
+  Setsid/Kill-Logik, ausgelagert
+- tools/cli/cmd/acfcan_windows.go (//go:build windows): Stubs, die
+  einen klaren "wird unter Windows nicht unterstützt"-Fehler liefern
+  statt den Build zu brechen
+- tools/cli/cmd/acfcan.go: kein direkter syscall-Import mehr, delegiert
+  an die plattformspezifischen Funktionen
+Verifiziert: go build für linux/amd64, linux/arm(7), darwin/amd64,
+darwin/arm64 und windows/amd64 laufen jetzt alle durch.
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com> 
+- Fix(ci): acfcan-Kernel-Modul-Build vom Runner-Host-Kernel entkoppeln (#276)
+e2e-demo-local-test (#271) und acfcan-module-build schlagen auf dem
+Drone-Runner fehl — drei Ursachen, alle im selben Umfeld:
+1. generic-builder (debian:bookworm) vs. Runner-Host (debian:trixie,
+   +deb13-Kernelpakete): bookworms Archiv führt grundsätzlich keine
+   +deb13-Headers-Pakete, unabhängig vom Host-Patch-Level. Verifiziert
+   (lokaler bookworm-Container): selbst das generische
+   linux-headers-amd64-Metapaket hängt auf bookworms 6.1-LTS-Zweig, dem
+   netdev_get_by_name() fehlt (erst ab Kernel 6.5) — der acfcan-Code
+   kompiliert damit grundsätzlich nicht.
+2. .drone.yml-CMD-Block von test-e2e-local hatte kein `set -e` — ein
+   fehlgeschlagener build_acfcan_native.sh-Aufruf wurde verschluckt,
+   pytest lief mit nie gebautem acfcan.ko einfach weiter.
+3. tests/integration/test_e2e_local.py rief modprobe ohne
+   shutil.which()-Guard auf (anders als ip/cangw/candump/tcpdump) —
+   FileNotFoundError statt sauberem Skip, wenn kmod fehlt.
+Änderungen:
+- acfcan-module-build: Image auf debian:trixie umgestellt (reiner
+  Compile-Check, braucht daher keinen exakten Host-Kernel-Match)
+- scripts/ci_check_acfcan_compile.sh: baut jetzt host-KERNEL-
+  UNABHÄNGIG gegen ein generisches linux-headers-amd64 statt gegen
+  linux-headers-$(uname -r) — Host-Kernel-Drift auf dem Runner soll
+  dieses reine Compile-Signal nicht mehr rot machen
+- scripts/build_acfcan_native.sh (neu, vorheriger Commit): bewusst
+  weiterhin host-kernel-GEBUNDEN (linux-headers-$(uname -r)) — für
+  test-e2e-local zwingend nötig, da acfcan.ko dort per insmod auf
+  demselben Host ladbar sein muss (Vermagic-Check, nicht entkoppelbar)
+- e2e-demo-local-test: Image ebenfalls auf debian:trixie (Go/Python/git
+  jetzt explizit installiert statt von generic-builder geerbt), `set -e`
+  im CMD-Block ergänzt
+- tests/integration/test_e2e_local.py: shutil.which("modprobe")-Guard
+  ergänzt, Doku-Referenzen auf scripts/build_acfcan_native.sh aktualisiert
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com> 
+- Fix(acfcan): Open1722s rtnl_newlink_params-Versions-Guard patchen (#278)
+Open1722s eigener Kernel-Versions-Guard in acfcanmain.c ist falsch:
+struct rtnl_newlink_params existiert im Linux-Kernel
+(include/net/rtnetlink.h) laut Quellcode-Diff aber erst ab v6.15 (0
+Treffer bis einschließlich v6.14, 5 Treffer ab v6.15) — nicht ab v6.10.
+Auf jedem Kernel im Bereich 6.10 <= Version < 6.15 (z.B. debian:trixie,
+6.12.x, siehe #276) nimmt der Guard fälschlich den neuen Zweig, obwohl
+der echte Kernel-Header dort noch die alte 5-Parameter-newlink-Signatur
+hat — Typkonflikt beim `.newlink = acfcan_newlink`, Build bricht.
+- scripts/patches/open1722-fix-rtnl-newlink-version-guard.patch (neu):
+  Ein-Zeilen-Fix, Guard auf KERNEL_VERSION(6, 15, 0) korrigiert.
+  Verifiziert (git apply --check) gegen unseren gepinnten Open1722-
+  Commit und gegen aktuellen main.
+- scripts/setup_open1722.sh: wendet den Patch nach dem Checkout an,
+  idempotent per grep-Marker (kein zweiter Anwendungsversuch bei
+  erneutem Lauf) — wirkt zentral für alle drei Konsumenten
+  (ci_check_acfcan_compile.sh, build_acfcan_native.sh,
+  build_open1722_acfcan.sh). `checkout --detach` auf `--force`
+  umgestellt, damit ein künftiger OPEN1722_REV-Bump nie an einem
+  stehengebliebenen lokalen Patch scheitert.
+Sollte zusätzlich stromaufwärts bei COVESA/Open1722 gemeldet werden —
+echter Bug in deren Code, kein reines Problem hier.
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com> 
+- Fix(acfcan): Open1722-Setup lief bei warmem CI-Cache nie — Patch griff nie (#278)
+Der #278-Patch (rtnl_newlink_params-Versions-Guard) griff in CI trotz
+Merge nicht — https://drone-paulefl.duckdns.org/.../15/4/2 zeigt exakt
+denselben Fehler wie vorher.
+Ursache: alle vier Open1722-Konsumenten riefen scripts/setup_open1722.sh
+nur auf, wenn $OPEN1722_DIR/.git NOCH NICHT existiert:
+    if [ ! -d "$OPEN1722_DIR/.git" ]; then
+      "$REPO_ROOT/scripts/setup_open1722.sh"
+    fi
+Der open1722-src-Cache-Volume in .drone.yml (/var/cache/drone/open1722/src)
+ist aber ein PERSISTENTER Host-Path-Mount über alle Builds hinweg — sobald
+ein früherer Build (vor dem #278-Fix) dort schon geklont hatte, existierte
+.git bereits, und setup_open1722.sh (inkl. der darin lebenden Patch-Logik)
+wurde nie wieder aufgerufen. Die Idempotenz-Prüfungen in setup_open1722.sh
+selbst (Clone/Checkout/Patch je einzeln übersprungen wenn schon erledigt)
+sind zwar korrekt, aber unerreichbar, wenn der äußere Aufruf gar nicht
+stattfindet.
+Fix: den äußeren `if [ ! -d ... ]`-Guard in allen vier Konsumenten entfernt,
+setup_open1722.sh wird jetzt immer aufgerufen — es ist selbst vollständig
+idempotent, ein Mehrfachaufruf ist güngig und nötig, damit der `git apply`-
+Patch-Schritt bei jedem Lauf tatsächlich geprüft wird.
+- scripts/ci_check_acfcan_compile.sh
+- scripts/build_acfcan_native.sh
+- scripts/build_open1722_acfcan.sh
+- scripts/build_open1722_userspace.sh
+Verifiziert: warmen Cache lokal simuliert (frischer, ungepatchter Clone +
+.git vorhanden) — vorher blieb der Guard bei KERNEL_VERSION(6, 10, 0)
+stehen, mit dem Fix wird jetzt korrekt auf KERNEL_VERSION(6, 15, 0)
+gepatcht.
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com> 
+- Fix(ci): push-exports gegen Race Conditions mit anderen Läufen härten
+Build 23 zeigte: zwei zeitgleich laufende architecture-export-Builds
+(häufig bei mehreren Merges kurz hintereinander) committen beide lokal
+und pushen beide auf main — der erste gewinnt, der zweite scheitert mit
+"non-fast-forward", weil plugins/git-action blind pusht statt vorher zu
+prüfen/zu integrieren.
+- scripts/ci-git-push-retry.sh (neu): pusht, und holt bei einem
+  fehlgeschlagenen Push den aktuellen Remote-Stand + rebased den lokalen
+  [skip ci]-Commit darauf, bis zu 5 Versuche. Bricht bei einem echten
+  Inhaltskonflikt (nicht nur Timing-Race) sauber mit `git rebase --abort`
+  ab, statt den Workspace in einem kaputten Zustand zu hinterlassen.
+- push-exports: plugins/git-action durch alpine/git + obiges Skript
+  ersetzt (Token direkt in der Remote-URL statt netrc-Plugin-Settings)
+Verifiziert mit zwei lokalen Race-Simulationen (separate Bare-Repo,
+zwei "Builds" committen/pushen gegeneinander):
+  - gleicher Inhalt (realistischer Fall bei deterministischem
+    Diagramm-Export): Rebase erkennt den Commit als bereits enthalten,
+    zweiter Push-Versuch erfolgreich, exit 0
+  - unterschiedlicher Inhalt (Stresstest für den Fehlerfall): Rebase-
+    Konflikt korrekt erkannt, sauber abgebrochen, exit 1, Workspace
+    bleibt in konsistentem Zustand (nicht mitten im Rebase)
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com> 
+- Fix(ci): push-changelog denselben Race-Condition-Fix wie push-exports geben
+Build 24 zeigte push-changelog (changelog-update-Pipeline) mit demselben
+"non-fast-forward"-Fehler wie push-exports vorher (#283) — blinder Push
+über plugins/git-action, der scheitert sobald ein anderer zeitgleich
+laufender Build (z.B. push-exports desselben Commits) zwischenzeitlich
+schon gepusht hat.
+Gleicher Fix: plugins/git-action durch alpine/git + das bereits in #283
+eingeführte scripts/ci-git-push-retry.sh ersetzt (Fetch+Rebase+Retry bei
+non-fast-forward). update-changelog.sh ruft ci-git-setup.sh schon selbst
+auf, daher hier kein zusätzlicher Setup-Schritt nötig.
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com> 
+- Fix(ci): redundante bausteinsicht-Image-Pulls in architecture-export vermeiden
+7 Steps in architecture-export (show-version, validate-model, sync-model,
+export-plantuml, export-mermaid, export-table, export-png) hatten
+`pull: always` für dasselbe ghcr.io/paulefl/bausteinsicht:latest-Image —
+dadurch wurde es pro Pipeline-Lauf siebenmal frisch gezogen, obwohl es
+sich innerhalb eines Laufs nie ändert. Auf if_not_exists umgestellt.
+Tradeoff (siehe Kommentar in .drone.yml): nach einem Versionsbump in
+build-container-images greift der neue :latest-Stand hier erst, sobald
+der Runner-Layer-Cache erneuert wird — in der Praxis kein Problem, da
+das selten passiert.
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com> 
+
+### Debug
+
+- Push URL ohne Token loggen für commit-exports Diagnose 
+
+
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+### Infrastruktur & Tooling
+
+- Bump codecov/codecov-action from 4 to 5 
+- Bump actions/download-artifact from 4 to 8 
+- Bump github.com/spf13/cobra in /go-api in the go-deps group 
+- Bump fyne.io/fyne/v2 from 2.4.3 to 2.7.3 in /go-api 
+- Bump github.com/spf13/viper in /go-api 
+- Bump github/codeql-action from 3 to 4 
+- Bump actions/upload-artifact from 4 to 7 
+- Bump actions/setup-go from 5 to 6 
+- Download BeagleBone Black HW spec into specs/hw/BeagleBone/Black/ 
+- Add BME280 hardware spec (#39) 
+- Add GitHub Pages smoke-test after deploy (#40) 
+- Add tag trigger to CI workflow for release job 
+- Use container script instead of inline podman commands 
+- Separate build step from run commands 
+- Add export-diagram, export-table and export-png steps 
+- Commit export changes back to repo if files changed 
+- Update exported diagrams [skip ci] 
+- Update exported diagrams [skip ci] 
+- Trigger only on beaglebone_black.jsonc changes 
+- Trigger SonarCloud verification 
+- Update unreleased section [skip ci] 
+- Update unreleased section [skip ci] 
+- Update unreleased section [skip ci] 
+- Update unreleased section [skip ci] 
+- Gruppierung nach Software-Änderungen und Infrastruktur & Tooling (#65) 
+- Erstelle PR statt direktem Push auf main (branch protection fix) (#66) 
+- Update unreleased section [skip ci] (#67) 
+- Update unreleased section [skip ci] (#69) 
+- Update unreleased section [skip ci] (#71) 
+- Update unreleased section [skip ci] (#73) 
+- Update unreleased section [skip ci] 
+- Update unreleased section [skip ci] 
+- Update unreleased section [skip ci] (#76) 
+- Add entry for Issue #31 fix (#75) [skip ci] 
+- Update unreleased section [skip ci] (#78) 
+- Add entry for Issue #21 fix (#77) [skip ci] 
+- Update unreleased section [skip ci] (#80) 
+- Add entry for Issue #27 fix (#79) [skip ci] 
+- Update unreleased section [skip ci] (#82) 
+- Update unreleased section [skip ci] (#89) 
+- Beaglebone-tooling auf v1.1.0 aktualisieren (#90) 
+- Update unreleased section [skip ci] (#91) 
+- Bump beaglebone-tooling actions to v1.1.1 
+- Update unreleased section [skip ci] (#92) 
+- Bump beaglebone-tooling actions to v1.1.2 
+- Update unreleased section [skip ci] (#93) 
+- Update unreleased section [skip ci] (#94) 
+- Bump beaglebone-tooling actions to v1.1.3 
+- Update unreleased section [skip ci] (#95) 
+- Bump beaglebone-tooling actions to v1.1.4 
+- Update unreleased section [skip ci] (#96) 
+- Bump beaglebone-tooling actions to v1.1.5 
+- Update unreleased section [skip ci] (#97) 
+- Bump beaglebone-tooling actions to v1.1.6 
+- Update unreleased section [skip ci] (#98) 
+- Replace all inline steps with beaglebone-tooling composite actions @v1.1.7 
+- Update unreleased section [skip ci] (#99) 
+- Bump beaglebone-tooling actions to v1.1.8 
+- Update unreleased section [skip ci] (#100) 
+- Bump beaglebone-tooling actions to v1.1.10 (fix junit_to_sarif) 
+- Update unreleased section [skip ci] (#102) 
+- Update unreleased section [skip ci] (#103) 
+- Bump beaglebone-tooling to v1.1.12 
+- Update unreleased section [skip ci] (#104) 
+- Bump beaglebone-tooling to v1.1.13 
+- Update unreleased section [skip ci] (#105) 
+- Update unreleased section [skip ci] (#106) 
+- Bump beaglebone-tooling to v1.1.14 
+- Update unreleased section [skip ci] (#108) 
+- Update unreleased section [skip ci] (#109) 
+- Bump beaglebone-tooling to v1.1.15 
+- Update unreleased section [skip ci] (#111) 
+- Bump beaglebone-tooling to v1.1.16 
+- Update unreleased section [skip ci] (#124) 
+- Update unreleased section [skip ci] (#125) 
+- Download-tooling auf v1.1.16 aktualisieren (konsistent mit anderen Actions) 
+- Update unreleased section [skip ci] (#126) 
+- Update unreleased section [skip ci] (#128) 
+- Bump beaglebone-tooling auf v1.1.17 (alle Actions konsistent) 
+- Update unreleased section [skip ci] (#129) 
+- Bump beaglebone-tooling to v1.1.18, rename shellcheck-sarif → shellcheck 
+- Update unreleased section [skip ci] (#131) 
+- Update unreleased section [skip ci] (#133) 
+- Bump beaglebone-tooling to v1.1.19 
+- Update unreleased section [skip ci] (#135) 
+- Update unreleased section [skip ci] (#137) 
+- Update unreleased section [skip ci] (#145) 
+- Bump beaglebone-tooling to v1.1.20 
+- Update unreleased section [skip ci] (#147) 
+- Bump beaglebone-tooling to v1.1.21 
+- Update unreleased section [skip ci] (#148) 
+- Update unreleased section [skip ci] (#154) 
+- Bump github.com/charmbracelet/lipgloss in /tools/tui 
+- Bump actions/upload-artifact from 4 to 7 
+- Bump github.com/spf13/viper in /tools/cli 
+- Bump github.com/spf13/cobra in /tools/cli 
+- Bump github.com/charmbracelet/bubbletea in /tools/tui 
+- Bump actions/checkout from 4 to 6 
+- Bump actions/checkout from 4 to 6 
+- Update spidev requirement in /project/rust-lib 
+- Update cbindgen requirement in /project/rust-lib 
+- Update linux-embedded-hal requirement in /project/rust-lib 
+- Update bme280 requirement in /project/rust-lib 
+- Update unreleased section [skip ci] (#183) 
+- Update unreleased section [skip ci] (#185) 
+- Update unreleased section [skip ci] (#187) 
+- Trigger drone build 
+- Fix all drone yaml parse errors and add local lint tool 
+- Retrigger build 
+- Simplify to single smoke pipeline for testing 
+- Add pipeline 1 (C & Rust libraries) 
+- Use temp volumes instead of host volumes (untrusted repo) 
+- Use generic-builder for ARM cross-build 
+- Add test-go step with gotestsum and coverage gate 
+- Use generic-builder for test-go step 
+- Add pipeline 2 (Embedded SW Go API + HAL) 
+- Add pipeline 3 (CLI + TUI + GUI tools) 
+- Add pipeline 4 (WebApp frontend) 
+- Add pipeline 5 (Release bei Tags) 
+- Add pipeline 6 (Nightly) 
+- Add pipeline 7 (Reports & Dokumentation) 
+- Minimize pipeline 7 to single step for debugging 
+- Pipeline 7 step placeholder for debugging 
+- Pipeline 7 absolute minimum for debugging 
+- Remove pipeline 5 for debugging 
+- Restore pipeline 7 fully, fix environment secrets in sonar steps 
+- Add pipelines 8-12 (without pipeline 5) 
+- Re-add pipeline 5 for debugging 
+- Minimize pipeline 5 to smoke test for debugging 
+- Pipeline 5 step 1 - add ref exclude trigger 
+- Pipeline 5 step 2 - add build-docker-image step 
+- Pipeline 5 debug - minimize build-docker-image commands 
+- Pipeline 5 debug - add podman login command 
+- Pipeline 5 debug - add podman build command 
+- Pipeline 5 fix - replace ${DRONE_TAG} with $DRONE_TAG in commands 
+- Pipeline 5 complete - restore all steps with $DRONE_TAG fix 
+- Fix all ${} plain scalar issues in drone.yml + extend linter with Pass 2 raw-text checks 
+- Replace gitea with github (plugins/github-release + api.github.com) 
+- Fix bausteinsicht script name (bausteinsicht.sh) 
+- Trigger only on push to main and pull_request 
+- Restore test-c-lib and test-rust-lib steps in pipeline 1 
+- Update test-rust-lib image to rust:alpine (Cargo.lock v4 support) 
+- Fix test-c-lib target (make -C c-lib test) 
+- Test-go uses golang:1.24 instead of generic-builder 
+- Use --password-stdin for podman login (no tty in CI) 
+- Install git-cliff in pipeline 12 instead of skipping 
+- Add bausteinsicht Docker image (pipeline 8 uses ghcr.io image, pipeline 9 builds it) 
+- Bausteinsicht image built from upstream devcontainer Dockerfile + DrawIO layer 
+- Fix junit-reports path (reports/ relative to workspace root) 
+- Pipeline 5 builds all artifacts before release (cli, tui, web-gui, arm) 
+- Add strictdoc coverage gate with JUnit cross-reference 
+- Add strictdoc container image, use pre-built image in pipeline 7 
+- Generate JUnit XML via gotestsum, add junit-reports plugin cards 
+- Use Bau_token secret for bausteinsicht repo clone 
+- Fix podman login — use -p flag instead of --password-stdin pipe 
+- Replace registry_owner with registry_user in image paths 
+- Copy upstream bausteinsicht files to build context, strip Claude Code install 
+- Rewrite bausteinsicht image — install from repo source, no upstream devcontainer 
+- Debug bausteinsicht repo structure 
+- Switch build-generic-builder and build-strictdoc to plugins/buildah 
+- Add podman manifest inspect debug output 
+- Change allure upload target to /home/deploy/downloads 
+- Make allure-generate.sh robust against download failures 
+- Restore allure upload target to /var/www/downloads 
+- Print report URL after allure-generate in all pipelines 
+- Unzip allure report on server for all 12 pipelines 
+- Fix YAML parse error caused by colon-space in echo commands 
+- Add allure history download for trend graphs between builds 
+- Add pipeline 13-dashboard combining allure results from all pipelines 
+- Add per-step JUnit tracking in pipeline 9-build-container 
+- Add per-step JUnit tracking to all pipelines via generate-junit.sh 
+- Fix bash not found - use sh for generate-junit, add timing support 
+- Bump actions/checkout from 4 to 6 (#192) 
+- Path-based pipeline trigger optimierung — docker-only pushs starten nur pipeline 9 
+- Docker-compose.yml zu .gitignore hinzugefügt 
+- Paths-Filter für Pipeline 13-dashboard hinzugefügt 
+- Makefile zu paths-Filtern aller relevanten Pipelines hinzugefügt 
+- .drone.yml zu paths-Filtern aller Pipelines hinzugefügt 
+- Beaglebone_black.jsonc mit aktuellem Code synchronisiert 
+- Update exported diagrams [skip ci] 
+- Update unreleased section [skip ci] 
+- Update unreleased section [skip ci] 
+- Update unreleased section [skip ci] 
+- Update unreleased section [skip ci] 
+- Update unreleased section [skip ci] 
+- Update unreleased section [skip ci] 
+- Update unreleased section [skip ci] 
+- Update unreleased section [skip ci] 
+- Diagnose curl vor hardware-tests für API-Fehlerausgabe 
+- Update unreleased section [skip ci] 
+- Hardware-tests skippen wenn Sensor nicht erreichbar 
+- Update unreleased section [skip ci] 
+- Update unreleased section [skip ci] 
+- Rename 7a-testing to sw-unit-tests, consolidate hw tests in pipeline 10 
+- Merge 3-tools und 4-webapp zu apps-build-test 
+- 10-integration-tests läuft jetzt bei jedem Push 
+- Update unreleased section [skip ci] 
+- Update unreleased section [skip ci] 
+- Update unreleased section [skip ci] 
+- Trigger auf tags/*-toTestOnTarget beschränken 
+- Update unreleased section [skip ci] 
+- Update unreleased section [skip ci] 
+- Update unreleased section [skip ci] 
+- Paths-Filter project/c-lib/** → project/c/** korrigieren 
+- Update unreleased section [skip ci] 
+- Update exported diagrams [skip ci] 
+- Update exported diagrams [skip ci] 
+- Update exported diagrams [skip ci] 
+- Update exported diagrams [skip ci] 
+- Update exported diagrams [skip ci] 
+- Update unreleased section [skip ci] 
+- Update unreleased section [skip ci] 
+- Update unreleased section [skip ci] 
+- Update unreleased section [skip ci] 
+- Update unreleased section [skip ci] 
+- Bump actions/download-artifact from 6 to 8 
+- Bump actions/upload-artifact from 6 to 7 
+- Bump actions/checkout from 6 to 7 
+- Bump actions/cache from 4 to 6 
+- Implementierungsplan für Yocto-Image-Build (#250) 
+- Add build-yocto-image pipeline (#250) 
+- Split bbb-sensor-image/bbb-full-image, add make yocto-image target 
+- Implementierungsplan für PRU-ICSS-Offloading (#252) 
+- Ci(drone): pru-firmware-build Pipeline (#252)
+Schneller Compile-Check der PRU1-Firmware bei jedem Push/PR (Sekunden,
+keine Hardware nötig) — lädt GNU-PRU-Toolchain in gecachtes Volume,
+baut project/pru/fw/pru1_gpio_ctrl via scripts/build_pru_firmware.sh.
+Kann PRU-Timing/GPIO nicht funktional testen, nur Kompilierbarkeit. 
+- Docs(pru): Doku + Makefile-Target + Hardware-Test-Stub (#252)
+- Makefile: pru-fw Target (+ .PHONY, info-Hilfe inkl. bisher fehlendem
+  yocto-image-Eintrag)
+- CLAUDE.md: Key-Files, Architektur-Diagramm, HAL-Backend-Liste, Build-/
+  Test-Commands um pru-Backend ergänzt
+- README.md: HAL-Backend-Tabelle um pru ergänzt
+- tests/hardware/test_pru.py: BEAGLE_HOST-gated (kein Mocking möglich,
+  siehe Plan-Doku 'Bekannte Einschränkungen') 
+- Docs(acfcan): Hardware-Test-Stub + Doku + Recipe-Paketierungs-Fix (#256)
+- tests/hardware/test_acfcan.py: SSH-getriebener Test (analog test_uart.py,
+  acfcan hat keine REST-API-Anbindung) — baut den Ein-Board-veth-Testaufbau
+  (ecu0/ecu1 über mon1/mon2) auf und verifiziert Tunneling in beide
+  Richtungen per cansend/candump
+- acfcan-mod_1.0.bb: KERNEL_MODULES_META_PACKAGE = "${PN}" ergänzt, damit die
+  von kernel-module-split automatisch gesplittete
+  kernel-module-acfcan-Abhängigkeit an "acfcan-mod" (das IMAGE_INSTALL
+  referenziert) hängt statt am generischen "kernel-modules"-Metapaket;
+  FILES:${PN} entfernt (kollidiert sonst mit dem automatischen Split)
+- CLAUDE.md/README.md: acfcan als eigenständiges Kernel-Modul unterhalb der
+  HAL dokumentiert (bewusst nicht in der HAL-Backend-Tabelle, da kein
+  HW_BACKEND-Wert) 
+- Docs(autosar): IEEE-1722-Referenzdoku — Standard vs. Open1722 vs. Projekt (#258)
+docs/how-to/ieee1722-avtp-acf-referenz.adoc (kein .buildadoc-Marker, analog
+docs/how-to/bme280-seengreat-anschliessen.adoc — eigenständige Referenz,
+nicht Teil des arc42-PDF/HTML-Builds): AVTPDU-Subtype- und ACF-Typ-Tabellen
+aus der Blogserie (Teile 1-3, 6-9) übernommen und um eine Spalte "in diesem
+Projekt" ergänzt (#256 Kernel-Modul, #257 User-Space-Tools). Ausblick-Abschnitt
+zu CAN-XL/CAN_V2 als Tracking-Notiz für künftige Erweiterungen, kein
+Implementierungsauftrag. ARXML/AUTOSAR-Konfiguration bewusst nur als
+Kontext-Fußnote — dieses Projekt konfiguriert kein IEEE1722Tp-BSW-Modul. 
+- Bump flask 
+- Docs(acfcan): User-Guide für die IEEE1722/ACF-CAN-Demo (#259/#260)
+- docs/how-to/ieee1722-acfcan-demo-userguide.adoc: durchgängige
+  Schritt-für-Schritt-Anleitung (Build/Deploy User-Space-Tools, Basis-Demo,
+  Viewer-Container, optionale MACsec/MKA-Absicherung, bbcli-Alternative,
+  Einordnung des acfcan-Kernel-Moduls, Tests, Fehlerdiagnose)
+- ieee1722-avtp-acf-referenz.adoc: Verweis auf den neuen Guide ergänzt
+- tools/acfcan-viewer/README.md: fehlende MACsec-Umgebungsvariablen
+  (ACFCAN_VIEWER_ENABLE_MACSEC etc., #260) nachgetragen + Link zum Guide 
+- Test(demo): hardware-freie lokale E2E-ACF-CAN-Verifikation (#271)
+Ergänzt #270 um eine schnelle, hardware-freie Vorstufe zum
+BEAGLE_HOST-gated tests/hardware/test_e2e_demo.py: baut dieselbe
+5-Namespace-Topologie (REST-veth, CAN-vxcan, ACF-CAN-veth+acfcan-Modul)
+lokal per subprocess auf statt per SSH gegen ein physisches Board, mit
+D5 (can-hal-bridge) gegen den Mock-HAL-Treiber.
+- tests/integration/test_e2e_local.py: neuer Test, inkl. CAN-Frame-
+  (candump) und rohem ACF-CAN/IEEE-1722-Ethernet-Frame-Mitschnitt
+  (tcpdump -X) sowie D2-/D5-Prozess-Logs, sichtbar mit `-s`
+- tests/conftest.py: "integration" von der BEAGLE_HOST-Skip-Regel
+  ausgenommen (analog zu "web")
+- scripts/ci_check_acfcan_compile.sh: kopiert das native acfcan.ko
+  zusätzlich nach bin/kernel/acfcan-native.ko, damit der neue Test es
+  per insmod tatsächlich funktional nutzen kann
+- .drone.yml: neue privilegierte Pipeline e2e-demo-local-test, baut
+  can-hal-bridge/rest-can-gateway nativ + acfcan.ko nativ und lässt den
+  Test bei jedem PR laufen — erste automatisierte CI-Abdeckung für die
+  ACF-CAN-Kette
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com> 
+- Update exported diagrams [skip ci] 
+- Update exported diagrams [skip ci] 
+- Update exported diagrams [skip ci] 
+- Update exported diagrams [skip ci] 
+- Update exported diagrams [skip ci] 
+- Update exported diagrams [skip ci] 
 
 ### Software-Änderungen
 
