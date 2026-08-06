@@ -1205,15 +1205,21 @@ volumes:
       path: /var/cache/drone/pipeline-results
 
 steps:
+  # if_not_exists statt always (war 7x pull: always über diese Pipeline
+  # verteilt — dasselbe :latest-Image wurde in jedem Lauf siebenmal frisch
+  # gezogen, obwohl es sich innerhalb eines Laufs nie ändert). Tradeoff: nach
+  # einem bausteinsicht-Versionsbump (build-container-images) greift der
+  # neue :latest-Stand hier erst, sobald der Runner-Cache diesen Layer neu
+  # zieht — kein Problem in der Praxis, da das selten passiert.
   - name: show-version
     image: ghcr.io/paulefl/bausteinsicht:latest
-    pull: always
+    pull: if_not_exists
     commands:
       - 'echo "bausteinsicht container version: $APP_VERSION"'
 
   - name: validate-model
     image: ghcr.io/paulefl/bausteinsicht:latest
-    pull: always
+    pull: if_not_exists
     depends_on: [show-version]
     environment:
       STEP: validate-model
@@ -1223,7 +1229,7 @@ steps:
 
   - name: sync-model
     image: ghcr.io/paulefl/bausteinsicht:latest
-    pull: always
+    pull: if_not_exists
     depends_on: [validate-model]
     environment:
       STEP: sync-model
@@ -1235,7 +1241,7 @@ steps:
 
   - name: export-plantuml
     image: ghcr.io/paulefl/bausteinsicht:latest
-    pull: always
+    pull: if_not_exists
     depends_on: [validate-model]
     environment:
       STEP: export-plantuml
@@ -1247,7 +1253,7 @@ steps:
 
   - name: export-mermaid
     image: ghcr.io/paulefl/bausteinsicht:latest
-    pull: always
+    pull: if_not_exists
     depends_on: [validate-model]
     environment:
       STEP: export-mermaid
@@ -1259,7 +1265,7 @@ steps:
 
   - name: export-table
     image: ghcr.io/paulefl/bausteinsicht:latest
-    pull: always
+    pull: if_not_exists
     depends_on: [validate-model]
     environment:
       STEP: export-table
@@ -1271,7 +1277,7 @@ steps:
 
   - name: export-png
     image: ghcr.io/paulefl/bausteinsicht:latest
-    pull: always
+    pull: if_not_exists
     depends_on: [export-plantuml, export-mermaid, export-table]
     environment:
       STEP: export-png
