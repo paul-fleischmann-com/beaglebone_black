@@ -64,19 +64,40 @@ make test
 
 ## Deployen
 
+### Option A — Aus dem Release (empfohlen, kein Build nötig)
+
 ```bash
+# Binaries vom aktuellen Release herunterladen
+mkdir -p /tmp/bbb-deploy && cd /tmp/bbb-deploy
+
+gh release download v1.1.1 \
+  --repo paul-fleischmann-com/beaglebone_black \
+  --pattern "embedded-armv7" \
+  --pattern "libhardware.so" \
+  --pattern "libhardware_rs.so"
+
+# App-Verzeichnis auf BBB anlegen
+ssh debian@192.168.7.2 "sudo mkdir -p /app && sudo chown debian:debian /app"
+
+# Binaries auf BBB kopieren
+scp embedded-armv7 libhardware.so libhardware_rs.so debian@192.168.7.2:/app/
+
+ssh debian@192.168.7.2 "chmod +x /app/embedded-armv7"
+```
+
+### Option B — Aus dem Quellcode bauen
+
+```bash
+# Alles bauen
+make all
+
 # Auf BeagleBone deployen
 make deploy
+```
 
-# Manuell
-scp bin/embedded-armv7 \
-    project/go-api/libs/libhardware.so \
-    project/go-api/libs/libhardware_rs.so \
-    debian@192.168.7.2:/app/
+### API testen
 
-ssh debian@192.168.7.2 "systemctl restart embedded-sw"
-
-# API testen
+```bash
 curl http://192.168.7.2:5000/health
 curl http://192.168.7.2:5000/api/v1/bme280
 ```
