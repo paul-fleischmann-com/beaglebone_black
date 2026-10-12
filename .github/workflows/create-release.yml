@@ -6,6 +6,11 @@ on:
       - 'v*'
       - '!v*-toTestOnTarget'
       - '!v*-stable'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing tag to create the release for'
+        required: true
 
 jobs:
   create-release:
@@ -17,7 +22,7 @@ jobs:
       - name: Create release if it does not exist
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: ${{ github.ref_name }}
+          TAG: ${{ inputs.tag || github.ref_name }}
         run: |
           if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             echo "Release $TAG exists already"
