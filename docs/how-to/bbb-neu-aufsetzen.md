@@ -98,19 +98,56 @@ sudo screen /dev/ttyACM0 115200
 Damit der BBB dauerhaft das neue System nutzt — auch ohne SD-Karte.
 
 ```bash
-# Auf dem BBB (via SSH): prüfen welches Device SD-Karte und eMMC ist
+# Auf dem BBB (via SSH): Devices prüfen
 lsblk
-# typisch: mmcblk0 = SD-Karte, mmcblk1 = eMMC (interne 4 GB)
+# typisch: mmcblk0 = SD-Karte, mmcblk1 = eMMC (intern)
 ```
 
+> **Wichtig:** Ist die SD-Karte **größer** als die eMMC (z.B. 29 GB SD → 14,6 GB eMMC),
+> funktioniert direktes `dd` nicht. Dann Weg A oder Weg B verwenden.
+
+### Weg A — Kleineres Image verwenden (empfohlen)
+
+Ein 4-GB-Image passt auf jede BBB-eMMC und erlaubt direktes `dd`:
+
+1. Image herunterladen: **`bone-debian-12.x-iot-armhf-*-4gb.img.xz`** von beagleboard.org
+2. Auf SD flashen (wie in Abschnitt 2)
+3. Von SD booten (Abschnitt 3), dann:
+
 ```bash
-# SD-Karte auf eMMC kopieren (ca. 5–15 Minuten)
 sudo dd if=/dev/mmcblk0 of=/dev/mmcblk1 bs=4M status=progress conv=fsync
 sudo sync
 sudo shutdown -h now
+# SD-Karte entfernen, USB neu anstecken → bootet von eMMC
 ```
 
-Nach dem Ausschalten **SD-Karte entfernen**, dann USB neu anstecken → bootet von eMMC.
+### Weg B — Partition für Partition kopieren
+
+Wenn das laufende SD-System bereits eingerichtet ist und nicht nochmal neu aufgesetzt werden soll:
+
+```bash
+# 1. Partition-Layout von SD auf eMMC übertragen
+sudo sfdisk --dump /dev/mmcblk0 | sudo sfdisk /dev/mmcblk1
+
+# 2. Boot-Partition und Swap 1:1 kopieren
+sudo dd if=/dev/mmcblk0p1 of=/dev/mmcblk1p1 bs=4M status=progress
+sudo dd if=/dev/mmcblk0p2 of=/dev/mmcblk1p2 bs=4M status=progress
+
+# 3. Root-Partition formatieren und per rsync befüllen
+sudo mkfs.ext4 /dev/mmcblk1p3
+sudo mount /dev/mmcblk1p3 /mnt
+sudo rsync -aAX \
+  --exclude={"/dev/*","/proc/*","/sys/*","/tmp/*","/run/*","/mnt/*"} \
+  / /mnt/
+
+# 4. UUID in /etc/fstab anpassen
+sudo blkid /dev/mmcblk1p3    # neue UUID notieren
+sudo nano /mnt/etc/fstab     # UUID für / durch neue ersetzen
+
+sudo umount /mnt
+sudo shutdown -h now
+# SD-Karte entfernen, USB neu anstecken → bootet von eMMC
+```
 
 ---
 
