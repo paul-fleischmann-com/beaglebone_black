@@ -9,6 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Infrastruktur & Tooling
 
+- Build and attach binaries to release in GHA 
+- Docs - add release-based deploy option to SETUP.md
+
+Option A: download embedded-armv7 + libs from GitHub release v1.1.1
+and scp to BBB — no build toolchain required.
+Option B: build from source (existing make deploy flow).
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com> 
+
+
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+### Infrastruktur & Tooling
+
 - Bump codecov/codecov-action from 4 to 5 
 - Bump actions/download-artifact from 4 to 8 
 - Bump github.com/spf13/cobra in /go-api in the go-deps group 
