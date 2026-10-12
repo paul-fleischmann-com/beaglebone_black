@@ -4,6 +4,8 @@
 
 ### Entwicklungsrechner (Linux/macOS)
 
+> **Windows-Nutzer:** Siehe Abschnitt [Windows-Zugriff](#windows-zugriff) weiter unten.
+
 ```bash
 # Go 1.22+
 wget https://go.dev/dl/go1.22.linux-amd64.tar.gz
@@ -96,6 +98,50 @@ bbcli completion bash >> ~/.bashrc && source ~/.bashrc
 bbcli system status
 bbcli bme280 read
 ```
+
+## Windows-Zugriff
+
+### 1. USB-Treiber installieren
+
+Beim ersten Anstecken versucht Windows den Treiber automatisch zu installieren.
+Falls das fehlschlägt, Treiber-Paket manuell herunterladen:
+
+- [beagleboard.org/getting-started](https://beagleboard.org/getting-started) → **Windows Drivers**
+
+Nach erfolgreicher Installation zeigt der Geräte-Manager:
+- **Netzwerkadapter**: `BeagleBone` (USB-Ethernet RNDIS, IP `192.168.7.2`)
+- **Anschlüsse (COM & LPT)**: `COMx` (serielle Konsole)
+
+### 2. SSH (Windows 10/11)
+
+Windows 10/11 hat OpenSSH eingebaut:
+
+```powershell
+ssh debian@192.168.7.2
+# Passwort: temppwd
+```
+
+Alternativ: [PuTTY](https://www.putty.org/) — Host `192.168.7.2`, Port `22`, SSH.
+
+### 3. Serielle Konsole (z.B. für Passwort-Recovery)
+
+1. Geräte-Manager öffnen → **Anschlüsse (COM & LPT)** → COM-Nummer merken (z.B. `COM4`)
+2. PuTTY öffnen:
+   - Connection type: **Serial**
+   - Serial line: `COM4` (eigene Nummer eintragen)
+   - Speed: `115200`
+   - **Open** → Enter drücken → Login-Prompt erscheint
+
+### 4. Passwort zurücksetzen (über serielle Konsole)
+
+```bash
+sudo passwd debian
+# oder als root:
+su -
+passwd debian
+```
+
+---
 
 ## Systemd Service (BeagleBone)
 
