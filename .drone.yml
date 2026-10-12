@@ -586,7 +586,7 @@ steps:
     depends_on: [build-arm, build-tools, build-web-gui]
     environment:
       STEP: checksums
-      CMD: "(cd bin && sha256sum embedded bbcli-* bbtui-* bbweb-gui.zip > checksums.sha256 && cat checksums.sha256)"
+      CMD: "(cd bin && cp embedded embedded-armv7 && sha256sum embedded embedded-armv7 bbcli-* bbtui-* bbweb-gui.zip > checksums.sha256 && cat checksums.sha256)"
     commands:
       - sh scripts/run-step.sh
 
@@ -615,6 +615,7 @@ steps:
       api_key: {from_secret: github_token}
       files:
         - bin/embedded
+        - bin/embedded-armv7
         - project/go-api/libs/libhardware.so
         - project/go-api/libs/libhardware_rs.so
         - bin/bbcli-linux-amd64
