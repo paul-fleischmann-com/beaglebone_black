@@ -30,3 +30,77 @@ jobs:
             gh release create "$TAG" --repo "$GITHUB_REPOSITORY" \
               --title "Release $TAG" --generate-notes --verify-tag
           fi
+
+  build-assets:
+    name: Build and attach release binaries
+    needs: create-release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: read
+    env:
+      TAG: ${{ inputs.tag || github.ref_name }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.tag || github.ref_name }}
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+
+      # ARM libs + REST API (same build script as the Drone pipeline)
+      - name: Pull builder image
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | podman login ghcr.io -u ${{ github.actor }} --password-stdin
+          podman pull ghcr.io/${{ github.repository_owner }}/generic-builder:latest
+          podman tag ghcr.io/${{ github.repository_owner }}/generic-builder:latest generic-builder
+
+      - name: Build ARM binaries (C, Rust, Go API)
+        run: |
+          mkdir -p bin
+          podman run --rm \
+            -e JUNIT= \
+            -v "$PWD/bin:/output" \
+            -v "$PWD:/src" \
+            generic-builder \
+            -c "bash /src/scripts/build-arm.sh"
+          sudo chown -R "$(id -u):$(id -g)" bin project
+          cp bin/embedded bin/embedded-armv7
+
+      - name: Build CLI and TUI
+        run: |
+          build() { # dir out goos goarch [goarm]
+            (cd "$1" && GOOS=$3 GOARCH=$4 GOARM=$5 CGO_ENABLED=0 \
+              go build -ldflags="-s -w" -o "$GITHUB_WORKSPACE/bin/$2" .)
+          }
+          build tools/cli bbcli-linux-amd64       linux   amd64
+          build tools/cli bbcli-linux-arm         linux   arm   7
+          build tools/cli bbcli-darwin-amd64      darwin  amd64
+          build tools/cli bbcli-darwin-arm64      darwin  arm64
+          build tools/cli bbcli-windows-amd64.exe windows amd64
+          build tools/tui bbtui-linux-amd64       linux   amd64
+          build tools/tui bbtui-linux-armv7       linux   arm   7
+          build tools/tui bbtui-darwin-amd64      darwin  amd64
+
+      - name: Package web GUI
+        run: |
+          mkdir -p bin/web-gui
+          cp tools/web-gui/index.html bin/web-gui/
+          echo "$TAG" > bin/web-gui/version.txt
+          (cd bin && zip -r bbweb-gui.zip web-gui/)
+
+      - name: Checksums
+        run: |
+          cd bin
+          sha256sum embedded embedded-armv7 bbcli-* bbtui-* bbweb-gui.zip > checksums.sha256
+          cat checksums.sha256
+
+      - name: Upload assets to release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cd bin
+          gh release upload "$TAG" --repo "$GITHUB_REPOSITORY" --clobber \
+            embedded embedded-armv7 libhardware.so libhardware_rs.so \
+            bbcli-* bbtui-* bbweb-gui.zip checksums.sha256
