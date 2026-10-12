@@ -95,23 +95,22 @@ sudo screen /dev/ttyACM0 115200
 
 ## 5. Image auf eMMC flashen (permanent, optional)
 
-Damit der BBB dauerhaft das neue System nutzt — auch ohne SD-Karte:
+Damit der BBB dauerhaft das neue System nutzt — auch ohne SD-Karte.
 
 ```bash
-# Auf dem BBB (via SSH oder serieller Konsole):
-sudo /opt/scripts/tools/eMMC/bbb-eMMC-flasher-eewiki-ext4.sh
-
-# Alternativ (neuere Images):
-sudo enable-emmc-flasher.sh
+# Auf dem BBB (via SSH): prüfen welches Device SD-Karte und eMMC ist
+lsblk
+# typisch: mmcblk0 = SD-Karte, mmcblk1 = eMMC (interne 4 GB)
 ```
 
-Der BBB blinkt beim Flash-Vorgang mit den 4 LEDs im Lauflicht-Muster.
-**Warten** bis alle 4 LEDs dauerhaft aus sind (ca. 5–15 Minuten) — dann:
-
 ```bash
+# SD-Karte auf eMMC kopieren (ca. 5–15 Minuten)
+sudo dd if=/dev/mmcblk0 of=/dev/mmcblk1 bs=4M status=progress conv=fsync
+sudo sync
 sudo shutdown -h now
-# SD-Karte entfernen, USB neu anstecken → bootet von eMMC
 ```
+
+Nach dem Ausschalten **SD-Karte entfernen**, dann USB neu anstecken → bootet von eMMC.
 
 ---
 
