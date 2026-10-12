@@ -97,58 +97,32 @@ sudo screen /dev/ttyACM0 115200
 
 Damit der BBB dauerhaft das neue System nutzt — auch ohne SD-Karte.
 
+### Empfohlen: beagle-flasher (neuere Images ab 2024)
+
 ```bash
-# Auf dem BBB (via SSH): Devices prüfen
-lsblk
-# typisch: mmcblk0 = SD-Karte, mmcblk1 = eMMC (intern)
+# Auf dem BBB (via SSH, von SD gebootet):
+sudo beagle-flasher
 ```
 
-> **Wichtig:** Ist die SD-Karte **größer** als die eMMC (z.B. 29 GB SD → 14,6 GB eMMC),
-> funktioniert direktes `dd` nicht. Dann Weg A oder Weg B verwenden.
+Der BBB blinkt während des Flash-Vorgangs mit den LEDs und fährt anschließend automatisch
+herunter. **SD-Karte entfernen**, USB neu anstecken → bootet von eMMC.
 
-### Weg A — Kleineres Image verwenden (empfohlen)
+> **Hinweis:** `beagle-flasher` erfordert ausreichend Strom — am besten externes 5V-Netzteil
+> statt USB verwenden, da USB unter Last zu wenig Strom liefern kann.
 
-Ein 4-GB-Image passt auf jede BBB-eMMC und erlaubt direktes `dd`:
-
-1. Image herunterladen: **`bone-debian-12.x-iot-armhf-*-4gb.img.xz`** von beagleboard.org
-2. Auf SD flashen (wie in Abschnitt 2)
-3. Von SD booten (Abschnitt 3), dann:
+Falls `beagle-flasher` nicht gefunden wird:
 
 ```bash
+sudo enable-beagle-flasher && sudo reboot
+# BBB flasht beim Reboot automatisch die eMMC
+```
+
+### Fallback: manuell per dd (nur wenn SD-Karte ≤ eMMC-Größe)
+
+```bash
+lsblk   # mmcblk0 = SD-Karte, mmcblk1 = eMMC
 sudo dd if=/dev/mmcblk0 of=/dev/mmcblk1 bs=4M status=progress conv=fsync
 sudo sync
-sudo shutdown -h now
-# SD-Karte entfernen, USB neu anstecken → bootet von eMMC
-```
-
-### Weg B — Partition für Partition kopieren
-
-Wenn das laufende SD-System bereits eingerichtet ist und nicht nochmal neu aufgesetzt werden soll:
-
-```bash
-# 1. Partition-Layout von SD auf eMMC übertragen
-sudo sfdisk --dump /dev/mmcblk0 | sudo sfdisk /dev/mmcblk1
-
-# 2. Boot-Partition und Swap 1:1 kopieren
-sudo dd if=/dev/mmcblk0p1 of=/dev/mmcblk1p1 bs=4M status=progress
-sudo dd if=/dev/mmcblk0p2 of=/dev/mmcblk1p2 bs=4M status=progress
-
-# 3. Root-Partition formatieren und per rsync befüllen
-sudo mkfs.ext4 /dev/mmcblk1p3
-sudo mount /dev/mmcblk1p3 /mnt
-sudo rsync -aAX \
-  --exclude={"/dev/*","/proc/*","/sys/*","/tmp/*","/run/*","/mnt/*"} \
-  / /mnt/
-
-# 4. UUID in /etc/fstab anpassen
-# fstab enthält noch die UUID der SD-Karte — muss auf eMMC-UUID geändert werden
-NEW_UUID=$(sudo blkid -s UUID -o value /dev/mmcblk1p3)
-OLD_UUID=$(sudo blkid -s UUID -o value /dev/mmcblk0p3)
-sudo sed -i "s/$OLD_UUID/$NEW_UUID/g" /mnt/etc/fstab
-# Ergebnis prüfen:
-cat /mnt/etc/fstab
-
-sudo umount /mnt
 sudo shutdown -h now
 # SD-Karte entfernen, USB neu anstecken → bootet von eMMC
 ```
