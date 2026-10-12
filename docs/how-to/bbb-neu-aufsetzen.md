@@ -141,8 +141,12 @@ sudo rsync -aAX \
   / /mnt/
 
 # 4. UUID in /etc/fstab anpassen
-sudo blkid /dev/mmcblk1p3    # neue UUID notieren
-sudo nano /mnt/etc/fstab     # UUID für / durch neue ersetzen
+# fstab enthält noch die UUID der SD-Karte — muss auf eMMC-UUID geändert werden
+NEW_UUID=$(sudo blkid -s UUID -o value /dev/mmcblk1p3)
+OLD_UUID=$(sudo blkid -s UUID -o value /dev/mmcblk0p3)
+sudo sed -i "s/$OLD_UUID/$NEW_UUID/g" /mnt/etc/fstab
+# Ergebnis prüfen:
+cat /mnt/etc/fstab
 
 sudo umount /mnt
 sudo shutdown -h now
