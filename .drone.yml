@@ -2359,6 +2359,15 @@ steps:
         cd project/go-api
         go build -ldflags="-s -w" -o ../../bin/can-hal-bridge-native ./cmd/can-hal-bridge/
         go build -ldflags="-s -w" -o ../../bin/rest-can-gateway-native ./cmd/rest-can-gateway/
+        # Issue #280: der reale SocketCAN-Pfad (pkg/e2edemo/cansock.go) wird nur hier
+        # (privilegiert, vcan ladbar) gegen ein echtes Interface getestet. Ein Skip
+        # gilt hier als Fehler, damit der Test nicht still wieder wegfällt.
+        modprobe vcan
+        ip link add dev vcan0 type vcan
+        ip link set up vcan0
+        go test ./pkg/e2edemo/ -run TestConnSendReceiveRoundtrip -v -count=1 | tee /tmp/cansock-test.log
+        grep -q -- "--- PASS: TestConnSendReceiveRoundtrip" /tmp/cansock-test.log
+        ip link del vcan0
         cd ../..
         pip install --quiet pytest pytest-timeout --break-system-packages
         pytest tests/integration/test_e2e_local.py -v -s --timeout=60
