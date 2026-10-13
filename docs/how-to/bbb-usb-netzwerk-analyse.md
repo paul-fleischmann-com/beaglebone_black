@@ -35,12 +35,48 @@ Das BBB hängt per Mini-USB an einem Rechner, der das Netz per NAT oder Bridge w
 ### Variante 4: Gadget direkt am Router
 Das BBB tritt als USB-Gerät auf (RNDIS/ECM). Ein Router mit USB-Host-Port nutzt diesen üblicherweise für Speicher oder Mobilfunk-Sticks, nicht für Gadget-Netzwerkadapter. Ob es beim vorhandenen Router geht, ist ohne Modellangabe nicht zu beantworten; die Chance ist gering.
 
-## Empfehlung
-1. **Onboard-Ethernet** verwenden, wenn ein Kabel möglich ist.
-2. Geht das nicht, einen **USB-Ethernet-Adapter** (Variante 1) einsetzen. Vorher am Board prüfen, ob der Treiber im Image vorhanden ist.
-3. WLAN (Variante 2) und die Gadget-Varianten (3, 4) nur, wenn 0 und 1 ausscheiden.
+## Gewählte Variante: Gadget-Netz über den Drone-Host (Variante 3)
 
-In allen Fällen: **DHCP-Reservierung** im Router (feste IP pro MAC-Adresse) oder statische Adresse im LAN, danach diese Adresse in den Drone-Secret `beagle_host` eintragen (siehe `ToDO/285-drone-secret-beagle-host.md`).
+Entscheidung: Das BBB hängt per Mini-USB am Rechner `192.168.2.55`, auf dem auch Drone läuft. Der Nachteil von Variante 3 („Zwischenrechner muss dauerhaft laufen“) entfällt, weil dieser Rechner ohnehin durchläuft. Kein Netzwerkkabel zum BBB und kein USB-Adapter nötig.
+
+```
+LAN ── 192.168.2.55 (Drone-Server/-Runner) ══ USB-Gadget ══ BBB
+        │ usb-Interface: 192.168.7.1               192.168.7.2
+        └ Drone-Container erreichen 192.168.7.2 über das Host-Routing
+```
+
+### Variante A: Drone-Runner greift direkt auf 192.168.7.2 zu (einfachste Lösung)
+- Das BBB vergibt dem Host per DHCP `192.168.7.1`; das BBB selbst hat `192.168.7.2` (siehe `docs/SETUP.md`).
+- Drone-Container laufen auf demselben Host. Docker leitet ihre Pakete über das Host-Routing (mit Masquerading) in das USB-Netz. Dann gilt für Drone: **`beagle_host` = `192.168.7.2`**, REST-Port 5000 und SSH-Port 22 bleiben unverändert. Es ist weder Port-Forwarding noch Codeänderung nötig.
+- Einschränkung: `192.168.7.2` ist nur für diesen Host und seine Container erreichbar, nicht für andere Rechner im LAN.
+- Zu prüfen am Host: `ip addr` (USB-Interface mit `192.168.7.1`), `sysctl net.ipv4.ip_forward` (Docker setzt `1`), `docker run --rm alpine ping -c 2 192.168.7.2`.
+
+### Variante B: „spezieller Port“ auf 192.168.2.55 (Port-Forwarding, Zugriff aus dem ganzen LAN)
+Ein Port auf `192.168.2.55` wird per DNAT an das BBB weitergereicht. Beispiel (ungetestet; `<lan-if>` und `<usb-if>` durch die echten Interfacenamen ersetzen):
+
+```bash
+sudo sysctl -w net.ipv4.ip_forward=1
+# SSH: 192.168.2.55:2222 -> BBB:22
+sudo iptables -t nat -A PREROUTING -i <lan-if> -p tcp --dport 2222 -j DNAT --to-destination 192.168.7.2:22
+# REST-API: 192.168.2.55:5000 -> BBB:5000
+sudo iptables -t nat -A PREROUTING -i <lan-if> -p tcp --dport 5000 -j DNAT --to-destination 192.168.7.2:5000
+sudo iptables -t nat -A POSTROUTING -o <usb-if> -d 192.168.7.2 -j MASQUERADE
+sudo iptables -A FORWARD -d 192.168.7.2 -p tcp -m multiport --dports 22,5000 -j ACCEPT
+```
+
+Die Regeln überstehen keinen Neustart; dauerhaft über `iptables-persistent`/`nftables` oder ein systemd-Unit-File sichern. Das USB-Interface heißt je nach System `usb0` oder `enx<MAC>`.
+
+**Achtung bei Variante B:** `tests/conftest.py` prüft `BEAGLE_HOST` immer auf **Port 5000**. Wird die REST-API auf einem anderen Host-Port angeboten, müsste der Test um eine Variable wie `BEAGLE_PORT` erweitert werden. Wird Port 5000 auf `192.168.2.55` mit 5000 weitergeleitet, geht es ohne Codeänderung, aber nur, wenn dort kein anderer Dienst Port 5000 nutzt. SSH-basierte Tests (`BEAGLE_USER`, SSH-Port 22) bräuchten ebenfalls einen Port-Parameter, wenn SSH auf `2222` liegt.
+
+### Empfehlung für diesen Aufbau
+**Variante A.** `beagle_host` = `192.168.7.2`. Sie braucht keine Zusatzkonfiguration auf dem Host und keine Codeänderung. Variante B nur, wenn Rechner außerhalb des Drone-Hosts auf das BBB zugreifen sollen. Dann ein Folge-Issue für `BEAGLE_PORT`/SSH-Port in den Tests anlegen.
+
+## Vergleich mit den anderen Varianten (Rückfallebene)
+1. **Onboard-Ethernet** (Variante 0), wenn später doch ein Kabel möglich ist.
+2. **USB-Ethernet-Adapter** (Variante 1) als USB-Alternative zum Router; vorher Treiber im Image prüfen.
+3. WLAN (Variante 2) und Gadget direkt am Router (Variante 4) nur, wenn nichts anderes geht.
+
+In allen Fällen: stabile Adresse festlegen (hier `192.168.7.2`, fest durch das Gadget-Netz) und in den Drone-Secret `beagle_host` eintragen (siehe `ToDO/285-drone-secret-beagle-host.md`).
 
 ## Konfiguration (ungetestet, Richtwerte für Debian)
 
@@ -73,7 +109,8 @@ In allen Fällen: **DHCP-Reservierung** im Router (feste IP pro MAC-Adresse) ode
    ```
 
 ## Offen
-- [ ] Gewählte Variante am echten Board testen (Ping, SSH und `:5000` aus dem LAN)
+- [ ] Variante A am Drone-Host testen: `docker run --rm alpine ping -c 2 192.168.7.2`, danach `curl http://192.168.7.2:5000/health` aus einem Drone-Step
+- [ ] Entscheiden, ob Variante B (Port-Forwarding, LAN-Zugriff) gebraucht wird; falls ja, `BEAGLE_PORT`/SSH-Port in den Tests ergänzen
 - [ ] Prüfen, welcher Netzwerkdienst im Debian- und im Yocto-Image aktiv ist
 - [ ] Bei USB-Adapter: Treiber im Debian-Image und im Yocto-Kernel bestätigen, bei Bedarf Kernel-Fragment als eigenes Issue anlegen
-- [ ] Feste Adresse bzw. DHCP-Reservierung festlegen und in `beagle_host` (Drone) eintragen
+- [ ] `beagle_host` in Drone auf `192.168.7.2` setzen (Variante A)
