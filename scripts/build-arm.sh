@@ -70,6 +70,7 @@ find "$PROJECT/rust-lib" -name "*.h" -exec cp {} "$PROJECT/go-api/libs/include/"
 
 run_step "Build Go API" \
   sh -c "cd '$PROJECT/go-api' && \
+    GONOSUMDB='github.com/paulefl/udal' go mod tidy && \
     CGO_CFLAGS='-I$PROJECT/go-api/libs/include' \
     CGO_LDFLAGS='-L$PROJECT/go-api/libs -lhardware -lhardware_rs' \
     GOOS=linux GOARCH=arm GOARM=7 CGO_ENABLED=1 CC=arm-linux-gnueabihf-gcc \
