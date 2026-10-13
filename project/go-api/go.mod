@@ -2,8 +2,6 @@ module myproject
 
 go 1.26.0
 
-toolchain go1.26.9
-
 require (
 	github.com/gorilla/mux v1.8.1
 	github.com/paulefl/udal/code/sdk/go v0.0.0-20261013111931-e4d8812a32d2
@@ -12,6 +10,7 @@ require (
 require (
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.31.0 // indirect
+	github.com/paulefl/udal/code/api/proto/gen v0.0.0-20261013111931-e4d8812a32d2 // indirect
 	golang.org/x/net v0.60.0 // indirect
 	golang.org/x/sys v0.48.0 // indirect
 	golang.org/x/text v0.42.0 // indirect
