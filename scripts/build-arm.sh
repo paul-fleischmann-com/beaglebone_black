@@ -73,7 +73,6 @@ run_step "Build Go API" \
     CGO_CFLAGS='-I$PROJECT/go-api/libs/include' \
     CGO_LDFLAGS='-L$PROJECT/go-api/libs -lhardware -lhardware_rs' \
     GOOS=linux GOARCH=arm GOARM=7 CGO_ENABLED=1 CC=arm-linux-gnueabihf-gcc \
-    GOFLAGS=-mod=mod GONOSUMDB='github.com/paulefl/udal' \
     go build -ldflags='-s -w' -o '$OUTPUT/embedded' ./cmd/"
 
 run_step "Build CLI (ARM)" \
