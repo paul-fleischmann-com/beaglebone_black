@@ -12,7 +12,7 @@ inputs:
   go-version:
     description: Go version (passed to actions/setup-go).
     required: false
-    default: '1.24'
+    default: '1.26'
 
   working-directory:
     description: Directory containing go.mod, relative to workspace root.
@@ -69,7 +69,7 @@ runs:
     - name: Install report tools
       shell: bash
       run: |
-        go install gotest.tools/gotestsum@v1.12.0
+        go install gotest.tools/gotestsum@v1.13.0
         go install github.com/boumenot/gocover-cobertura@latest
 
     - name: Go Unit Tests
