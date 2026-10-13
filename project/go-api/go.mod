@@ -12,7 +12,7 @@ require (
 require (
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.31.0 // indirect
-	github.com/paulefl/udal/code/api/proto/gen v0.0.0-20261013111931-e4d8812a32d2 // indirect
+	github.com/paulefl/udal/code/api/proto/gen v0.0.0 // indirect
 	golang.org/x/net v0.60.0 // indirect
 	golang.org/x/sys v0.48.0 // indirect
 	golang.org/x/text v0.42.0 // indirect
@@ -21,3 +21,7 @@ require (
 	google.golang.org/grpc v1.84.0 // indirect
 	google.golang.org/protobuf v1.36.12 // indirect
 )
+
+// The UDAL SDK go.mod uses a local replace for proto/gen (v0.0.0), which is
+// ignored by external consumers. Redirect to the proxy-accessible pseudo-version.
+replace github.com/paulefl/udal/code/api/proto/gen v0.0.0 => github.com/paulefl/udal/code/api/proto/gen v0.0.0-20261013111931-e4d8812a32d2
