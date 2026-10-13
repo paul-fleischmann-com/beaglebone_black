@@ -3,13 +3,18 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"log"
 	"myproject/pkg/api"
 	"myproject/pkg/hal/config"
 	"myproject/pkg/hal/loader"
+	udalclient "myproject/pkg/udal"
 	"net/http"
+	"os"
+	"os/signal"
 	"sync"
+	"syscall"
 
 	"github.com/gorilla/mux"
 )
@@ -44,6 +49,18 @@ func main() {
 	r.HandleFunc("/api/v1/uart/receive", srv.UARTReceiveHandler).Methods("GET")
 	r.HandleFunc("/api/v1/spi/transfer", srv.SPITransferHandler).Methods("POST")
 	r.HandleFunc("/api/v1/backend", backendHandler(srv)).Methods("POST")
+
+	// UDAL Gateway push (Weg 2, udal#47) — opt-in via UDAL_GATEWAY_URL.
+	// Runs concurrently; does not affect the REST API.
+	if uCfg := udalclient.LoadConfig(); uCfg != nil {
+		ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+		defer cancel()
+		go func() {
+			if err := udalclient.Run(ctx, uCfg, driver, &hwMu); err != nil && ctx.Err() == nil {
+				log.Printf("udal: %v", err)
+			}
+		}()
+	}
 
 	log.Printf("API läuft auf :5000")
 	httpSrv := api.NewHTTPServer(":5000", api.CORSMiddleware(r))
