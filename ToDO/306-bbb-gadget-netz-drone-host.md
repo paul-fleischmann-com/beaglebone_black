@@ -6,7 +6,7 @@ Analyse: `docs/how-to/bbb-usb-netzwerk-analyse.md` (PR #307)
 ## Ziel
 Das BBB hängt per Mini-USB am Drone-Host `192.168.2.55`. Drone-Container erreichen es unter `192.168.7.2` (REST-API Port 5000, SSH Port 22). Im Code ändert sich nichts. Alle Schritte laufen auf `192.168.2.55`, Drone-Einstellungen in der Drone-UI.
 
-Hinweis: Alle Befehle sind ungetestet (aus Dokumentation abgeleitet). Annahme: Linux-Host (vermutlich Debian 13), Drone läuft in Docker.
+Hinweis: Alle Befehle sind ungetestet (aus Dokumentation abgeleitet). Der Host ist ein Debian-Linux mit Benutzer `deploy` und **Podman** (nicht Docker; Interface `podman1`, `10.89.0.1/24`). Befehle mit `podman` statt `docker`.
 
 ## Schritte
 
@@ -22,7 +22,9 @@ dmesg | tail -n 20
 ip -br addr
 ```
 - [ ] Ein neues Interface (`usb0` oder `enx<MAC>`) ist vorhanden
-- [ ] Interface-Name notiert: `________________`
+- [x] Interface gefunden: `enx647060d23516`, `UP`, `192.168.7.1/30` (per DHCP vom BBB)
+
+Hinweis: `dmesg` meldet als Benutzer `deploy` „Die Operation ist nicht erlaubt“ (`kernel.dmesg_restrict`). Dann `sudo dmesg | tail -n 20` nehmen; `lsusb` und `ip -br addr` brauchen keine Root-Rechte.
 
 ### 3. Adresse setzen, falls keine vergeben wurde
 Normalerweise bekommt der Host `192.168.7.1/24` per DHCP vom BBB. Fehlt die Adresse, vorübergehend:
@@ -43,27 +45,49 @@ curl http://192.168.7.2:5000/health          # nur, wenn die API auf dem BBB lä
 - [ ] `curl` liefert `{"status":"ok"}` (sonst Deployment laut `docs/SETUP.md` prüfen, Dienst `embedded-sw`)
 
 ### 5. SSH-Schlüssel für Drone hinterlegen
-Der öffentliche Teil des Schlüssels, den du als Secret `ssh_key_bbb` verwendest, muss auf dem BBB liegen:
+Der öffentliche Teil des Schlüssels, dessen privater Teil als Secret `ssh_key_bbb` in Drone liegt, muss auf dem BBB stehen. `<pfad>` in den Befehlen ist der Ordner, in dem die Schlüsseldatei liegt, normalerweise `~/.ssh/`.
+
+**Fall 1: Schlüssel existiert schon.** Nachsehen:
 ```bash
-ssh-copy-id -i <pfad>/id_ed25519.pub debian@192.168.7.2
-ssh -i <pfad>/id_ed25519 debian@192.168.7.2 true      # muss ohne Passwort laufen
+ls -l ~/.ssh/
 ```
+Dateien wie `id_ed25519` (privat) und `id_ed25519.pub` (öffentlich) liegen dort. Dann:
+```bash
+ssh-copy-id -i ~/.ssh/id_ed25519.pub debian@192.168.7.2
+```
+Heißt die Datei anders (`id_rsa.pub`, `beagle_key.pub` laut `docs/SETUP.md`), den Namen entsprechend einsetzen.
+
+**Fall 2: Noch kein Schlüssel.** Eigenen Schlüssel nur für Drone anlegen, ohne Passphrase (Drone kann keine eingeben):
+```bash
+ssh-keygen -t ed25519 -f ~/.ssh/drone_bbb -C "drone-bbb" -N ""
+ssh-copy-id -i ~/.ssh/drone_bbb.pub debian@192.168.7.2
+ssh -i ~/.ssh/drone_bbb debian@192.168.7.2 true      # muss ohne Passwort laufen
+```
+`ssh-copy-id` fragt einmal das Passwort des BBB-Benutzers `debian` (laut `docs/SETUP.md`).
+
+**Privater Teil für Drone:** Als Secret `ssh_key_bbb` kommt der **private** Schlüssel (Datei ohne `.pub`):
+```bash
+cat ~/.ssh/drone_bbb
+```
+Den kompletten Inhalt inklusive der Zeilen `-----BEGIN OPENSSH PRIVATE KEY-----` und `-----END ...-----` in der Drone-UI einfügen. Den privaten Schlüssel nirgends sonst weitergeben (nicht in Chats, Issues oder Commits).
+
+- [ ] Schlüssel vorhanden (Fall 1) oder angelegt (Fall 2)
 - [ ] Login mit dem Schlüssel ohne Passwort funktioniert
 
-### 6. Prüfen, ob Docker-Container das BBB erreichen
+### 6. Prüfen, ob Podman-Container das BBB erreichen
 ```bash
-sysctl net.ipv4.ip_forward          # soll 1 sein (Docker setzt es)
-docker run --rm alpine ping -c 2 192.168.7.2
-docker run --rm curlimages/curl -s http://192.168.7.2:5000/health
+sysctl net.ipv4.ip_forward          # soll 1 sein (sonst setzen, siehe Tabelle)
+podman run --rm docker.io/library/alpine ping -c 2 192.168.7.2
+podman run --rm docker.io/curlimages/curl -s http://192.168.7.2:5000/health
 ```
 - [ ] Container erreicht `192.168.7.2` (Ping und `curl`)
 
 Falls es fehlschlägt:
 | Symptom | Ursache | Maßnahme |
 |---|---|---|
-| Weiterleitung geblockt | Firewall (`ufw`) | `sudo ufw route allow in on docker0 out on <interface>` |
-| Kein Routing | `ip_forward` ist 0 | `sudo sysctl -w net.ipv4.ip_forward=1` |
-| Subnetz belegt | Ein Docker-Netz nutzt `192.168.7.0/24` | `docker network ls` und `docker network inspect <name>` prüfen, Netz umlegen |
+| Weiterleitung geblockt | Firewall (`ufw`/`nftables`) | Weiterleitung von `podman1` nach `enx647060d23516` erlauben |
+| Kein Routing | `ip_forward` ist 0 | `sudo sysctl -w net.ipv4.ip_forward=1`, dauerhaft über `/etc/sysctl.d/99-forward.conf` mit `net.ipv4.ip_forward=1` |
+| Subnetz belegt | Ein Podman-Netz nutzt `192.168.7.0/24` | `podman network ls` und `podman network inspect <name>` prüfen, Netz umlegen |
 
 ### 7. Interface dauerhaft machen
 Sonst ist die Adresse nach einem Neustart weg. Netzwerkdienst des Hosts feststellen: `systemctl status NetworkManager systemd-networkd`.
