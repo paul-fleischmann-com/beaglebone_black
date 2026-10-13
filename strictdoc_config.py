@@ -11,6 +11,7 @@ def create_config():
             "project/c/",
             "project/rust-lib/",
             "tests/",
+            "tools/cli/",
             "Makefile",
         ],
         project_features=[
