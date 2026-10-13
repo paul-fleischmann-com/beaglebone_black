@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Infrastruktur & Tooling
 
+- Extend BBB gadget network guide with SSH key path and Podman (#306) 
+
+
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+### Infrastruktur & Tooling
+
 - Add step-by-step guide for BBB gadget network on Drone host (#306) 
 
 
