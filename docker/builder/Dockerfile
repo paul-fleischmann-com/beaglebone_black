@@ -39,7 +39,7 @@ RUN apt-get update && apt-get install -y \
 # ----------------------------
 # Install Go (official binary)
 # ----------------------------
-RUN curl -fsSL https://go.dev/dl/go1.24.1.linux-amd64.tar.gz \
+RUN curl -fsSL https://go.dev/dl/go1.26.9.linux-amd64.tar.gz \
     | tar -C /usr/local -xz
 
 ENV PATH="/usr/local/go/bin:${PATH}"
