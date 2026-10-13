@@ -8,6 +8,10 @@ github.com/paulefl/udal/code/api/proto/gen v0.0.0-20261013111931-e4d8812a32d2/go
 github.com/paulefl/udal/code/api/proto/gen v0.0.0-20261013111931-e4d8812a32d2 h1:Kjc8ajXfwye6ecPCmkHDBE+g+ZAXXrib1Y6ND0QaH5A=
 github.com/paulefl/udal/code/sdk/go v0.0.0-20261013111931-e4d8812a32d2/go.mod h1:XSeGRbukQYqemQ+LNTVDmlZAAYAbreOvaRBt09J03WI=
 github.com/paulefl/udal/code/sdk/go v0.0.0-20261013111931-e4d8812a32d2 h1:x+qgXsvRrxDWQcdslBW2IpdFxYPbmYfk9ct+HdlREB8=
+golang.org/toolchain v0.0.1-go1.26.9.linux-amd64/go.mod h1:8wlg68NqwW7eMnI1aABk/C2pDYXj8mrMY4TyRfiLeS0=
+golang.org/toolchain v0.0.1-go1.26.9.linux-amd64 h1:H1MNjtpLSXRMijiKWuh1cj9j9YM4NXKqM93/8h6Aics=
+golang.org/toolchain v0.0.1-go1.26.9.linux-arm/go.mod h1:8wlg68NqwW7eMnI1aABk/C2pDYXj8mrMY4TyRfiLeS0=
+golang.org/toolchain v0.0.1-go1.26.9.linux-arm h1:tbFZw2sLdQmOswNI67d+r1rWsPHWLXE9qgKDQCyrwAI=
 golang.org/x/net v0.60.0/go.mod h1:2DA/G1UfVbCpQPeWTmMPGY7Cs2PkBkwu743bVX5PIVg=
 golang.org/x/net v0.60.0 h1:79p50tfZlm0J9YfoDsSi639qSXNGVwEzOPLCxM2FsYU=
 golang.org/x/sys v0.29.0/go.mod h1:/VUhepiaJMQUp4+oa/7Zr1D23ma6VTLIYjOOTFZPUcA=
