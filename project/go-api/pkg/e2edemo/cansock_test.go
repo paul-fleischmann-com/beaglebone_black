@@ -9,8 +9,10 @@ import (
 // SocketCAN interface. It is skipped wherever that isn't available (e.g. in
 // this repo's default CI containers, which have neither the "can"/"vcan"
 // kernel modules loaded nor CAP_NET_RAW) — the protocol-level logic is
-// already fully covered without hardware in protocol_test.go. To run this
-// locally: `sudo modprobe vcan && sudo ip link add dev vcan0 type vcan && sudo ip link set up vcan0`.
+// already fully covered without hardware in protocol_test.go. It runs for real
+// (a skip counts as failure there) in the privileged Drone pipeline
+// e2e-demo-local-test (#271/#280). To run this locally:
+// `sudo modprobe vcan && sudo ip link add dev vcan0 type vcan && sudo ip link set up vcan0`.
 func TestConnSendReceiveRoundtrip(t *testing.T) {
 	const testIface = "vcan0"
 
