@@ -1,6 +1,8 @@
 module myproject
 
-go 1.26
+go 1.26.0
+
+toolchain go1.26.9
 
 require (
 	github.com/gorilla/mux v1.8.1
