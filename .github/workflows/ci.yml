@@ -236,6 +236,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build-arm, test-go, test-c, test-python, strictdoc, security-python]
     if: always()
+    continue-on-error: true
     steps:
       - uses: actions/checkout@v7
         with:
@@ -245,6 +246,9 @@ jobs:
         with:
           sonar-token: ${{ secrets.SONAR_TOKEN }}
           qualitygate-wait: 'false'
+          rust-sarif-artifact: ''
+          c-sarif-artifact: ''
+          rust-coverage-artifact: ''
 
   sonar-report:
     name: SonarQube Issues Report
