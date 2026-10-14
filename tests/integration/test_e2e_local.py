@@ -67,8 +67,8 @@ import time
 import pytest
 
 NAMESPACES = ["dev1", "dev2", "dev3", "dev4", "dev5"]
-D1_ADDR = "10.271.1.1"
-D2_ADDR = "10.271.1.2"
+D1_ADDR = "10.28.1.1"
+D2_ADDR = "10.28.1.2"
 HTTP_PORT = 8080
 # Mock-Treiber in pkg/hal/mock liefert deterministisch diesen Wert (siehe
 # tests/hardware/test_e2e_demo.py, dasselbe Akzeptanzkriterium aus #270).

@@ -22,7 +22,7 @@
 # Ausführen (als root, blockiert im Vordergrund):
 #   sudo ./scripts/setup_e2e_demo.sh
 # Test (in einer zweiten Sitzung):
-#   sudo ip netns exec dev1 curl http://10.270.1.2:8080/temperature
+#   sudo ip netns exec dev1 curl http://10.27.1.2:8080/temperature
 # Aufräumen:
 #   sudo ./scripts/setup_e2e_demo.sh teardown
 
@@ -32,8 +32,8 @@ NAMESPACES="dev1 dev2 dev3 dev4 dev5"
 BRIDGE_BIN=${E2E_DEMO_BRIDGE_BIN:-/app/can-hal-bridge}
 GATEWAY_BIN=${E2E_DEMO_GATEWAY_BIN:-/app/rest-can-gateway}
 HTTP_PORT=${E2E_DEMO_HTTP_PORT:-8080}
-D1_IP=${E2E_DEMO_D1_IP:-10.270.1.1/30}
-D2_IP=${E2E_DEMO_D2_IP:-10.270.1.2/30}
+D1_IP=${E2E_DEMO_D1_IP:-10.27.1.1/30}
+D2_IP=${E2E_DEMO_D2_IP:-10.27.1.2/30}
 
 if [ "${1:-}" = "teardown" ]; then
   echo "=== Räume Namespaces auf: $NAMESPACES ==="

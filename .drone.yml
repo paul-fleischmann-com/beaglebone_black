@@ -220,7 +220,7 @@ volumes:
 
 steps:
   - name: test-hal-unit
-    image: golang:1.24
+    image: golang:1.26
     pull: if_not_exists
     volumes:
       - name: go-mod-cache
@@ -234,7 +234,7 @@ steps:
       - sh scripts/run-step.sh
 
   - name: lint-go
-    image: golang:1.24
+    image: golang:1.26
     pull: if_not_exists
     volumes:
       - name: go-mod-cache
@@ -350,7 +350,7 @@ volumes:
 
 steps:
   - name: lint-cli
-    image: golang:1.24
+    image: golang:1.26
     pull: if_not_exists
     volumes:
       - name: go-mod-cache
@@ -366,7 +366,7 @@ steps:
       - sh scripts/run-step.sh
 
   - name: lint-tui
-    image: golang:1.24
+    image: golang:1.26
     pull: if_not_exists
     volumes:
       - name: go-mod-cache
@@ -404,7 +404,7 @@ steps:
       - sh scripts/run-step.sh
 
   - name: build-cli
-    image: golang:1.24
+    image: golang:1.26
     pull: if_not_exists
     depends_on: [lint-cli]
     volumes:
@@ -427,7 +427,7 @@ steps:
       - sh scripts/run-step.sh
 
   - name: build-tui
-    image: golang:1.24
+    image: golang:1.26
     pull: if_not_exists
     depends_on: [lint-tui]
     volumes:
@@ -542,7 +542,7 @@ steps:
       - sh scripts/run-step.sh
 
   - name: build-tools
-    image: golang:1.24
+    image: golang:1.26
     pull: if_not_exists
     volumes:
       - name: go-mod-cache
@@ -808,7 +808,7 @@ steps:
       - sh scripts/run-step.sh
 
   - name: test-c-lib-cgo
-    image: golang:1.24
+    image: golang:1.26
     pull: if_not_exists
     depends_on: [restore-artifacts]
     volumes:
@@ -843,7 +843,7 @@ steps:
       - sh scripts/run-step.sh
 
   - name: go-tests-with-coverage
-    image: golang:1.24
+    image: golang:1.26
     pull: if_not_exists
     volumes:
       - name: go-mod-cache
@@ -2256,7 +2256,7 @@ volumes:
 
 steps:
   - name: test-e2e-demo
-    image: golang:1.24
+    image: golang:1.26
     pull: if_not_exists
     volumes:
       - name: go-mod-cache

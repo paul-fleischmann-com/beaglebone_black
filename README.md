@@ -341,7 +341,7 @@ ssh debian@192.168.7.2
 sudo ./scripts/setup_e2e_demo.sh
 
 # Zweite Sitzung: Test-Anfrage von D1 aus
-sudo ip netns exec dev1 curl http://10.270.1.2:8080/temperature
+sudo ip netns exec dev1 curl http://10.27.1.2:8080/temperature
 
 # Aufräumen
 sudo ./scripts/setup_e2e_demo.sh teardown
