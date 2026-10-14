@@ -74,7 +74,7 @@ bereits (#256/#257/#259) und werden nur neu zusammengesteckt. Getroffene Entsche
 ## Phase 4 — Netzwerk-Topologie-Setup-Skript
 
 - `scripts/setup_e2e_demo.sh`: legt `dev1`..`dev5` an (`ip netns add`), verbindet
-  D1↔D2 (`veth`, statische IPs `10.270.1.1/30` / `.2/30`), D2↔D3 und D4↔D5 (`vxcan`),
+  D1↔D2 (`veth`, statische IPs `10.27.1.1/30` / `.2/30`), D2↔D3 und D4↔D5 (`vxcan`),
   D3↔D4 (`veth` + `acfcan`-Modul-Setup analog `tests/hardware/test_acfcan.py`, gegenläufig
   gespiegelte Stream-IDs). Startet `can-hal-bridge` (Mock-Default) in `dev5` und
   `rest-can-gateway` in `dev2` im Hintergrund. Gibt am Ende den `curl`-Befehl für `dev1` aus.
@@ -85,7 +85,7 @@ bereits (#256/#257/#259) und werden nur neu zusammengesteckt. Getroffene Entsche
 
 - `tests/hardware/test_e2e_demo.py`: Analog `test_acfcan.py` — SSH-Fixture baut die Topologie
   per `setup_e2e_demo.sh` auf dem Board auf, Test ruft
-  `ip netns exec dev1 curl http://10.270.1.2:8080/temperature` auf und verifiziert, dass der
+  `ip netns exec dev1 curl http://10.27.1.2:8080/temperature` auf und verifiziert, dass der
   Wert exakt `23.45` (Mock-Wert aus `pkg/hal/mock`) innerhalb eines Timeouts zurückkommt.
   Skip-Fixture falls `acfcan`/`vxcan`-Kernelmodule nicht verfügbar sind (wie bei `test_acfcan.py`).
 - Commit nach dieser Phase.

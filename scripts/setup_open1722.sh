@@ -17,6 +17,10 @@ OPEN1722_URL=${OPEN1722_URL:-https://github.com/COVESA/Open1722.git}
 # eigenem README "in active development") nicht unbemerkt den Build bricht.
 OPEN1722_REV=${OPEN1722_REV:-8535cfd63da7a71ec1169d122b2c6d081b28e75b}
 
+# CI-Volume (/open1722-src) gehört oft einem anderen Benutzer als der Step —
+# sonst bricht git mit "dubious ownership" ab.
+git config --global --add safe.directory "$OPEN1722_DIR" 2>/dev/null || true
+
 if [ -d "$OPEN1722_DIR/.git" ]; then
   echo "=== Open1722 bereits vorhanden, überspringe Clone ==="
 else
