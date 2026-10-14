@@ -16,6 +16,8 @@ trigger:
   paths:
     - docker/**/VERSION
     - docker/**/Dockerfile
+    - tools/acfcan-viewer/VERSION
+    - tools/acfcan-viewer/Dockerfile
     - scripts/build-container.sh
     - .drone.yml
 
@@ -65,13 +67,29 @@ steps:
     commands:
       - sh scripts/run-step.sh
 
+  # acfcan-viewer (#259): wie die anderen Images versioniert nach ghcr.io — der
+  # Build wird übersprungen, solange tools/acfcan-viewer/VERSION unverändert ist.
+  # Den reinen Prüfbau bei jeder Änderung macht weiterhin die Pipeline
+  # acfcan-viewer-build (nur bei pull_request/custom, ohne Push).
+  - name: build-acfcan-viewer
+    image: quay.io/podman/stable
+    pull: if_not_exists
+    privileged: true
+    environment:
+      REGISTRY_USER:  {from_secret: registry_user}
+      REGISTRY_TOKEN: {from_secret: Bau_token}
+      STEP: build-acfcan-viewer
+      CMD: bash scripts/build-container.sh acfcan-viewer tools/acfcan-viewer/Dockerfile tools/acfcan-viewer tools/acfcan-viewer/VERSION
+    commands:
+      - sh scripts/run-step.sh
+
   - name: save-results
     image: alpine
     pull: if_not_exists
     volumes:
       - name: pipeline-results
         path: /pipeline-results
-    depends_on: [build-generic-builder, build-bausteinsicht, build-strictdoc]
+    depends_on: [build-generic-builder, build-bausteinsicht, build-strictdoc, build-acfcan-viewer]
     commands:
       - sh scripts/save-pipeline-results.sh build-container-images
     when:
@@ -2187,7 +2205,7 @@ image_pull_secrets:
   - dockerconfigjson
 
 trigger:
-  event: [push, pull_request, custom]
+  event: [pull_request, custom]
   branch:
     exclude: [refs/tags/*]
   paths:
