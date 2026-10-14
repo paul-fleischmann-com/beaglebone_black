@@ -10,6 +10,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Infrastruktur & Tooling
 
 - Update exported diagrams [skip ci] 
+
+### Software-Änderungen
+
+- Use golang:1.26, git safe.directory for open1722, valid E2E demo IPs (#271) 
+- Bump gotestsum to v1.13.0 for Go 1.26 (x/tools tokeninternal build error) 
+
+
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+### Infrastruktur & Tooling
+
+- Update exported diagrams [skip ci] 
 - Add Drone CI troubleshooting steps (runner socket, ghcr pull secret, pathschanged token) 
 
 
