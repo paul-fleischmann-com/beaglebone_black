@@ -1,0 +1,199 @@
+TEIL 1: Drone-Token rotieren (Host, nicht im Chat)
+--------------------------------------------------
+Das alte Token wurde im Chat gepostet und gilt als kompromittiert.
+
+1. Neues Token holen (altes wird dabei ungueltig):
+
+     read -rs -p "altes Token: " OLD; echo
+     curl -s -X POST -H "Authorization: Bearer $OLD" \
+       "https://drone-paulefl.duckdns.org/api/user/token?rotate=true" \
+       | python3 -c 'import sys,json;print(json.load(sys.stdin)["token"])'
+     unset OLD
+
+2. Neues Token nur lokal speichern (Passwortmanager oder
+   export DRONE_TOKEN=... in der eigenen Shell). Nicht in den Chat.
+
+3. Pruefen:
+     neues Token  -> curl -s -o /dev/null -w "%{http_code}\n" \
+                       -H "Authorization: Bearer <neu>" \
+                       https://drone-paulefl.duckdns.org/api/user     # 200
+     altes Token  -> gleicher Aufruf                                   # 401
+
+   Ohne ?rotate=true gibt der Endpunkt nur das bestehende Token zurueck.
+   Bei 404 auf dem POST: Endpunkt nicht vorhanden -> melden.
+
+
+TEIL 2: Drone-Secret "dockerconfigjson" anlegen (Ursache Build 35)
+------------------------------------------------------------------
+Ohne dieses Secret scheitert jeder Pull von ghcr.io/paulefl/generic-builder
+und ghcr.io/paulefl/bausteinsicht (403 Forbidden). Beide Images sind privat.
+
+1. Auf dem Host Werte setzen (aus den Drone-Secrets registry_user / Bau_token;
+   das Token braucht den Scope read:packages):
+
+     USER=<registry_user-Wert>
+     TOKEN=<Bau_token-Wert>
+     AUTH=$(printf '%s:%s' "$USER" "$TOKEN" | base64 -w0)
+     printf '{"auths":{"ghcr.io":{"auth":"%s"}}}' "$AUTH" > /tmp/dockerconfig.json
+
+2. Inhalt von /tmp/dockerconfig.json in der Drone-UI als ORG-Secret
+   "dockerconfigjson" anlegen (Organisation paul-fleischmann-com -> Secrets).
+
+3. Aufraeumen:
+     rm /tmp/dockerconfig.json
+
+
+TEIL 3: BBB-Secrets pruefen / aktualisieren
+-------------------------------------------
+Org-Secrets existieren bereits: beagle_host, beagle_user, ssh_key_bbb.
+Werte sind nicht einsehbar -> kontrollieren bzw. neu setzen:
+
+  beagle_host = 192.168.7.2
+  beagle_user = debian
+  ssh_key_bbb = Ausgabe von:  cat ~/.ssh/drone_bbb
+                (der NEUE Key, komplett inkl. BEGIN/END-Zeilen)
+
+
+TEIL 4: Host-Check fuer Container -> BBB (rootful Podman!)
+----------------------------------------------------------
+     sysctl net.ipv4.ip_forward
+     sudo podman run --rm docker.io/library/alpine ping -c 2 192.168.7.2
+     sudo podman run --rm docker.io/curlimages/curl -s http://192.168.7.2:5000/health
+
+Erwartet: ip_forward = 1, 0 % Verlust, {"status":"ok",...}
+
+
+TEIL 5: Neuen Build starten
+---------------------------
+Drone-UI -> Repo -> Cron "nightly" -> Run now, oder neuen Build auf main.
+Pruefen: Stages build-libraries, architecture-export, pru-firmware-build,
+open1722-userspace-build (Pull-Fehler 403 muss weg sein).
+
+
+OFFEN (Code, nach Freigabe per PR)
+----------------------------------
+- Stage e2e-demo-build / e2e-demo-local-test: "go.mod requires go >= 1.26.0
+  (running go 1.24.13)" -> Image mit passender Go-Version
+- Stage acfcan-module-build / open1722-userspace-build:
+  "dubious ownership in /open1722-src"
+  -> git config --global --add safe.directory /open1722-src
+- Ungueltige IPs 10.270.1.x / 10.271.1.x (Oktett > 255) in
+  scripts/setup_e2e_demo.sh, tests/hardware/test_e2e_demo.py,
+  tests/integration/test_e2e_local.py, README.md, docs/features/plans/270-*.md
+- Image-Namen: .drone.yml nutzt ghcr.io/paulefl/..., GHA nutzt
+  ghcr.io/paul-fleischmann-com/... -> vereinheitlichen
+
+TEIL 6: "Bad credentials" bei push / pull_request (Builds 40-42)
+---------------------------------------------------------------
+Befund: Builds mit Event cron/custom laufen (38, 39), Builds mit Event
+push/pull_request scheitern sofort mit status=error, error="Bad credentials"
+und starten keine Stage (40, 41, 42). Logout/Login in Drone hilft nicht.
+
+Verdacht: Config-Plugin "drone-pathschanged" (drone-convert-pathschanged).
+Es fragt bei push/PR die GitHub-API nach geaenderten Dateien; bei cron/custom
+gibt es keinen Diff, daher kein Aufruf. Ist dessen GitHub-Token ungueltig,
+kommt genau "Bad credentials".
+
+1. Pruefen (Host, rootful):
+
+     sudo podman logs --tail 30 drone-pathschanged
+     sudo podman inspect drone-pathschanged \
+       --format '{{range .Config.Env}}{{println .}}{{end}}' \
+       | sed -E 's/(TOKEN|SECRET)=.*/\1=***/'
+
+   Im Log: "Bad credentials" bzw. 401. Variablennamen notieren (meist TOKEN),
+   KEINE Werte in den Chat.
+
+2. Neues GitHub-Token erzeugen:
+   GitHub -> Settings -> Developer settings -> Personal access tokens
+   Scope: public_repo (Repo ist oeffentlich) bzw. repo.
+
+3. Token in der Compose-Datei von drone-pathschanged eintragen
+   (Verzeichnis /server/drone, wie Server und Runner).
+
+4. Neu erstellen und Server neu starten:
+
+     cd /server/drone
+     sudo podman-compose up -d --force-recreate drone-pathschanged
+     sudo podman restart drone-server
+
+5. Pruefen: PR #311 / Build 42 -> Restart. Es muessen Stages starten
+   (statt sofort "error").
+
+Wenn das Plugin nicht die Ursache ist: im drone-server-Log nach
+"Bad credentials" suchen:
+     sudo podman logs --tail 100 drone-server | grep -i -B2 -A2 credentials
+
+TEIL 7: GitHub-Token fuer drone-pathschanged erneuern (STEP BY STEP)
+--------------------------------------------------------------------
+Bestaetigt durch Log: Nach "a path field was seen" bricht das Plugin ab,
+sobald build_before gesetzt ist (GitHub-Compare-API) -> "Bad credentials".
+Cron-Lauf mit leerem build_before funktionierte noch. Betroffen: Builds 40-43.
+
+Schritt 1: Variablennamen des Plugins ansehen (Host, Werte ausgeblendet)
+
+     sudo podman inspect drone-pathschanged \
+       --format '{{range .Config.Env}}{{println .}}{{end}}' | sed -E 's/=.*/=***/'
+
+   Notieren, wie die Token-Variable heisst (meist TOKEN oder PLUGIN_TOKEN).
+   Werte NICHT in den Chat.
+
+Schritt 2: Compose-Datei finden
+
+     grep -ln "pathschanged" /server/drone/*.y*ml
+     cp <datei> <datei>.bak          # Sicherung
+
+Schritt 3: Neues GitHub-Token erzeugen (Browser)
+
+   a) https://github.com/settings/tokens  (Personal access tokens)
+      -> "Generate new token"
+   b) Variante classic:      Scope "public_repo" (Repo ist oeffentlich)
+      Variante fine-grained: Repository paul-fleischmann-com/beaglebone_black,
+                             Permissions: Contents = Read-only,
+                                          Metadata = Read-only
+   c) Ablauf (Expiration): z. B. 90 Tage oder "No expiration"
+      (Ablaufdatum notieren, sonst passiert es wieder!)
+   d) Token kopieren - wird nur einmal angezeigt.
+
+Schritt 4: Token in die Compose-Datei eintragen
+
+     sudo nano <datei>
+
+   Beim Service drone-pathschanged den Wert der Token-Variablen ersetzen.
+   Speichern (Strg+O, Enter), beenden (Strg+X).
+   Token nicht in Git committen und nicht in den Chat posten.
+
+Schritt 5: Plugin neu erstellen, Server neu starten
+
+     cd /server/drone
+     sudo podman-compose up -d --force-recreate drone-pathschanged
+     sudo podman restart drone-server
+
+   Falls podman-compose fehlt:  sudo docker-compose up -d --force-recreate drone-pathschanged
+
+Schritt 6: Plugin-Start pruefen
+
+     sudo podman logs --tail 10 drone-pathschanged
+     sudo podman ps --format 'table {{.Names}}\t{{.Status}}' | grep drone
+
+   Alle drei Drone-Container muessen "Up" sein.
+
+Schritt 7: Wirkung testen
+
+   Drone-UI -> Build 43 (oder PR #311 / Build 42) -> "Restart".
+   Erwartung: Stages starten (nicht mehr sofort "error: Bad credentials").
+   Im Plugin-Log erscheinen wieder "excluding pipeline ..."-Zeilen auch
+   fuer push/pull_request:
+
+     sudo podman logs --tail 30 drone-pathschanged
+
+Schritt 8: Altes Token entfernen
+
+   https://github.com/settings/tokens -> altes (abgelaufenes/unbekanntes)
+   Token loeschen, falls noch vorhanden.
+
+Schritt 9: Ablaufdatum merken (Kalender), damit der Fehler nicht wiederkommt.
+
+Rollback bei Problemen:
+     cp <datei>.bak <datei>
+     cd /server/drone && sudo podman-compose up -d --force-recreate
