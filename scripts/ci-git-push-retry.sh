@@ -29,7 +29,10 @@ while [ "$attempt" -le "$MAX_ATTEMPTS" ]; do
 
   echo "Push fehlgeschlagen (Versuch $attempt/$MAX_ATTEMPTS) — vermutlich Race mit einem parallel laufenden architecture-export-Build. Hole aktuellen Stand und rebase..."
   git fetch "$REMOTE_URL" "$BRANCH"
-  if ! git rebase FETCH_HEAD; then
+  # --autostash: commit-exports staged nur arch/model/export/; weitere von den
+  # Export-Steps geänderte Dateien bleiben unstaged im Workspace, und ein
+  # nackter Rebase bricht dann mit "You have unstaged changes" ab (Build 54).
+  if ! git rebase --autostash FETCH_HEAD; then
     git rebase --abort
     echo "FEHLER: Rebase auf den aktuellen $BRANCH-Stand ergab einen echten Konflikt (nicht nur ein Timing-Race) — manuell prüfen." >&2
     exit 1
