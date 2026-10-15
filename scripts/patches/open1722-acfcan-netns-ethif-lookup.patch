@@ -1,0 +1,27 @@
+Fix: acfcan_up() sucht das Ethernet-Interface (cfg->ethif) per
+netdev_get_by_name(&init_net, ...) ausschliesslich im Haupt-Netzwerk-Namespace.
+Liegt das Interface -- wie in der E2E-Demo-Topologie (Issue #270, #271) -- in
+einem eigenen Namespace (ecu-d3/veth-d3 in dev3, ecu-d4/veth-d4 in dev4),
+liefert die Suche NULL und "ip link set ecu-d3 up" scheitert mit
+"RTNETLINK answers: Invalid argument" (Drone-Build 49, Stage
+e2e-demo-local-test).
+
+Der Lookup nutzt jetzt den Namespace des acfcan-Geraets (dev_net(dev)).
+Das TX-Verhalten bleibt unveraendert (skb->dev = cfg->eth_netdev), der
+RX-Handler ist ein globaler packet_type (dev = NULL).
+
+Wird von scripts/setup_open1722.sh nach dem Checkout angewendet.
+
+diff --git a/examples/acf-can/linux-kernel-mod/acfcanmain.c b/examples/acf-can/linux-kernel-mod/acfcanmain.c
+index 5f217c9..a06b7e4 100644
+--- a/examples/acf-can/linux-kernel-mod/acfcanmain.c
++++ b/examples/acf-can/linux-kernel-mod/acfcanmain.c
+@@ -163,7 +163,7 @@ static int acfcan_up(struct net_device *dev)
+ 	// chek we have an a valid ethernet device
+ 	struct net_device *ethif;
+ 
+-	ethif = netdev_get_by_name(&init_net, cfg->ethif, &cfg->tracker, GFP_KERNEL);
++	ethif = netdev_get_by_name(dev_net(dev), cfg->ethif, &cfg->tracker, GFP_KERNEL);
+ 
+ 	if (!ethif)
+ 	{

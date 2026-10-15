@@ -48,5 +48,10 @@ if [ -f "$ACFCAN_MAIN" ] && ! grep -q "KERNEL_VERSION(6, 15, 0)" "$ACFCAN_MAIN";
   git -C "$OPEN1722_DIR" apply "$REPO_ROOT/scripts/patches/open1722-fix-rtnl-newlink-version-guard.patch"
 fi
 
+if [ -f "$ACFCAN_MAIN" ] && ! grep -q "netdev_get_by_name(dev_net(dev)" "$ACFCAN_MAIN"; then
+  echo "=== Wende Patch an: Ethernet-Interface-Lookup im Namespace des acfcan-Geräts (Issue #271) ==="
+  git -C "$OPEN1722_DIR" apply "$REPO_ROOT/scripts/patches/open1722-acfcan-netns-ethif-lookup.patch"
+fi
+
 echo "=== Fertig. ==="
 echo "OPEN1722_DIR=$OPEN1722_DIR"
